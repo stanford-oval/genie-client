@@ -1,0 +1,116 @@
+diff --git a/ext/soup/gstsouphttpsrc.c b/ext/soup/gstsouphttpsrc.c
+index a89922293..64dbd473e 100644
+--- a/ext/soup/gstsouphttpsrc.c
++++ b/ext/soup/gstsouphttpsrc.c
+@@ -119,6 +119,8 @@ enum
+   PROP_RETRIES,
+   PROP_METHOD,
+   PROP_TLS_INTERACTION,
++  PROP_CONTENT_TYPE,
++  PROP_POST_DATA,
+ };
+ 
+ #define DEFAULT_USER_AGENT           "GStreamer souphttpsrc " PACKAGE_VERSION " "
+@@ -410,6 +412,32 @@ gst_soup_http_src_class_init (GstSoupHTTPSrcClass * klass)
+           "The HTTP method to use (GET, HEAD, OPTIONS, etc)",
+           DEFAULT_SOUP_METHOD, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+ 
++ /**
++   * GstSoupHTTPSrc::content-type
++   *
++   * The HTTP Content-Type to use when making a POST request
++   *
++   * Since: 1.xxx
++   */
++  g_object_class_install_property (gobject_class,
++      PROP_CONTENT_TYPE,
++      g_param_spec_string ("content-type", "content-type",
++          "HTTP Content-Type to use (used only with POST)", "",
++          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
++
++ /**
++   * GstSoupHTTPSrc::post-data
++   *
++   * The HTTP data to send when making a POST request
++   *
++   * Since: 1.xxx
++   */
++  g_object_class_install_property (gobject_class,
++      PROP_POST_DATA,
++      g_param_spec_string ("post-data", "post-data",
++          "HTTP POST Data", "",
++          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
++
+   gst_element_class_add_static_pad_template (gstelement_class, &srctemplate);
+ 
+   gst_element_class_set_static_metadata (gstelement_class, "HTTP client source",
+@@ -504,6 +532,8 @@ gst_soup_http_src_init (GstSoupHTTPSrc * src)
+   src->tls_interaction = DEFAULT_TLS_INTERACTION;
+   src->max_retries = DEFAULT_RETRIES;
+   src->method = DEFAULT_SOUP_METHOD;
++  src->content_type = NULL;
++  src->post_data = NULL;
+   src->minimum_blocksize = gst_base_src_get_blocksize (GST_BASE_SRC_CAST (src));
+   proxy = g_getenv ("http_proxy");
+   if (!gst_soup_http_src_set_proxy (src, proxy)) {
+@@ -566,6 +596,8 @@ gst_soup_http_src_finalize (GObject * gobject)
+   if (src->tls_database)
+     g_object_unref (src->tls_database);
+   g_free (src->method);
++  g_free (src->content_type);
++  g_free (src->post_data);
+ 
+   if (src->tls_interaction)
+     g_object_unref (src->tls_interaction);
+@@ -686,6 +718,14 @@ gst_soup_http_src_set_property (GObject * object, guint prop_id,
+       g_free (src->method);
+       src->method = g_value_dup_string (value);
+       break;
++    case PROP_CONTENT_TYPE:
++      g_free (src->content_type);
++      src->content_type = g_value_dup_string (value);
++      break;
++    case PROP_POST_DATA:
++      g_free (src->post_data);
++      src->post_data = g_value_dup_string (value);
++      break;
+     default:
+       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+       break;
+@@ -777,6 +817,12 @@ gst_soup_http_src_get_property (GObject * object, guint prop_id,
+     case PROP_METHOD:
+       g_value_set_string (value, src->method);
+       break;
++    case PROP_CONTENT_TYPE:
++      g_value_set_string (value, src->content_type);
++      break;
++    case PROP_POST_DATA:
++      g_value_set_string (value, src->post_data);
++      break;
+     default:
+       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+       break;
+@@ -1525,6 +1571,10 @@ gst_soup_http_src_build_message (GstSoupHTTPSrc * src, const gchar * method)
+ 
+   gst_soup_http_src_add_extra_headers (src);
+ 
++  if (src->content_type && src->post_data) {
++    soup_message_set_request(src->msg, src->content_type, SOUP_MEMORY_COPY, src->post_data, strlen(src->post_data));
++  }
++
+   return TRUE;
+ }
+ 
+diff --git a/ext/soup/gstsouphttpsrc.h b/ext/soup/gstsouphttpsrc.h
+index f848cde6d..6949820e4 100644
+--- a/ext/soup/gstsouphttpsrc.h
++++ b/ext/soup/gstsouphttpsrc.h
+@@ -67,6 +67,8 @@ struct _GstSoupHTTPSrc {
+   gint retry_count;            /* Number of retries since we received data */
+   gint max_retries;            /* Maximum number of retries */
+   gchar *method;               /* HTTP method */
++  gchar *content_type;         /* HTTP content-type */
++  gchar *post_data;            /* HTTP post data */
+ 
+   gboolean got_headers;        /* Already received headers from the server */
+   gboolean have_size;          /* Received and parsed Content-Length

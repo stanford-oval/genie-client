@@ -1,0 +1,4 @@
+option('static', type: 'boolean', value: false)
+
+option('alsa', type: 'boolean', value: true)
+option('pulseaudio', type: 'boolean', value: false)

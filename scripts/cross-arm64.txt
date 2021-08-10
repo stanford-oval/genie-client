@@ -1,0 +1,19 @@
+[binaries]
+c = '/usr/bin/aarch64-linux-gnu-gcc-8'
+cpp = '/usr/bin/aarch64-linux-gnu-g++-8'
+ar = '/usr/bin/aarch64-linux-gnu-ar'
+strip = '/usr/bin/aarch64-linux-gnu-strip'
+pkgconfig = 'usr/bin/aarch64-linux-gnu-pkg-config'
+ld = '/usr/bin/aarch64-linux-gnu-ld'
+
+[properties]
+root = '/usr/aarch64-linux-gnu'
+has_function_printf = true
+has_function_hfkerhisadf = false
+skip_sanity_check = true
+
+[host_machine]
+system = 'linux'
+cpu_family = 'aarch64'
+cpu = 'aarch64'
+endian = 'little'

@@ -1,0 +1,5 @@
+.vscode/
+assets/*
+!assets/.gitkeep
+!assets/news-intro.oga
+build/
