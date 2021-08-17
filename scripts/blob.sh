@@ -56,7 +56,7 @@ findDeps build/src/genie
 
 mkdir -p ${DESTDIR} ${DESTDIR}/gio/modules ${DESTDIR}/gstreamer-1.0
 
-plugins="coreelements alsa playback wavparse ogg mpg123 typefindfunctions soup vorbis audioconvert audioresample"
+plugins="coreelements autodetect alsa playback wavparse ogg mpg123 typefindfunctions soup vorbis volume audioconvert audioresample"
 for p in ${plugins} ; do
 	cp -p /usr/local/lib/${SEARCH_ARCH}/gstreamer-1.0/libgst${p}.so ${DESTDIR}/gstreamer-1.0/
 	findDeps /usr/local/lib/${SEARCH_ARCH}/gstreamer-1.0/libgst${p}.so

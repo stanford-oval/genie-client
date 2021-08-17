@@ -96,6 +96,7 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg, gpoint
             gst_object_unref(GST_OBJECT(obj->playingTask->pipeline));
             g_source_remove(obj->playingTask->bus_watch_id);
             g_free(obj->playingTask);
+            obj->playingTask = NULL;
             obj->playing = false;
             obj->dispatch_queue();
             break;
@@ -112,6 +113,7 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg, gpoint
             gst_object_unref(GST_OBJECT(obj->playingTask->pipeline));
             g_source_remove(obj->playingTask->bus_watch_id);
             g_free(obj->playingTask);
+            obj->playingTask = NULL;
             obj->playing = false;
             obj->dispatch_queue();
             break;
@@ -394,17 +396,21 @@ gboolean genie::AudioPlayer::clean_queue()
 gboolean genie::AudioPlayer::stop()
 {
     if (!playing) return true;
-    g_print("Stop playing current pipeline\n");
-    gst_element_set_state(playingTask->pipeline, GST_STATE_PAUSED);
-    playing = false;
+    if (playingTask && playingTask->pipeline) {
+        g_print("Stop playing current pipeline\n");
+        gst_element_set_state(playingTask->pipeline, GST_STATE_PAUSED);
+        playing = false;
+    }
     return true;
 }
 
 gboolean genie::AudioPlayer::resume()
 {
     if (playing) return true;
-    g_print("Resume current pipeline\n");
-    gst_element_set_state(playingTask->pipeline, GST_STATE_PLAYING);
-    playing = true;
+    if (playingTask && playingTask->pipeline) {
+        g_print("Resume current pipeline\n");
+        gst_element_set_state(playingTask->pipeline, GST_STATE_PLAYING);
+        playing = true;
+    }
     return true;
 }

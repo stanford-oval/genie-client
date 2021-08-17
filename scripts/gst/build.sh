@@ -24,12 +24,14 @@ meson ${PARAMS} --prefix=/usr/local -Dintrospection=disabled -Dauto_features=dis
 	-Dgst-plugins-base:playback=enabled \
 	-Dgst-plugins-base:typefind=enabled \
 	-Dgst-plugins-base:volume=enabled \
+	-Dgst-plugins-base:vorbis=enabled \
+	-Dgst-plugins-base:audioconvert=enabled \
+	-Dgst-plugins-base:audioresample=enabled \
 	-Dgst-plugins-good:autodetect=enabled \
 	-Dgst-plugins-good:wavparse=enabled \
 	-Dgst-plugins-good:mpg123=enabled \
 	-Dgst-plugins-good:soup=enabled \
 	-Dgst-plugins-good:pulse=enabled \
-	-Dgst-plugins-good:vorbis=enabled \
 	build
 
 # patch for souphttpsrc
