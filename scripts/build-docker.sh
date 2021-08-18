@@ -2,8 +2,7 @@
 : ${BLOB:=0}
 : ${SH:=0}
 : ${STATIC:=0}
-: ${PROF:=0}
-: ${BLOB_LIGHT:=0}
+: ${LIGHT:=0}
 
 : ${ARCH:="amd64"}
 if [ -n "${1}" ]; then
@@ -38,12 +37,12 @@ if [ ${SH} -eq 1 ]; then
 fi
 
 # copy the artifacts to the output directory
-if [ ${BLOB} -eq 1 ] && [ ${BLOB_LIGHT} -eq 0 ]; then
+if [ ${BLOB} -eq 1 ]; then
 	docker run --rm -v $(pwd)/build:/out --security-opt label=disable -e ARCH=${ARCH} genie-builder:${ARCH} /src/scripts/blob.sh
 	exit ${?}
 fi
 
-if [ ${BLOB_LIGHT} -eq 1 ]; then
+if [ ${LIGHT} -eq 1 ]; then
 	docker run --rm -v $(pwd)/build:/out --security-opt label=disable -e ARCH=${ARCH} genie-builder:${ARCH} /src/scripts/binonly.sh
 	exit ${?}
 fi

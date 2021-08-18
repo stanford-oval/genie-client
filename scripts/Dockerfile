@@ -1,6 +1,7 @@
 ARG ARCH=
 ARG STATIC=0
 FROM ${ARCH}debian:stretch-slim
+ARG ARCH
 
 # baseline deps
 RUN apt-get update && \
@@ -22,6 +23,7 @@ COPY scripts/webrtcvad /src/scripts/webrtcvad
 RUN ./scripts/webrtcvad/build.sh
 
 # assets
+COPY assets /src/assets
 COPY scripts/get-assets.sh /src/scripts
 RUN ./scripts/get-assets.sh ${ARCH}
 

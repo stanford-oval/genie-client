@@ -31,7 +31,7 @@
         struct timeval t; \
         gettimeofday(&t, NULL); \
         localtime_r(&t.tv_sec, &tm); \
-        fprintf(stderr,"[%.2d:%.2d:%.2d.%.ld] %s (%s:%d): ", tm.tm_hour, tm.tm_min, tm.tm_sec, t.tv_usec, __func__, __FILE__, __LINE__); \
+        fprintf(stderr,"[%.2d:%.2d:%.2d.%.6ld] %s (%s:%d): ", tm.tm_hour, tm.tm_min, tm.tm_sec, t.tv_usec, __func__, __FILE__, __LINE__); \
         fprintf(stderr, fmt, ##__VA_ARGS__); \
     } while (0)
 

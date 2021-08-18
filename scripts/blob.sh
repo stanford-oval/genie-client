@@ -78,4 +78,7 @@ chmod +x ${DESTDIR}/*
 mkdir -p /out/src
 cp -p build/src/genie /out/src/
 
+mkdir -p /out/assets
+cp -p assets/* /out/assets/
+
 exit 0

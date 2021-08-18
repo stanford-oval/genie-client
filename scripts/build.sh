@@ -1,15 +1,11 @@
 #!/bin/bash -ex
 : ${CROSS:=""}
 : ${STATIC:=0}
-: ${PROF:=0}
 
 EXTRA=""
 if [ ${STATIC} -eq 1 ]; then
 	EXTRA="-Dstatic=true"
 	#export LDFLAGS=-static-libstdc++
-fi
-if [ ${PROF} -eq 1 ]; then
-	EXTRA="${EXTRA} -Dprofiler=true"
 fi
 
 mkdir -p build
