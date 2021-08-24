@@ -83,10 +83,26 @@ void genie::STT::on_message(SoupWebsocketConnection *conn, gint type, GBytes *me
                 PROF_TIME_DIFF("STT full", obj->app->m_audioInput->tStart);
                 PROF_PRINT("STT text: %s\n", text);
 
-                g_print("STT text: %s\n", text);
-                gchar *dtext = g_strdup(text);
-                obj->app->m_wsClient.get()->sendCommand(dtext);
-                g_free(dtext);
+                gboolean wakewordFound = false;
+                if (!memcmp(text, "Computer,", 9) || !memcmp(text, "computer,", 9) ||
+                   !memcmp(text, "Computer.", 9) || !memcmp(text, "computer.", 9)) {
+                        text += 9;
+                    wakewordFound = true;
+                } else if (!memcmp(text, "Computer", 8) || !memcmp(text, "computer", 8)) {
+                    text += 8;
+                    wakewordFound = true;
+                }
+
+                if (wakewordFound) {
+                    gchar *dtext = g_strchug(g_strdup(text));
+                    PROF_PRINT("STT mangled: %s\n", dtext);
+                    obj->app->m_wsClient.get()->sendCommand(dtext);
+                    g_free(dtext);
+                } else {
+                    g_print("STT wakeword not found\n");
+                    obj->app->m_audioPlayer.get()->playSound(SOUND_NO_MATCH);
+                    obj->app->m_audioPlayer.get()->resume();
+                }
             }
         } else {
             g_print("STT status %d\n", status);
@@ -130,10 +146,6 @@ void genie::STT::on_connection(SoupSession *session, GAsyncResult *res, gpointer
 
     soup_websocket_connection_send_text(conn, "{ \"ver\": 1 }");
     obj->acceptStream = true;
-
-    if (!g_queue_is_empty(obj->queue)) {
-        g_queue_clear(obj->queue);
-    }
 
     g_signal_connect(conn, "message", G_CALLBACK(genie::STT::on_message), data);
     g_signal_connect(conn, "closed",  G_CALLBACK(genie::STT::on_close),   data);
@@ -192,7 +204,7 @@ void genie::STT::sendFrame(int16_t *data, gsize length)
 
 void genie::STT::dispatch_frame(AudioFrame *t)
 {
-    soup_websocket_connection_send_binary(wconn, t->data, t->length);
+    soup_websocket_connection_send_binary(wconn, (int16_t *)t->data, t->length * sizeof(int16_t));
     g_free(t->data);
     g_free(t);
 }
@@ -201,7 +213,7 @@ void genie::STT::dispatch_queue(gboolean last)
 {
     if (!g_queue_is_empty(queue) && acceptStream && wconn && soup_websocket_connection_get_state(wconn) == SOUP_WEBSOCKET_STATE_OPEN) {
         if (last) {
-            for (guint i = 0; i < g_queue_get_length(queue); i++) {
+            while (!g_queue_is_empty(queue)) {
                 AudioFrame *t = (AudioFrame *)g_queue_pop_head(queue);
                 dispatch_frame(t);
             }
@@ -218,7 +230,7 @@ gboolean genie::STT::add_queue(int16_t *data, gsize length)
 {
     AudioFrame *t = g_new(AudioFrame, 1);
     t->data = (int16_t *)malloc(length * sizeof(int16_t));
-    memcpy((int16_t *)t->data, data, length);
+    memcpy(t->data, (int16_t *)data, length * sizeof(int16_t));
     t->length = length;
     g_queue_push_tail(queue, t);
     return true;

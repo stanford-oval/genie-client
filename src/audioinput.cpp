@@ -29,12 +29,17 @@ genie::AudioInput::AudioInput(App *appInstance)
 {
     app = appInstance;
     vadInstance = WebRtcVad_Create();
+    pcmQueue = g_queue_new();
 }
 
 genie::AudioInput::~AudioInput()
 {
     running = false;
     WebRtcVad_Free(vadInstance);
+    while (!g_queue_is_empty(pcmQueue)) {
+        g_free(g_queue_pop_head(pcmQueue));
+    }
+    g_queue_free(pcmQueue);
     free(pcm);
     snd_pcm_close(alsa_handle);
     pv_porcupine_delete_func(porcupine);
@@ -224,6 +229,13 @@ void *genie::AudioInput::loop(gpointer data)
         }
 
         if (state == 0) {
+            if (g_queue_get_length(obj->pcmQueue) > 32) {
+                g_free(g_queue_pop_head(obj->pcmQueue));
+            }
+            int16_t *frames = (int16_t *)g_malloc(count * sizeof(int16_t));
+            memcpy(frames, (int16_t *)obj->pcm, count * sizeof(int16_t));
+            g_queue_push_tail(obj->pcmQueue, frames);
+
             int32_t keyword_index = -1;
             status = obj->pv_porcupine_process_func(obj->porcupine, obj->pcm, &keyword_index);
             if (status != PV_STATUS_SUCCESS) {
@@ -234,11 +246,15 @@ void *genie::AudioInput::loop(gpointer data)
                 PROF_PRINT("detected keyword\n");
                 gettimeofday(&obj->tStart, NULL);
 
-                g_print("detected keyword\n");
                 obj->app->m_audioPlayer->stop();
                 obj->app->m_audioPlayer->playSound(SOUND_MATCH);
                 obj->app->m_stt->connect();
-                obj->app->m_stt->sendFrame(obj->pcm, count);
+                g_debug("send prior %d frames\n", g_queue_get_length(obj->pcmQueue));
+                while (!g_queue_is_empty(obj->pcmQueue)) {
+                    int16_t *frames = (int16_t *)g_queue_pop_head(obj->pcmQueue);
+                    obj->app->m_stt->sendFrame(frames, count);
+                    g_free(frames);
+                }
                 frame_length = 480;
                 state = 1;
             }

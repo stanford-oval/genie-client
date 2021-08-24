@@ -383,7 +383,7 @@ gboolean genie::AudioPlayer::clean_queue()
         g_source_remove(playingTask->bus_watch_id);
         playing = false;
     }
-    for (guint i = 0; i < g_queue_get_length(playerQueue); i++) {
+    while (!g_queue_is_empty(playerQueue)) {
         AudioTask *t = (AudioTask *)g_queue_pop_head(playerQueue);
         gst_element_set_state(t->pipeline, GST_STATE_NULL);
         gst_object_unref(GST_OBJECT(t->pipeline));

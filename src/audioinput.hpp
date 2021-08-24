@@ -20,7 +20,6 @@
 #define _AUDIO_H
 
 #include <glib.h>
-#include <app.hpp>
 #include <alsa/asoundlib.h>
 #include "pv_porcupine.h"
 #include "audioplayer.hpp"
@@ -54,6 +53,7 @@ private:
 
     int16_t *pcm;
     int32_t frame_length;
+    GQueue *pcmQueue;
 
     VadInst *vadInstance;
     gint vadThreshold;
