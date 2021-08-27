@@ -28,6 +28,7 @@ meson ${PARAMS} --prefix=/usr/local -Dintrospection=disabled -Dauto_features=dis
 	-Dgst-plugins-base:audioconvert=enabled \
 	-Dgst-plugins-base:audioresample=enabled \
 	-Dgst-plugins-good:autodetect=enabled \
+	-Dgst-plugins-good:audioparsers=enabled \
 	-Dgst-plugins-good:wavparse=enabled \
 	-Dgst-plugins-good:mpg123=enabled \
 	-Dgst-plugins-good:soup=enabled \
