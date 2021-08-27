@@ -85,41 +85,30 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg, gpoint
     AudioPlayer *obj = (AudioPlayer *)data;
     switch (GST_MESSAGE_TYPE(msg)) {
         case GST_MESSAGE_STREAM_STATUS:
-            PROF_PRINT("Stream status changed\n");
+            // PROF_PRINT("Stream status changed\n");
+            
+            // Dig into the status message... we want to know when the audio
+            // stream starts, 'cause that's what we consider the when we deliver
+            // to the user -- it ends both the TTS window and entire run of
+            // processing tracking.
             GstStreamStatusType type;
             GstElement *owner;
             gst_message_parse_stream_status(msg, &type, &owner);
-            switch (type) {
-                case GST_STREAM_STATUS_TYPE_CREATE:
-                    PROF_PRINT("GST_STREAM_STATUS_TYPE_CREATE\n");
-                    break;
-                case GST_STREAM_STATUS_TYPE_ENTER:
-                    obj->app->track_processing_event(PROCESSING_END_TTS);
-                    PROF_PRINT("GST_STREAM_STATUS_TYPE_ENTER\n");
-                    break;
-                case GST_STREAM_STATUS_TYPE_LEAVE:
-                    PROF_PRINT("GST_STREAM_STATUS_TYPE_LEAVE\n");
-                    break;
-                case GST_STREAM_STATUS_TYPE_DESTROY:
-                    PROF_PRINT("GST_STREAM_STATUS_TYPE_DESTROY\n");
-                    break;
-                case GST_STREAM_STATUS_TYPE_START:
-                    PROF_PRINT("GST_STREAM_STATUS_TYPE_START\n");
-                    break;
-                case GST_STREAM_STATUS_TYPE_PAUSE:
-                    PROF_PRINT("GST_STREAM_STATUS_TYPE_PAUSE\n");
-                    break;
-                case GST_STREAM_STATUS_TYPE_STOP:
-                    PROF_PRINT("GST_STREAM_STATUS_TYPE_STOP\n");
-                    break;
-                default:
-                    PROF_PRINT("ERROR -- unknown stream status type!\n");
-                    break;
+            
+            // By printing all status events and timing when the audio starts
+            // it seems like we want the "enter" type event.
+            // 
+            // There are actually _two_ of them fired, and we want the second --
+            // which is convinient for us, because we can track the event _both_
+            // times, with the second time over-writing the first, which results
+            // in the desired state.
+            if (type == GST_STREAM_STATUS_TYPE_ENTER) {
+                obj->app->track_processing_event(PROCESSING_END_TTS);
             }
             break;
         case GST_MESSAGE_EOS:
             g_debug("End of stream\n");
-            PROF_TIME_DIFF("End of stream", obj->playingTask->tStart);
+            // PROF_TIME_DIFF("End of stream", obj->playingTask->tStart);
             obj->app->track_processing_event(PROCESSING_FINISH);
             gst_element_set_state(obj->playingTask->pipeline, GST_STATE_NULL);
             gst_object_unref(GST_OBJECT(obj->playingTask->pipeline));

@@ -154,7 +154,7 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint type, GByte
                 // PROF_PRINT("Start speak text: %s\n", text);
                 if (obj->tInit) {
                     obj->app->track_processing_event(PROCESSING_END_GENIE);
-                    PROF_TIME_DIFF("command response", obj->tStart);
+                    // PROF_TIME_DIFF("command response", obj->tStart);
                     obj->tInit = false;
                 }
 
