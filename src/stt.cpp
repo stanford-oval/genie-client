@@ -51,8 +51,14 @@ int genie::STT::init()
 
 void genie::STT::on_message(SoupWebsocketConnection *conn, gint type, GBytes *message, gpointer data)
 {
+    STT *obj = reinterpret_cast<STT *>(data);
+    obj->app->track_processing_event(PROCESSING_END_STT);
+    PROF_TIME_DIFF(
+        "STT response received (last frame -> on_message)",
+        obj->tLastFrame
+    );
+    
     if (type == SOUP_WEBSOCKET_DATA_TEXT) {
-        STT *obj = reinterpret_cast<STT *>(data);
         gsize sz;
         const gchar *ptr;
 
@@ -124,13 +130,26 @@ void genie::STT::on_close(SoupWebsocketConnection *conn, gpointer data)
     STT *obj = reinterpret_cast<STT *>(data);
 
     gushort code = soup_websocket_connection_get_close_code(conn);
-    g_print("WebSocket connection closed: %d\n", code);
+    g_print("STT WebSocket connection closed: %d\n", code);
+    PROF_TIME_DIFF(
+        "STT total (connect -> on_close)",
+        obj->tConnect
+    );
+    PROF_TIME_DIFF(
+        "STT since last frame (last frame -> on_close)",
+        obj->tLastFrame
+    );
     obj->acceptStream = false;
 }
 
 void genie::STT::on_connection(SoupSession *session, GAsyncResult *res, gpointer data)
 {
     STT *obj = reinterpret_cast<STT *>(data);
+    
+    PROF_TIME_DIFF(
+        "STT connect time (connect -> on_connection)",
+        obj->tConnect
+    );
 
     SoupWebsocketConnection *conn;
     GError *error = NULL;
@@ -159,6 +178,9 @@ void genie::STT::setConnection(SoupWebsocketConnection *conn)
 
 int genie::STT::connect()
 {
+    gettimeofday(&tConnect, NULL);
+    g_print("SST connecting...\n");
+    
     SoupSession *session;
     SoupMessage *msg;
 
@@ -195,10 +217,17 @@ void genie::STT::sendFrame(int16_t *data, gsize length)
 
         if (firstFrame) {
             firstFrame = false;
-            gettimeofday(&tStart, NULL);
+            gettimeofday(&tFirstFrame, NULL);
         }
-
-        dispatch_queue(length == 0);
+        
+        gboolean isLastFrame = (length == 0);
+        
+        if (isLastFrame) {
+            gettimeofday(&tLastFrame, NULL);
+            app->track_processing_event(PROCESSING_START_STT);
+        }
+        
+        dispatch_queue(isLastFrame);
     }
 }
 
@@ -218,7 +247,7 @@ void genie::STT::dispatch_queue(gboolean last)
                 dispatch_frame(t);
             }
 
-            PROF_TIME_DIFF("STT xfer", tStart);
+            PROF_TIME_DIFF("STT xfer (first frame -> last frame)", tFirstFrame);
         } else {
             AudioFrame *t = (AudioFrame *)g_queue_pop_head(queue);
             dispatch_frame(t);

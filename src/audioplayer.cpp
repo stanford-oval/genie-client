@@ -50,11 +50,11 @@ gboolean genie::AudioPlayer::bus_call(GstBus *bus, GstMessage *msg, gpointer dat
     switch (GST_MESSAGE_TYPE(msg)) {
         case GST_MESSAGE_STREAM_STATUS:
             g_debug("Stream status changed\n");
-            PROF_PRINT("Stream status changed\n");
+            // PROF_PRINT("Stream status changed\n");
             break;
         case GST_MESSAGE_EOS:
             g_debug("End of stream\n");
-            PROF_PRINT("End of stream\n");
+            // PROF_PRINT("End of stream\n");
             gst_element_set_state(obj->pipeline, GST_STATE_NULL);
             gst_object_unref(GST_OBJECT(obj->pipeline));
             g_source_remove(obj->bus_watch_id);
@@ -85,13 +85,42 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg, gpoint
     AudioPlayer *obj = (AudioPlayer *)data;
     switch (GST_MESSAGE_TYPE(msg)) {
         case GST_MESSAGE_STREAM_STATUS:
-            g_debug("Stream status changed\n");
             PROF_PRINT("Stream status changed\n");
+            GstStreamStatusType type;
+            GstElement *owner;
+            gst_message_parse_stream_status(msg, &type, &owner);
+            switch (type) {
+                case GST_STREAM_STATUS_TYPE_CREATE:
+                    PROF_PRINT("GST_STREAM_STATUS_TYPE_CREATE\n");
+                    break;
+                case GST_STREAM_STATUS_TYPE_ENTER:
+                    obj->app->track_processing_event(PROCESSING_END_TTS);
+                    PROF_PRINT("GST_STREAM_STATUS_TYPE_ENTER\n");
+                    break;
+                case GST_STREAM_STATUS_TYPE_LEAVE:
+                    PROF_PRINT("GST_STREAM_STATUS_TYPE_LEAVE\n");
+                    break;
+                case GST_STREAM_STATUS_TYPE_DESTROY:
+                    PROF_PRINT("GST_STREAM_STATUS_TYPE_DESTROY\n");
+                    break;
+                case GST_STREAM_STATUS_TYPE_START:
+                    PROF_PRINT("GST_STREAM_STATUS_TYPE_START\n");
+                    break;
+                case GST_STREAM_STATUS_TYPE_PAUSE:
+                    PROF_PRINT("GST_STREAM_STATUS_TYPE_PAUSE\n");
+                    break;
+                case GST_STREAM_STATUS_TYPE_STOP:
+                    PROF_PRINT("GST_STREAM_STATUS_TYPE_STOP\n");
+                    break;
+                default:
+                    PROF_PRINT("ERROR -- unknown stream status type!\n");
+                    break;
+            }
             break;
         case GST_MESSAGE_EOS:
             g_debug("End of stream\n");
-            PROF_PRINT("End of stream\n");
-            PROF_TIME_DIFF("Pipeline", obj->playingTask->tStart);
+            PROF_TIME_DIFF("End of stream", obj->playingTask->tStart);
+            obj->app->track_processing_event(PROCESSING_FINISH);
             gst_element_set_state(obj->playingTask->pipeline, GST_STATE_NULL);
             gst_object_unref(GST_OBJECT(obj->playingTask->pipeline));
             g_source_remove(obj->playingTask->bus_watch_id);
@@ -248,7 +277,9 @@ gboolean genie::AudioPlayer::say(gchar *text)
 {
     if (!text || strlen(text) < 1)
         return false;
-
+    
+    app->track_processing_event(PROCESSING_START_TTS);
+    
     GstElement *source, *demuxer, *decoder, *conv, *sink;
     GstBus *bus;
 
@@ -290,43 +321,68 @@ gboolean genie::AudioPlayer::say(gchar *text)
 
 gboolean genie::AudioPlayer::playLocation(gchar *location)
 {
-    if (!location || strlen(location) < 1)
+    g_print("Playing location...\n");
+    if (!location || strlen(location) < 1) {
+        g_print("Invalid location, returning false");
         return false;
+    }
+    
+    g_print("Location: %s\n", location);
 
-    GstElement *source, *demuxer, *decoder, *parser, *conv, *sampler, *sink;
+    GstElement *source, *demuxer, *decoder, *parser, *converter, *sampler, *sink;
     GstBus *bus;
-
+    
+    g_print("Creating pipeline...\n");
     pipeline = gst_pipeline_new("audio-player");
     if (!pipeline) {
         g_printerr("Gst element could not be created pipeline\n");
         return -1;
     }
-
+    
+    g_print("Creating Soup HTTP Source...\n");
     source = gst_element_factory_make("souphttpsrc", "http-source");
     if (!source) {
         g_printerr("Gst element could not be created source\n");
         return -1;
     }
-
+    
+    g_print("Setting source location...\n");
     g_object_set(G_OBJECT(source), "location", location, NULL);
+    g_print("Setting source method to GET...\n");
     g_object_set(G_OBJECT(source), "method", "GET", NULL);
-    if (app->m_config->audioOutputDevice) {
-        g_object_set(G_OBJECT(sink), "device", app->m_config->audioOutputDevice, NULL);
-    }
-
+    
+    g_print("Getting pipeline bus...\n");
     bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline));
+    g_print("Adding watch to bus...\n");
     bus_watch_id = gst_bus_add_watch(bus, genie::AudioPlayer::bus_call_queue, this);
+    g_print("Un-ref'ing bus...\n");
     gst_object_unref(bus);
-
+    
+    g_print("Making sink...\n");
     sink = gst_element_factory_make(app->m_config->audioSink, "audio-output");
     if (!sink) {
         g_printerr("Gst element could not be created sink\n");
         return -1;
     }
-
+    
+    g_print("Checking audio output device...\n");
+    if (app->m_config->audioOutputDevice) {
+        g_print("Device exists, setting on source...\n");
+        g_object_set(G_OBJECT(sink), "device", app->m_config->audioOutputDevice, NULL);
+    } else {
+        g_print("NULL device.\n");
+    }
+    
     const char *dot = strrchr(location, '.');
+    
+    if (dot) {
+        g_print("Found '.' in location.\n");
+    } else {
+        g_printerr("FAILED to find '.' in location!\n");
+    }
 
     if (!dot || !memcmp(dot, ".wav", 4)) {
+        g_print("It's a WAV!\n");
         decoder = gst_element_factory_make("wavparse", "wav-parser");
         if (!decoder) {
             g_printerr("Gst element could not be created\n");
@@ -335,13 +391,39 @@ gboolean genie::AudioPlayer::playLocation(gchar *location)
         gst_bin_add_many(GST_BIN(pipeline), source, decoder, sink, NULL);
         gst_element_link_many(source, decoder, sink, NULL);
     } else if (!memcmp(dot, ".mp3", 4)) {
+        g_print("It's an MP3!\n");
         parser = gst_element_factory_make("mpegaudioparse", "parser");
+        if (!parser) { g_printerr("No parser!!!\n"); return -1; }
+        
         decoder = gst_element_factory_make("mpg123audiodec", "decoder");
-        conv = gst_element_factory_make("audioconvert", "converter");
+        if (!decoder) { g_printerr("No decoder!!!\n"); return -1; }
+        
+        converter = gst_element_factory_make("audioconvert", "converter");
+        if (!converter) { g_printerr("No converter!!!\n"); return -1; }
+        
         sampler = gst_element_factory_make("audioresample", "resampler");
+        if (!sampler) { g_printerr("No sampler!!!\n"); return -1; }
 
-        gst_bin_add_many(GST_BIN(pipeline), source, parser, decoder, conv, sampler, sink, NULL);
-        gst_element_link_many(source, parser, decoder, conv, sampler, sink, NULL);
+        gst_bin_add_many(
+            GST_BIN(pipeline),
+            source,
+            parser,
+            decoder,
+            converter,
+            sampler,
+            sink,
+            NULL
+        );
+        
+        gst_element_link_many(
+            source,
+            parser,
+            decoder,
+            converter,
+            sampler,
+            sink,
+            NULL
+        );
     }
 
     add_queue(pipeline, bus_watch_id, location);

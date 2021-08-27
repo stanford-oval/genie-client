@@ -59,8 +59,10 @@ private:
     SoupWebsocketConnection *wconn;
     gboolean acceptStream;
     GQueue *queue;
-
-    struct timeval tStart;
+    
+    struct timeval tConnect;
+    struct timeval tFirstFrame;
+    struct timeval tLastFrame;
     gboolean firstFrame;
 };
 

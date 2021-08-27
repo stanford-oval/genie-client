@@ -35,8 +35,14 @@ double time_diff(struct timeval x, struct timeval y)
 	return (((double)y.tv_sec*1000000 + (double)y.tv_usec) - ((double)x.tv_sec*1000000 + (double)x.tv_usec));
 }
 
+int time_diff_ms(struct timeval x, struct timeval y)
+{
+	return (int)(time_diff(x, y) / 1000);
+}
+
 genie::App::App()
 {
+    isProcessing = FALSE;
 }
 
 genie::App::~App()
@@ -89,4 +95,98 @@ gboolean genie::App::sig_handler(gpointer data)
     GMainLoop *loop = reinterpret_cast<GMainLoop *>(data);
     g_main_loop_quit(loop);
     return G_SOURCE_REMOVE;
+}
+
+void genie::App::print_processing_entry(
+    const char *name,
+    int duration_ms,
+    int total_ms
+) {
+    g_print(
+        "%12s: %5d ms (%3d%%)\n",
+        name,
+        duration_ms,
+        (int)(((float)duration_ms / (float)total_ms) * 100)
+    );
+}
+
+/**
+ * @brief Track an event that is part of a turn's remote processing.
+ * 
+ * We want to keep a close eye the performance of our 
+ * 
+ * @param eventType 
+ */
+void genie::App::track_processing_event(ProcesingEvent_t eventType) {
+    // Unless we are starting a turn or already in a turn just bail out. This
+    // avoids tracking the "Hi..." and any other messages at connect.
+    if (!(eventType == PROCESSING_BEGIN || isProcessing)) {
+        return;
+    }
+    
+    switch (eventType)
+    {
+        case PROCESSING_BEGIN:
+            gettimeofday(&tStartProcessing, NULL);
+            isProcessing = TRUE;
+            break;
+        case PROCESSING_START_STT:
+            gettimeofday(&tStartSTT, NULL);
+            break;
+        case PROCESSING_END_STT:
+            gettimeofday(&tEndSTT, NULL);
+            break;
+        case PROCESSING_START_GENIE:
+            gettimeofday(&tStartGenie, NULL);
+            break;
+        case PROCESSING_END_GENIE:
+            gettimeofday(&tEndGenie, NULL);
+            break;
+        case PROCESSING_START_TTS:
+            gettimeofday(&tStartTTS, NULL);
+            break;
+        case PROCESSING_END_TTS:
+            gettimeofday(&tEndTTS, NULL);
+            break;
+        case PROCESSING_FINISH:
+            int total_ms = time_diff_ms(tStartProcessing, tEndTTS);
+            
+            g_print("############# Processing Performance #################\n");
+            print_processing_entry(
+                "Pre-STT",
+                time_diff_ms(tStartProcessing, tStartSTT),
+                total_ms
+            );
+            print_processing_entry(
+                "STT",
+                time_diff_ms(tStartSTT, tEndSTT),
+                total_ms
+            );
+            print_processing_entry(
+                "STT->Genie",
+                time_diff_ms(tEndSTT, tStartGenie),
+                total_ms
+            );
+            print_processing_entry(
+                "Genie",
+                time_diff_ms(tStartGenie, tEndGenie),
+                total_ms
+            );
+            print_processing_entry(
+                "Genie->TTS",
+                time_diff_ms(tEndGenie, tStartTTS),
+                total_ms
+            );
+            print_processing_entry(
+                "TTS",
+                time_diff_ms(tStartTTS, tEndTTS),
+                total_ms
+            );
+            g_print("------------------------------------------------------\n");
+            print_processing_entry("Total", total_ms, total_ms);
+            g_print("######################################################\n");
+            
+            isProcessing = FALSE;
+            break;
+    }
 }

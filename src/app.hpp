@@ -25,24 +25,25 @@
 #include "config.h"
 
 #include <sys/time.h>
-#define PROF_PRINT(fmt, ...) \
+#define PROF_PRINT(...) \
     do { \
         struct tm tm; \
         struct timeval t; \
         gettimeofday(&t, NULL); \
         localtime_r(&t.tv_sec, &tm); \
         fprintf(stderr,"[%.2d:%.2d:%.2d.%.6ld] %s (%s:%d): ", tm.tm_hour, tm.tm_min, tm.tm_sec, t.tv_usec, __func__, __FILE__, __LINE__); \
-        fprintf(stderr, fmt, ##__VA_ARGS__); \
+        fprintf(stderr, ##__VA_ARGS__); \
     } while (0)
 
 #define PROF_TIME_DIFF(str, start) \
     do { \
         struct timeval tEnd; \
         gettimeofday(&tEnd, NULL); \
-        PROF_PRINT("%s elapsed: %.0lfus\n", str, time_diff(start, tEnd)); \
+        PROF_PRINT("%s elapsed: %d ms\n", str, time_diff_ms(start, tEnd)); \
     } while(0)
 
 extern double time_diff(struct timeval x, struct timeval y);
+extern int time_diff_ms(struct timeval x, struct timeval y);
 
 namespace genie {
 
@@ -56,6 +57,17 @@ class STT;
 class TTS;
 class wsClient;
 
+enum ProcesingEvent_t {
+    PROCESSING_BEGIN = 0,
+    PROCESSING_START_STT = 1,
+    PROCESSING_END_STT = 2,
+    PROCESSING_START_GENIE = 3,
+    PROCESSING_END_GENIE = 4,
+    PROCESSING_START_TTS = 5,
+    PROCESSING_END_TTS = 6,
+    PROCESSING_FINISH = 7,
+};
+
 class App
 {
 public:
@@ -63,8 +75,9 @@ public:
     ~App();
     int exec();
 
-public:
     static gboolean sig_handler(gpointer data);
+    
+    void track_processing_event(ProcesingEvent_t eventType);
 
     GMainLoop *main_loop;
     std::unique_ptr<Config> m_config;
@@ -76,6 +89,22 @@ public:
     std::unique_ptr<STT> m_stt;
     std::unique_ptr<TTS> m_tts;
     std::unique_ptr<wsClient> m_wsClient;
+    
+private:
+    gboolean isProcessing;
+    struct timeval tStartProcessing;
+    struct timeval tStartSTT;
+    struct timeval tEndSTT;
+    struct timeval tStartGenie;
+    struct timeval tEndGenie;
+    struct timeval tStartTTS;
+    struct timeval tEndTTS;
+    
+    void print_processing_entry(
+        const char *name,
+        int duration_ms,
+        int total_ms
+    );
 };
 
 }

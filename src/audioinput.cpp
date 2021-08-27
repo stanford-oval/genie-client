@@ -192,7 +192,7 @@ int genie::AudioInput::init()
         g_error("unable to set vad mode to %d", vadMode);
         return -2;
     }
-    vadThreshold = 48;
+    vadThreshold = 24;
 
     if (WebRtcVad_ValidRateAndFrameLength(sample_rate, frame_length)) {
         g_debug("invalid rate %d or framelength %d", sample_rate, frame_length);
@@ -268,8 +268,11 @@ void *genie::AudioInput::loop(gpointer data)
             }
             if (vadCounter >= obj->vadThreshold) {
                 state = 0;
+                obj->app->track_processing_event(PROCESSING_BEGIN);
                 obj->app->m_stt->sendFrame(0, 0);
-                PROF_PRINT("STT last frame\n");
+                obj->app->m_audioPlayer->stop();
+                obj->app->m_audioPlayer->playSound(SOUND_MATCH);
+                // PROF_PRINT("STT last frame\n");
                 vadCounter = 0;
                 frame_length = obj->frame_length;
             }

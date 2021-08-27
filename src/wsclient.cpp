@@ -28,6 +28,7 @@
 
 void genie::wsClient::sendCommand(gchar *data)
 {
+    
     if (!wconn || soup_websocket_connection_get_state(wconn) != SOUP_WEBSOCKET_STATE_OPEN) {
         g_print("WS connection not open\n");
         return;
@@ -56,6 +57,7 @@ void genie::wsClient::sendCommand(gchar *data)
 
     PROF_PRINT("WS sendCommand: %s\n", str);
     gettimeofday(&tStart, NULL);
+    app->track_processing_event(PROCESSING_START_GENIE);
     tInit = true;
 
     g_debug("WS sendCommand: %s\n", str);
@@ -148,10 +150,10 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint type, GByte
                 json_reader_read_member(reader, "text");
                 const gchar *text = json_reader_get_string_value(reader);
                 json_reader_end_member(reader);
-                g_print("Start speak text: %s\n", text);
 
-                PROF_PRINT("Start speak text: %s\n", text);
+                // PROF_PRINT("Start speak text: %s\n", text);
                 if (obj->tInit) {
+                    obj->app->track_processing_event(PROCESSING_END_GENIE);
                     PROF_TIME_DIFF("command response", obj->tStart);
                     obj->tInit = false;
                 }
@@ -222,7 +224,7 @@ void genie::wsClient::on_close(SoupWebsocketConnection *conn, gpointer data)
     const char *close_data = soup_websocket_connection_get_close_data(conn);
 
     gushort code = soup_websocket_connection_get_close_code(conn);
-    g_print("WebSocket connection closed: %d %s\n", code, close_data);
+    g_print("Genie WebSocket connection closed: %d %s\n", code, close_data);
 }
 
 void genie::wsClient::on_connection(SoupSession *session, GAsyncResult *res, gpointer data)

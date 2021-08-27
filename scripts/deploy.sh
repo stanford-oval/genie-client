@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 : ${LIGHT:=0}
 
@@ -15,7 +15,9 @@ if test "$IP_ADDRESS" = "adb" ; then
     adb push build/src/genie /opt/genie/genie
 else
     if [ ${LIGHT} -eq 0 ]; then
-        ssh root@$IP_ADDRESS "rm -fr /opt/genie/lib ; mkdir -p /opt/genie"
+        ssh root@$IP_ADDRESS "rm -fr /opt/genie"
+        sleep 1
+        ssh root@$IP_ADDRESS "mkdir -p /opt/genie"
         scp -r build/lib root@$IP_ADDRESS:/opt/genie/
         scp -r build/assets root@$IP_ADDRESS:/opt/genie/
         scp scripts/launch.sh root@$IP_ADDRESS:/opt/duer/dcslaunch.sh

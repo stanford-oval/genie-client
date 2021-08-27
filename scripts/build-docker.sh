@@ -29,7 +29,13 @@ set -x
 
 # docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
-docker build --build-arg ARCH=${ARCH}/ --build-arg STATIC=${STATIC} -t genie-builder:${ARCH} -f scripts/Dockerfile .
+docker build \
+	--progress plain \
+	--build-arg ARCH=${ARCH}/ \
+	--build-arg STATIC=${STATIC} \
+	-t genie-builder:${ARCH} \
+	-f scripts/Dockerfile \
+	.
 
 if [ ${SH} -eq 1 ]; then
 	docker run --rm -it -v $(pwd):/out --security-opt label=disable genie-builder:${ARCH} /bin/bash
