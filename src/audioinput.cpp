@@ -192,7 +192,7 @@ int genie::AudioInput::init()
         g_error("unable to set vad mode to %d", vadMode);
         return -2;
     }
-    vadThreshold = 24;
+    vadThreshold = 32;
 
     if (WebRtcVad_ValidRateAndFrameLength(sample_rate, frame_length)) {
         g_debug("invalid rate %d or framelength %d", sample_rate, frame_length);
