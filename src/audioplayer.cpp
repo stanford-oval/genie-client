@@ -427,10 +427,10 @@ void genie::AudioPlayer::dispatch_queue()
         AudioTask *t = (AudioTask *)g_queue_pop_head(playerQueue);
         playingTask = t;
 
-        PROF_PRINT("gst pipeline started\n");
+        // PROF_PRINT("gst pipeline started\n");
         gettimeofday(&playingTask->tStart, NULL);
 
-        g_debug("Now playing: %s\n", playingTask->data);
+        PROF_PRINT("Now playing: %s\n", playingTask->data);
         gst_element_set_state(playingTask->pipeline, GST_STATE_PLAYING);
         playing = true;
     }
