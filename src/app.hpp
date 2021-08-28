@@ -39,11 +39,11 @@
     do { \
         struct timeval tEnd; \
         gettimeofday(&tEnd, NULL); \
-        PROF_PRINT("%s elapsed: %d ms\n", str, time_diff_ms(start, tEnd)); \
+        PROF_PRINT("%s elapsed: %0.3lf ms\n", str, time_diff_ms(start, tEnd)); \
     } while(0)
 
 extern double time_diff(struct timeval x, struct timeval y);
-extern int time_diff_ms(struct timeval x, struct timeval y);
+extern double time_diff_ms(struct timeval x, struct timeval y);
 
 namespace genie {
 
@@ -102,8 +102,8 @@ private:
     
     void print_processing_entry(
         const char *name,
-        int duration_ms,
-        int total_ms
+        double duration_ms,
+        double total_ms
     );
 };
 

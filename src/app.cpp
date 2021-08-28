@@ -35,9 +35,9 @@ double time_diff(struct timeval x, struct timeval y)
 	return (((double)y.tv_sec*1000000 + (double)y.tv_usec) - ((double)x.tv_sec*1000000 + (double)x.tv_usec));
 }
 
-int time_diff_ms(struct timeval x, struct timeval y)
+double time_diff_ms(struct timeval x, struct timeval y)
 {
-	return (int)(time_diff(x, y) / 1000);
+	return time_diff(x, y) / 1000;
 }
 
 genie::App::App()
@@ -99,14 +99,14 @@ gboolean genie::App::sig_handler(gpointer data)
 
 void genie::App::print_processing_entry(
     const char *name,
-    int duration_ms,
-    int total_ms
+    double duration_ms,
+    double total_ms
 ) {
     g_print(
-        "%12s: %5d ms (%3d%%)\n",
+        "%12s: %5.3lf ms (%3d%%)\n",
         name,
         duration_ms,
-        (int)(((float)duration_ms / (float)total_ms) * 100)
+        (int)((duration_ms / total_ms) * 100)
     );
 }
 
