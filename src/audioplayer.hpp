@@ -21,7 +21,9 @@
 
 #include <string>
 #include <gst/gst.h>
+
 #include "app.hpp"
+#include "autoptrs.hpp"
 
 namespace genie
 {
@@ -35,7 +37,7 @@ enum Sound_t {
 typedef struct {
     GstElement *pipeline;
     guint bus_watch_id;
-    gchar *data;
+    const gchar *data;
 
     struct timeval tStart;
 } AudioTask;
@@ -46,17 +48,16 @@ public:
     AudioPlayer(App *appInstance);
     ~AudioPlayer();
     gboolean playSound(enum Sound_t id, gboolean queue = false);
-    gboolean playWavFile(gchar *location);
-    gboolean playOggFile(gchar *location, gboolean queue);
-    gboolean playLocation(gchar *location);
-    gboolean say(gchar *text);
+    gboolean playURI(const gchar *uri, gboolean queue);
+    gboolean playLocation(const gchar *location, gboolean queue);
+    gboolean say(const gchar *text);
     gboolean clean_queue();
     gboolean stop();
     gboolean resume();
 
 private:
     void dispatch_queue();
-    gboolean add_queue(GstElement *p, guint bus_id, gchar *data);
+    gboolean add_queue(GstElement *p, guint bus_id, const gchar *data);
     static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data);
     static gboolean bus_call_queue(GstBus *bus, GstMessage *msg, gpointer data);
     static void on_pad_added(GstElement *element, GstPad *pad, gpointer data);
@@ -65,7 +66,7 @@ private:
     AudioTask *playingTask;
     App *app;
 
-    GstElement *pipeline;
+    auto_gst_ptr<GstElement> pipeline;
     guint bus_watch_id;
 };
 

@@ -55,7 +55,7 @@ void genie::TTS::on_stream_splice(GObject *source, GAsyncResult *result, gpointe
 
     g_object_unref(obj->session);
 
-    obj->app->m_audioPlayer->playWavFile(obj->tmpFile);
+    obj->app->m_audioPlayer->playLocation(obj->tmpFile, true);
 
     g_unlink(obj->tmpFile);
 }

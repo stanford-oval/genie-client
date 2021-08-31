@@ -18,4 +18,4 @@ cp ../../../scripts/webrtcvad/webrtcvad.pc.in .
 meson --prefix=/usr/local build
 
 ninja -C build
-ninja -C build install
+sudo ninja -C build install

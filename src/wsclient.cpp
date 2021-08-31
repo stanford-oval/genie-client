@@ -208,7 +208,7 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint type, GByte
                 const gchar *text = json_reader_get_string_value(reader);
                 json_reader_end_member(reader);
                 g_print("Start play location: %s\n", text);
-                obj->app->m_audioPlayer->playLocation((gchar *)text);
+                obj->app->m_audioPlayer->playURI((gchar *)text, true);
             } else if (!memcmp(type, "error", 4)) {
                 json_reader_read_member(reader, "error");
                 const gchar *text = json_reader_get_string_value(reader);
