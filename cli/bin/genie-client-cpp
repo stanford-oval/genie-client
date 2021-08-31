@@ -1,0 +1,5 @@
+#!/Users/nrser/.pyenv/versions/3.9.1/envs/experf-stats/bin/python
+# PYTHON_ARGCOMPLETE_OK
+
+from genie_client_cpp import run # pylint: disable=import-self
+run()

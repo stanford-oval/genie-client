@@ -152,7 +152,7 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint type, GByte
         const gchar *ptr;
 
         ptr = (const gchar *)g_bytes_get_data(message, &sz);
-        g_debug("WS Received data: %s\n", ptr);
+        g_print("WS Received data: %s\n", ptr);
 
         JsonParser *parser = json_parser_new();
         json_parser_load_from_data(parser, ptr, -1, NULL);
