@@ -3,3 +3,4 @@ assets/*
 !assets/.gitkeep
 !assets/news-intro.oga
 build/
+/tmp/
