@@ -110,10 +110,7 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg, gpoint
             g_debug("End of stream\n");
             // PROF_TIME_DIFF("End of stream", obj->playingTask->tStart);
             obj->app->track_processing_event(PROCESSING_FINISH);
-            gst_element_set_state(obj->playingTask->pipeline, GST_STATE_NULL);
-            gst_object_unref(GST_OBJECT(obj->playingTask->pipeline));
-            g_source_remove(obj->playingTask->bus_watch_id);
-            g_free(obj->playingTask);
+            delete obj->playingTask;
             obj->playingTask = NULL;
             obj->playing = false;
             obj->dispatch_queue();
@@ -127,10 +124,7 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg, gpoint
             g_printerr("Error: %s\n", error->message);
             g_error_free(error);
 
-            gst_element_set_state(obj->playingTask->pipeline, GST_STATE_NULL);
-            gst_object_unref(GST_OBJECT(obj->playingTask->pipeline));
-            g_source_remove(obj->playingTask->bus_watch_id);
-            g_free(obj->playingTask);
+            delete obj->playingTask;
             obj->playingTask = NULL;
             obj->playing = false;
             obj->dispatch_queue();
@@ -204,8 +198,13 @@ gboolean genie::AudioPlayer::playURI(const gchar *uri, gboolean queue = false)
     bus_watch_id = gst_bus_add_watch(bus, genie::AudioPlayer::bus_call, this);
     gst_object_unref(bus);
 
-    g_print("Now playing: %s\n", uri);
-    gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
+    if (queue) {
+        add_queue(pipeline.get(), bus_watch_id, uri);
+        dispatch_queue();
+    } else {
+        g_print("Now playing: %s\n", uri);
+        gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
+    }
 
     return true;
 }
@@ -266,17 +265,14 @@ void genie::AudioPlayer::dispatch_queue()
         gettimeofday(&playingTask->tStart, NULL);
 
         PROF_PRINT("Now playing: %s\n", playingTask->data);
-        gst_element_set_state(playingTask->pipeline, GST_STATE_PLAYING);
+        gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PLAYING);
         playing = true;
     }
 }
 
 gboolean genie::AudioPlayer::add_queue(GstElement *p, guint bus_id, const gchar *data)
 {
-    AudioTask *t = g_new(AudioTask, 1);
-    t->pipeline = p;
-    t->bus_watch_id = bus_id;
-    t->data = data;
+    AudioTask *t = new AudioTask(p, bus_id, data);
     g_queue_push_tail(playerQueue, t);
     return true;
 }
@@ -284,17 +280,13 @@ gboolean genie::AudioPlayer::add_queue(GstElement *p, guint bus_id, const gchar 
 gboolean genie::AudioPlayer::clean_queue()
 {
     if (playing) {
-        gst_element_set_state(playingTask->pipeline, GST_STATE_NULL);
-        gst_object_unref(GST_OBJECT(playingTask->pipeline));
-        g_source_remove(playingTask->bus_watch_id);
+        delete playingTask;
+        playingTask = nullptr;
         playing = false;
     }
     while (!g_queue_is_empty(playerQueue)) {
         AudioTask *t = (AudioTask *)g_queue_pop_head(playerQueue);
-        gst_element_set_state(t->pipeline, GST_STATE_NULL);
-        gst_object_unref(GST_OBJECT(t->pipeline));
-        g_source_remove(t->bus_watch_id);
-        g_free(t);
+        delete t;
     }
     return true;
 }
@@ -304,7 +296,7 @@ gboolean genie::AudioPlayer::stop()
     if (!playing) return true;
     if (playingTask && playingTask->pipeline) {
         g_print("Stop playing current pipeline\n");
-        gst_element_set_state(playingTask->pipeline, GST_STATE_PAUSED);
+        gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PAUSED);
         playing = false;
     }
     return true;
@@ -315,7 +307,7 @@ gboolean genie::AudioPlayer::resume()
     if (playing) return true;
     if (playingTask && playingTask->pipeline) {
         g_print("Resume current pipeline\n");
-        gst_element_set_state(playingTask->pipeline, GST_STATE_PLAYING);
+        gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PLAYING);
         playing = true;
     }
     return true;

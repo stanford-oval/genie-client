@@ -34,13 +34,23 @@ enum Sound_t {
     SOUND_NEWS_INTRO = 1,
 };
 
-typedef struct {
-    GstElement *pipeline;
+struct AudioTask {
+    auto_gst_ptr<GstElement> pipeline;
     guint bus_watch_id;
-    const gchar *data;
+    gchar* data;
 
     struct timeval tStart;
-} AudioTask;
+
+    AudioTask(const auto_gst_ptr<GstElement>& _pipeline, guint _bus_watch_id, const gchar* _data) :
+        pipeline(_pipeline), bus_watch_id(_bus_watch_id), data(g_strdup(_data)) {}
+
+    ~AudioTask() {
+        gst_element_set_state(pipeline.get(), GST_STATE_NULL);
+        if (bus_watch_id)
+            g_source_remove(bus_watch_id);
+        g_free(data);
+    }
+};
 
 class AudioPlayer
 {
