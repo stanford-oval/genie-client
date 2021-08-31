@@ -57,9 +57,9 @@ class AudioPlayer
 public:
     AudioPlayer(App *appInstance);
     ~AudioPlayer();
-    gboolean playSound(enum Sound_t id, gboolean queue = false);
-    gboolean playURI(const gchar *uri, gboolean queue);
-    gboolean playLocation(const gchar *location, gboolean queue);
+    gboolean playSound(enum Sound_t id);
+    gboolean playURI(const gchar *uri);
+    gboolean playLocation(const gchar *location);
     gboolean say(const gchar *text);
     gboolean clean_queue();
     gboolean stop();
@@ -67,8 +67,7 @@ public:
 
 private:
     void dispatch_queue();
-    gboolean add_queue(GstElement *p, guint bus_id, const gchar *data);
-    static gboolean bus_call(GstBus *bus, GstMessage *msg, gpointer data);
+    gboolean add_queue(GstElement *p, const gchar *data);
     static gboolean bus_call_queue(GstBus *bus, GstMessage *msg, gpointer data);
     static void on_pad_added(GstElement *element, GstPad *pad, gpointer data);
     gboolean playing;

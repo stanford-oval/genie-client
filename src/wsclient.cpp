@@ -28,7 +28,7 @@
 
 void genie::wsClient::sendCommand(gchar *data)
 {
-    
+
     if (!wconn || soup_websocket_connection_get_state(wconn) != SOUP_WEBSOCKET_STATE_OPEN) {
         g_print("WS connection not open\n");
         return;
@@ -73,7 +73,7 @@ void genie::wsClient::sendCommand(gchar *data)
 
 void genie::wsClient::sendPong(void)
 {
-    
+
     if (!wconn || soup_websocket_connection_get_state(wconn) != SOUP_WEBSOCKET_STATE_OPEN) {
         g_print("WS connection not open\n");
         return;
@@ -185,7 +185,7 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint type, GByte
                 const gchar *text = json_reader_get_string_value(reader);
                 json_reader_end_member(reader);
 
-                // PROF_PRINT("Start speak text: %s\n", text);
+                // PROF_PRINT("Queue speak text: %s\n", text);
                 if (obj->tInit) {
                     obj->app->track_processing_event(PROCESSING_END_GENIE);
                     // PROF_TIME_DIFF("command response", obj->tStart);
@@ -198,8 +198,8 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint type, GByte
                 const gchar *text = json_reader_get_string_value(reader);
                 json_reader_end_member(reader);
                 if (!memcmp(text, "news-intro", 10)) {
-                    g_print("Start sound: %s\n", text);
-                    obj->app->m_audioPlayer->playSound(SOUND_NEWS_INTRO, true);
+                    g_print("Queue sound: %s\n", text);
+                    obj->app->m_audioPlayer->playSound(SOUND_NEWS_INTRO);
                 } else {
                     g_print("Sound not recognized: %s\n", text);
                 }
@@ -207,8 +207,8 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint type, GByte
                 json_reader_read_member(reader, "url");
                 const gchar *text = json_reader_get_string_value(reader);
                 json_reader_end_member(reader);
-                g_print("Start play location: %s\n", text);
-                obj->app->m_audioPlayer->playURI((gchar *)text, true);
+                g_print("Queue play location: %s\n", text);
+                obj->app->m_audioPlayer->playURI((gchar *)text);
             } else if (!memcmp(type, "error", 4)) {
                 json_reader_read_member(reader, "error");
                 const gchar *text = json_reader_get_string_value(reader);

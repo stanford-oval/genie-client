@@ -45,41 +45,6 @@ genie::AudioPlayer::~AudioPlayer()
     g_queue_free(playerQueue);
 }
 
-gboolean genie::AudioPlayer::bus_call(GstBus *bus, GstMessage *msg, gpointer data)
-{
-    AudioPlayer *obj = (AudioPlayer *)data;
-    switch (GST_MESSAGE_TYPE(msg)) {
-        case GST_MESSAGE_STREAM_STATUS:
-            g_debug("Stream status changed\n");
-            // PROF_PRINT("Stream status changed\n");
-            break;
-        case GST_MESSAGE_EOS:
-            g_debug("End of stream\n");
-            gst_element_set_state(obj->pipeline.get(), GST_STATE_NULL);
-            gst_object_unref(GST_OBJECT(obj->pipeline.get()));
-            g_source_remove(obj->bus_watch_id);
-            break;
-        case GST_MESSAGE_ERROR: {
-            gchar *debug;
-            GError *error = NULL;
-            gst_message_parse_error(msg, &error, &debug);
-            g_free(debug);
-
-            g_printerr("Error: %s\n", error->message);
-            g_error_free(error);
-
-            gst_element_set_state(obj->pipeline.get(), GST_STATE_NULL);
-            gst_object_unref(GST_OBJECT(obj->pipeline.get()));
-            g_source_remove(obj->bus_watch_id);
-            break;
-        }
-        default:
-            break;
-    }
-
-    return true;
-}
-
 gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg, gpointer data)
 {
     AudioPlayer *obj = (AudioPlayer *)data;
@@ -146,19 +111,19 @@ void genie::AudioPlayer::on_pad_added(GstElement *element, GstPad *pad, gpointer
     gst_object_unref(sinkpad);
 }
 
-gboolean genie::AudioPlayer::playSound(enum Sound_t id, gboolean queue)
+gboolean genie::AudioPlayer::playSound(enum Sound_t id)
 {
     if (id == SOUND_MATCH) {
-        return playLocation((gchar *)"assets/match.oga", queue);
+        return playLocation("assets/match.oga");
     } else if (id == SOUND_NO_MATCH) {
-        return playLocation((gchar *)"assets/no-match.oga", queue);
+        return playLocation("assets/no-match.oga");
     } else if (id == SOUND_NEWS_INTRO) {
-        return playLocation((gchar *)"assets/news-intro.oga", queue);
+        return playLocation("assets/news-intro.oga");
     }
     return false;
 }
 
-gboolean genie::AudioPlayer::playLocation(const gchar *location, gboolean queue = false) {
+gboolean genie::AudioPlayer::playLocation(const gchar *location) {
     if (!location || strlen(location) < 1)
         return false;
 
@@ -169,7 +134,7 @@ gboolean genie::AudioPlayer::playLocation(const gchar *location, gboolean queue 
         path = g_build_filename(g_get_current_dir(), location, nullptr);
     gchar* uri = g_strdup_printf("file://%s", path);
 
-    gboolean ok = playURI(uri, queue);
+    gboolean ok = playURI(uri);
 
     g_free(uri);
     g_free(path);
@@ -177,7 +142,7 @@ gboolean genie::AudioPlayer::playLocation(const gchar *location, gboolean queue 
     return ok;
 }
 
-gboolean genie::AudioPlayer::playURI(const gchar *uri, gboolean queue = false)
+gboolean genie::AudioPlayer::playURI(const gchar *uri)
 {
     if (!uri || strlen(uri) < 1)
         return false;
@@ -194,18 +159,8 @@ gboolean genie::AudioPlayer::playURI(const gchar *uri, gboolean queue = false)
         "audio-sink", sink.get(),
         nullptr);
 
-    auto bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline.get()));
-    bus_watch_id = gst_bus_add_watch(bus, genie::AudioPlayer::bus_call, this);
-    gst_object_unref(bus);
-
-    if (queue) {
-        add_queue(pipeline.get(), bus_watch_id, uri);
-        dispatch_queue();
-    } else {
-        g_print("Now playing: %s\n", uri);
-        gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
-    }
-
+    add_queue(pipeline.get(), uri);
+    dispatch_queue();
     return true;
 }
 
@@ -241,15 +196,11 @@ gboolean genie::AudioPlayer::say(const gchar *text)
         g_object_set(G_OBJECT(sink), "device", app->m_config->audioOutputDevice, NULL);
     }
 
-    bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline.get()));
-    bus_watch_id = gst_bus_add_watch(bus, genie::AudioPlayer::bus_call_queue, this);
-    gst_object_unref(bus);
-
     gst_bin_add_many(GST_BIN(pipeline.get()), source, decoder, sink, NULL);
 
     gst_element_link_many(source, decoder, sink, NULL);
 
-    add_queue(pipeline.get(), bus_watch_id, text);
+    add_queue(pipeline.get(), text);
     dispatch_queue();
 
     return true;
@@ -270,9 +221,13 @@ void genie::AudioPlayer::dispatch_queue()
     }
 }
 
-gboolean genie::AudioPlayer::add_queue(GstElement *p, guint bus_id, const gchar *data)
+gboolean genie::AudioPlayer::add_queue(GstElement *p, const gchar *data)
 {
-    AudioTask *t = new AudioTask(p, bus_id, data);
+    auto *bus = gst_pipeline_get_bus(GST_PIPELINE(p));
+    auto bus_watch_id = gst_bus_add_watch(bus, genie::AudioPlayer::bus_call_queue, this);
+    gst_object_unref(bus);
+
+    AudioTask *t = new AudioTask(p, bus_watch_id, data);
     g_queue_push_tail(playerQueue, t);
     return true;
 }
