@@ -32,6 +32,7 @@ public:
     ~wsClient();
     int init();
     void sendCommand(gchar *data);
+    void sendPong(void);
     void sendThingtalk(gchar *data);
 
 protected:

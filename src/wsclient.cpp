@@ -71,6 +71,40 @@ void genie::wsClient::sendCommand(gchar *data)
     return;
 }
 
+void genie::wsClient::sendPong(void)
+{
+    
+    if (!wconn || soup_websocket_connection_get_state(wconn) != SOUP_WEBSOCKET_STATE_OPEN) {
+        g_print("WS connection not open\n");
+        return;
+    }
+
+    JsonBuilder *builder = json_builder_new();
+
+    json_builder_begin_object(builder);
+
+    json_builder_set_member_name(builder, "type");
+    json_builder_add_string_value(builder, "pong");
+
+    json_builder_end_object(builder);
+
+    JsonGenerator *gen = json_generator_new();
+    JsonNode *root = json_builder_get_root(builder);
+    json_generator_set_root(gen, root);
+    gchar *str = json_generator_to_data(gen, NULL);
+
+    PROF_PRINT("WS sendCommand: %s\n", str);
+
+    soup_websocket_connection_send_text(wconn, str);
+
+    json_node_free(root);
+    g_object_unref(gen);
+    g_object_unref(builder);
+    g_free(str);
+
+    return;
+}
+
 void genie::wsClient::sendThingtalk(gchar *data)
 {
     if (soup_websocket_connection_get_state(wconn) != SOUP_WEBSOCKET_STATE_OPEN) {
@@ -204,6 +238,9 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint type, GByte
                 g_print("WS picture\n");
             } else if (!memcmp(type, "choice", 5)) {
                 g_print("WS choice\n");
+            } else if (!memcmp(type, "ping", 4)) {
+                g_print("WS ping\n");
+                obj->sendPong();
             } else {
                 g_print("WS Unhandled message type: %s\n", type);
             }
