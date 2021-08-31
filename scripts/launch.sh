@@ -10,5 +10,7 @@ if [ -z "$(pidof ntpd)" ]; then
 	/usr/bin/start_ntp.sh &
 fi
 amixer -D hw:audiocodec cset name='LINEOUT volume' 8
+amixer -D hw:audiocodec cset name='MIC1 gain volume' 6
+amixer -D hw:audiocodec cset name='MIC2 gain volume' 6
 sleep 5
 ./genie
