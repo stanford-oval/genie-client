@@ -30,7 +30,6 @@ set -x
 # docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 
 docker build \
-	--progress plain \
 	--build-arg ARCH=${ARCH}/ \
 	--build-arg STATIC=${STATIC} \
 	-t genie-builder:${ARCH} \
