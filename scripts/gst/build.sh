@@ -33,6 +33,7 @@ meson ${PARAMS} --prefix=/usr/local -Dintrospection=disabled -Dauto_features=dis
 	-Dgst-plugins-good:mpg123=enabled \
 	-Dgst-plugins-good:soup=enabled \
 	-Dgst-plugins-good:pulse=enabled \
+	-Dgst-plugins-good:id3demux=enabled \
 	build
 
 # patch for souphttpsrc

@@ -350,24 +350,28 @@ void genie::wsClient::connect()
     SoupMessage *msg;
 
     session = soup_session_new();
-    if (strncmp(url, "wss", 3) == 0) {
+    if (g_str_has_prefix(url, "wss")) {
         // enable the wss support
         gchar *wss_aliases[] = { (gchar *)"wss", NULL };
         g_object_set(session, SOUP_SESSION_HTTPS_ALIASES, wss_aliases, NULL);
     }
 
-    gchar *convId = (gchar *)"";
+    SoupURI *uri = soup_uri_new(url);
     if (app->m_config->conversationId) {
-        convId = g_strdup_printf("?id=%s", app->m_config->conversationId);
+        soup_uri_set_query_from_fields(uri,
+            "skip_history", "1",
+            "id", app->m_config->conversationId,
+            nullptr);
+    } else {
+        soup_uri_set_query_from_fields(uri,
+            "skip_history", "1",
+            nullptr);
     }
 
-    gchar *uri = g_strdup_printf("%s%s", url, convId);
-    msg = soup_message_new(SOUP_METHOD_GET, uri);
-    g_free(uri);
-
-    if (app->m_config->conversationId) {
-        g_free(convId);
-    }
+    gchar *uristr = soup_uri_to_string(uri, false);
+    msg = soup_message_new(SOUP_METHOD_GET, uristr);
+    g_free(uristr);
+    soup_uri_free(uri);
 
     if (accessToken) {
         gchar *auth = g_strdup_printf("Bearer %s", accessToken);
