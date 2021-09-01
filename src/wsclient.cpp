@@ -28,14 +28,14 @@
 
 gboolean genie::wsClient::checkIsConnected() {
     if (wconn == NULL) {
-        g_printerr("GENIE websocket connection is NULL\n");
+        g_warning("GENIE websocket connection is NULL\n");
         return false;
     }
     
     SoupWebsocketState wconnState = soup_websocket_connection_get_state(wconn);
     
     if (wconnState != SOUP_WEBSOCKET_STATE_OPEN) {
-        g_print("WS connection not open (state %d)\n", wconnState);
+        g_warning("WS connection not open (state %d)\n", wconnState);
         return false;
     }
     
@@ -121,14 +121,14 @@ void genie::wsClient::handleConversationID(JsonReader *reader) {
         g_free(conversationId);
     }
     conversationId = g_strdup(text);
-    g_print("[SERVER WS] Set conversation id: %s\n", conversationId);
+    g_message("Set conversation id: %s\n", conversationId);
     acceptStream = true;
 }
 
 void genie::wsClient::handleText(gint64 id, JsonReader *reader) {
     if (id <= lastSaidTextID) {
         g_message(
-            "Skipping message ID=%lld, already said ID=%lld\n",
+            "Skipping message ID=%" G_GINT64_FORMAT ", already said ID=%" G_GINT64_FORMAT "\n",
             id,
             lastSaidTextID
         );
@@ -155,10 +155,14 @@ void genie::wsClient::handleSound(gint64 id, JsonReader *reader) {
     json_reader_end_member(reader);
     
     if (!strncmp(name, "news-intro", 10)) {
-        g_message("Playing sound message id=%lld name=%s\n", id, name);
+        g_message(
+            "Playing sound message id=%" G_GINT64_FORMAT " name=%s\n", id, name
+        );
         app->m_audioPlayer->playSound(SOUND_NEWS_INTRO);
     } else {
-        g_warning("Sound not recognized id=%lld name=%s\n", id, name);
+        g_warning(
+            "Sound not recognized id=%" G_GINT64_FORMAT " name=%s\n", id, name
+        );
     }
 }
 
@@ -167,8 +171,10 @@ void genie::wsClient::handleAudio(gint64 id, JsonReader *reader) {
     const gchar *url = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
     
-    g_message("Playing audio message id=%lld url=%s\n", id, url);
-    app->m_audioPlayer->playLocation((gchar *)url);
+    g_message(
+        "Playing audio message id=%" G_GINT64_FORMAT " url=%s\n", id, url
+    );
+    app->m_audioPlayer->playURI((gchar *)url);
 }
 
 void genie::wsClient::handleError(gint64 id, JsonReader *reader) {
@@ -176,7 +182,9 @@ void genie::wsClient::handleError(gint64 id, JsonReader *reader) {
     const gchar *error = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
     
-    g_warning("Handling id=%lld type=error error=%s\n", id, error);
+    g_warning(
+        "Handling id=%" G_GINT64_FORMAT " type=error error=%s\n", id, error
+    );
 }
 
 void genie::wsClient::handleAskSpecial(gint64 id, JsonReader *reader) {
@@ -184,7 +192,11 @@ void genie::wsClient::handleAskSpecial(gint64 id, JsonReader *reader) {
     json_reader_read_member(reader, "ask");
     const gchar *ask = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
-    g_debug("TODO Ignoring id=%lld type=askSpecial ask=%s\n", id, ask);
+    g_debug(
+        "TODO Ignoring id=%" G_GINT64_FORMAT " type=askSpecial ask=%s\n",
+        id,
+        ask
+    );
 }
 
 void genie::wsClient::handlePing(gint64 id, JsonReader *reader) {
@@ -239,7 +251,7 @@ void genie::wsClient::on_message(
         gint64 id = json_reader_get_int_value(reader);
         json_reader_end_member(reader);
         
-        g_debug("Handling message id=%lld, setting this->seq", id);
+        g_debug("Handling message id=%" G_GINT64_FORMAT ", setting this->seq", id);
         obj->seq = id;
 
         if (obj->acceptStream) {
@@ -265,13 +277,13 @@ void genie::wsClient::on_message(
                 || strncmp(type, "picture", 7) == 0
                 || strncmp(type, "choice", 5) == 0
             ) {
-                g_debug("Ignored message id=%lld type=%s", id, type);
+                g_debug("Ignored message id=%" G_GINT64_FORMAT " type=%s", id, type);
             } else {
-                g_warning("Unhandled message id=%lld type=%s\n", id, type);
+                g_warning("Unhandled message id=%" G_GINT64_FORMAT " type=%s\n", id, type);
             }
         } else {
             g_warning(
-                "Ignored message id=%lld type=%s -- not accepting stream\n",
+                "Ignored message id=%" G_GINT64_FORMAT " type=%s -- not accepting stream\n",
                 id,
                 type
             );
