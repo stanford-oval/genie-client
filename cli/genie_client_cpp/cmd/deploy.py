@@ -1,10 +1,12 @@
 import re
-from typing import Dict, Union
+from argparse import BooleanOptionalAction
 
-from clavier import log as logging, CFG
+from clavier import log as logging, CFG, err
 
 from genie_client_cpp.remote import Remote
 from . import remove
+from . import kill
+from . import build as build_cmd
 
 
 LOG = logging.getLogger(__name__)
@@ -12,8 +14,13 @@ LOG = logging.getLogger(__name__)
 COMMANDS_TO_KILL = (
     re.compile(r"/opt/duer/dcslaunch.sh$"),
     re.compile(r"/genie$"),
-    re.compile(r"^/tmp/spotifyd\s")
+    re.compile(r"^/tmp/spotifyd\s"),
 )
+
+BUILD_PATHS = CFG.genie_client_cpp.paths.build
+SCRIPT_PATHS = CFG.genie_client_cpp.paths.scripts
+DEPLOY_PATHS = CFG.genie_client_cpp.xiaodu.paths
+
 
 def add_to(subparsers):
     parser = subparsers.add_parser(
@@ -30,18 +37,68 @@ def add_to(subparsers):
         ),
     )
 
-def run(target: str):
+    parser.add_argument(
+        "-x",
+        "--exe-only",
+        action=BooleanOptionalAction,
+        default=False,
+        help="Only push the `genie` bin to the target",
+    )
+
+    parser.add_argument(
+        "-c",
+        "--config-only",
+        action=BooleanOptionalAction,
+        default=False,
+        help="Only push `config.ini` to the target",
+    )
+
+    parser.add_argument(
+        "-b",
+        "--build",
+        action=BooleanOptionalAction,
+        default=False,
+        help="Build before deploying",
+    )
+
+
+@LOG.inject
+def deploy_all(target: str, log=LOG):
+    log.info("FULL deploy (kill, remove, deploy all)...")
+
     remove.run(target)
 
     remote = Remote.create(target)
 
-    build_paths = CFG.genie_client_cpp.paths.build
-    script_paths = CFG.genie_client_cpp.paths.scripts
-    deploy_paths = CFG.genie_client_cpp.xiaodu.paths
-
     remote.run("mkdir", "-p", CFG.genie_client_cpp.xiaodu.paths.install)
-    remote.push(build_paths.lib, deploy_paths.lib)
-    remote.push(build_paths.assets, deploy_paths.assets)
-    remote.push(script_paths.launch, deploy_paths.launch)
-    remote.push(build_paths.config, deploy_paths.config)
-    remote.push(build_paths.exe, deploy_paths.exe)
+    remote.push(BUILD_PATHS.lib, DEPLOY_PATHS.lib)
+    remote.push(BUILD_PATHS.assets, DEPLOY_PATHS.assets)
+    remote.push(SCRIPT_PATHS.launch, DEPLOY_PATHS.launch)
+    remote.push(BUILD_PATHS.config, DEPLOY_PATHS.config)
+    remote.push(BUILD_PATHS.exe, DEPLOY_PATHS.exe)
+
+
+@LOG.inject
+def deploy_exe(target: str, log=LOG):
+    log.info("Deploying executable...")
+    kill.run(target)
+    Remote.create(target).push(BUILD_PATHS.exe, DEPLOY_PATHS.exe)
+
+
+@LOG.inject
+def deploy_config(target: str, log=LOG):
+    log.info("Deploying config file...")
+    Remote.create(target).push(BUILD_PATHS.config, DEPLOY_PATHS.config)
+
+
+def run(target: str, build: bool, exe_only: bool, config_only: bool):
+    if build:
+        build_cmd.run(exe_only=exe_only)
+
+    if exe_only or config_only:
+        if exe_only:
+            deploy_exe(target)
+        if config_only:
+            deploy_config(target)
+    else:
+        deploy_all(target)

@@ -24,6 +24,7 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
         with paths.configure("scripts") as scripts:
             scripts.root = paths.repo / "scripts"
             scripts.launch = scripts.root / "launch.sh"
+            scripts.dockerfile = scripts.root / "Dockerfile"
 
     with client.configure("xiaodu") as xiaodu:
         xiaodu.network_interface = "wlan0"
