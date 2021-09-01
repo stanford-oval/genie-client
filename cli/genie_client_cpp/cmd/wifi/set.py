@@ -4,6 +4,7 @@ from typing import List
 from clavier import CFG, log as logging
 
 from genie_client_cpp.remote import Remote
+from genie_client_cpp.context import Context
 
 
 LOG = logging.getLogger(__name__)
@@ -18,13 +19,13 @@ def add_to(subparsers):
 
     parser.add_argument(
         "-n",
-        "--network",
+        "--wifi-network",
         help="Network name (SSID)",
     )
 
     parser.add_argument(
         "-p",
-        "--password",
+        "--wifi-password",
         help="Network password (pre-shared key)",
     )
 
@@ -44,6 +45,7 @@ def add_to(subparsers):
 
     parser.add_argument(
         "target",
+        nargs="?",
         help=(
             "_destination_ argument for `ssh` or 'adb' to use Android debugger "
             "over a USB cable"
@@ -51,23 +53,25 @@ def add_to(subparsers):
     )
 
 
+@Context.inject_current
 def run(
     target: str,
-    network: str,
-    password: str,
-    reconfigure: bool,
+    wifi_network: str,
+    wifi_password: str,
     dns_servers: List[str],
+    reconfigure: bool,
 ):
     remote = Remote.create(target)
-    remote.write_lines(
-        CFG.genie_client_cpp.xiaodu.paths.wifi_config,
-        "ctrl_interface=/var/run/wpa_supplicant",
-        "update_config=1",
-        "network={",
-        f'    ssid="{network}"',
-        f'    psk="{password}"',
-        "}",
-    )
+    if wifi_network is not None and wifi_password is not None:
+        remote.write_lines(
+            CFG.genie_client_cpp.xiaodu.paths.wifi_config,
+            "ctrl_interface=/var/run/wpa_supplicant",
+            "update_config=1",
+            "network={",
+            f'    ssid="{wifi_network}"',
+            f'    psk="{wifi_password}"',
+            "}",
+        )
 
     if dns_servers:
         remote.write_lines(

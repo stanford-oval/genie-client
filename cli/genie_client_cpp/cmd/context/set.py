@@ -1,37 +1,44 @@
+from clavier import sh, log as logging
 
-# def add_to(subparsers):
-#     parser = subparsers.add_parser(
-#         "set",
-#         action=set_in_context,
-#         help="Set values in a context",
-#     )
+from genie_client_cpp.context import Context
 
-#     parser.add_argument(
-#         "-h",
-#         "--host",
-#     )
+LOG = logging.getLogger(__name__)
 
-#     parser.add_argument(
-#         "-n",
-#         "--network-name",
-#     )
+def add_to(subparsers):
+    parser = subparsers.add_parser(
+        "set",
+        target=set_in_context,
+        help="Set values in a context",
+    )
 
-#     parser.add_argument(
-#         "-p",
-#         "--network-password",
-#     )
+    parser.add_argument(
+        "-t",
+        "--target",
+    )
 
-#     parser.add_argument(
-#         "-d",
-#         "--dns-server",
-#         help="DNS servers to set in resolv.conf"
-#     )
+    parser.add_argument(
+        "-n",
+        "--wifi-name",
+    )
 
-#     parser.add_argument(
+    parser.add_argument(
+        "-p",
+        "--wifi-password",
+    )
 
-#     )
+    parser.add_argument(
+        "-d",
+        "--dns-servers",
+        action="append",
+        help="DNS servers to set in resolv.conf"
+    )
 
-# def set_in_context(
+    parser.add_argument(
+        "context",
+        help="Name of context",
+    )
 
-# ):
-#     pass
+def set_in_context(context, **values):
+    for name, value in values.items():
+        if value is not None:
+            Context.git_config_set((context, name), value)

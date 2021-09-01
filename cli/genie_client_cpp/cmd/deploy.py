@@ -1,9 +1,10 @@
 import re
 from argparse import BooleanOptionalAction
 
-from clavier import log as logging, CFG, err
+from clavier import log as logging, CFG
 
 from genie_client_cpp.remote import Remote
+from genie_client_cpp.context import Context
 from . import remove
 from . import kill
 from . import build as build_cmd
@@ -91,6 +92,7 @@ def deploy_config(target: str, log=LOG):
     Remote.create(target).push(BUILD_PATHS.config, DEPLOY_PATHS.config)
 
 
+@Context.inject_current
 def run(target: str, build: bool, exe_only: bool, config_only: bool):
     if build:
         build_cmd.run(exe_only=exe_only)

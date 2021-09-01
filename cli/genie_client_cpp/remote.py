@@ -22,6 +22,10 @@ class Remote(ABC):
 
     @classmethod
     def create(cls, target: str):
+        if not isinstance(target, str):
+            raise TypeError(
+                f"Expected str, given {type(target)}: {repr(target)}"
+            )
         if target == "adb":
             return ADBRemote()
         else:

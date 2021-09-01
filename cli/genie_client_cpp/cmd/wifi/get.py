@@ -1,4 +1,5 @@
 from argparse import BooleanOptionalAction
+from genie_client_cpp.context import Context
 
 from rich.panel import Panel
 from rich.rule import Rule
@@ -19,6 +20,7 @@ def add_to(subparsers):
 
     parser.add_argument(
         "target",
+        nargs="?",
         help=(
             "_destination_ argument for `ssh` or 'adb' to use Android debugger "
             "over a USB cable"
@@ -37,6 +39,7 @@ class View(io.View):
             self.data["dns"]
         )
 
+@Context.inject_current
 def run(target: str) -> View:
     remote = Remote.create(target)
     config = remote.read(CFG.genie_client_cpp.xiaodu.paths.wifi_config)
