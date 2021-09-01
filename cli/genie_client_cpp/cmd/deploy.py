@@ -32,6 +32,7 @@ def add_to(subparsers):
 
     parser.add_argument(
         "target",
+        nargs="?",
         help=(
             "_destination_ argument for `ssh` or 'adb' to use Android debugger "
             "over a USB cable"
