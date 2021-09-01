@@ -38,6 +38,7 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             paths.exe = paths.install / "genie"
 
             paths.wifi_config = Path("/data/wifi/wpa_supplicant.conf")
+            paths.dns_config = Path("/data/wifi/resolv.conf")
 
 with CFG.configure(io.rel, src=__file__) as rel:
     rel.to = CFG.genie_client_cpp.paths.repo
