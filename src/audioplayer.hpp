@@ -67,16 +67,13 @@ public:
 
 private:
     void dispatch_queue();
-    gboolean add_queue(GstElement *p, const gchar *data);
+    gboolean add_queue(const auto_gst_ptr<GstElement>& p, const gchar *data);
     static gboolean bus_call_queue(GstBus *bus, GstMessage *msg, gpointer data);
     static void on_pad_added(GstElement *element, GstPad *pad, gpointer data);
     gboolean playing;
     GQueue *playerQueue;
     AudioTask *playingTask;
     App *app;
-
-    auto_gst_ptr<GstElement> pipeline;
-    guint bus_watch_id;
 };
 
 }

@@ -153,13 +153,13 @@ gboolean genie::AudioPlayer::playURI(const gchar *uri)
     if (app->m_config->audioOutputDevice)
         g_object_set(G_OBJECT(sink.get()), "device", app->m_config->audioOutputDevice, NULL);
 
-    pipeline = auto_gst_ptr<GstElement>(gst_element_factory_make("playbin", "audio-player"), adopt_mode::ref_sink);
+    auto pipeline = auto_gst_ptr<GstElement>(gst_element_factory_make("playbin", "audio-player"), adopt_mode::ref_sink);
     g_object_set(G_OBJECT(pipeline.get()),
         "uri", uri,
         "audio-sink", sink.get(),
         nullptr);
 
-    add_queue(pipeline.get(), uri);
+    add_queue(pipeline, uri);
     dispatch_queue();
     return true;
 }
@@ -174,7 +174,7 @@ gboolean genie::AudioPlayer::say(const gchar *text)
     GstElement *source, *demuxer, *decoder, *conv, *sink;
     GstBus *bus;
 
-    pipeline = gst_pipeline_new("audio-player");
+    auto pipeline = auto_gst_ptr<GstElement>(gst_pipeline_new("audio-player"), adopt_mode::ref_sink);
     source = gst_element_factory_make("souphttpsrc", "http-source");
     decoder = gst_element_factory_make("wavparse", "wav-parser");
     sink = gst_element_factory_make(app->m_config->audioSink, "audio-output");
@@ -200,7 +200,7 @@ gboolean genie::AudioPlayer::say(const gchar *text)
 
     gst_element_link_many(source, decoder, sink, NULL);
 
-    add_queue(pipeline.get(), text);
+    add_queue(pipeline, text);
     dispatch_queue();
 
     return true;
@@ -221,9 +221,9 @@ void genie::AudioPlayer::dispatch_queue()
     }
 }
 
-gboolean genie::AudioPlayer::add_queue(GstElement *p, const gchar *data)
+gboolean genie::AudioPlayer::add_queue(const auto_gst_ptr<GstElement>& p, const gchar *data)
 {
-    auto *bus = gst_pipeline_get_bus(GST_PIPELINE(p));
+    auto *bus = gst_pipeline_get_bus(GST_PIPELINE(p.get()));
     auto bus_watch_id = gst_bus_add_watch(bus, genie::AudioPlayer::bus_call_queue, this);
     gst_object_unref(bus);
 

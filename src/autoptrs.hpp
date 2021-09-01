@@ -34,7 +34,7 @@ private:
 public:
     auto_gst_ptr() : m_instance(nullptr) {}
 
-    auto_gst_ptr(T* instance, adopt_mode mode = adopt_mode::owned) : m_instance(instance) {
+    auto_gst_ptr(T* instance, adopt_mode mode) : m_instance(instance) {
         if (m_instance) {
             if (mode == adopt_mode::ref)
                 gst_object_ref(m_instance);
@@ -54,18 +54,21 @@ public:
     }
 
     auto_gst_ptr<T>& operator=(const auto_gst_ptr<T>& other) {
+        if (other.m_instance)
+            gst_object_ref(other.m_instance);
         this->~auto_gst_ptr();
         m_instance = other.m_instance;
-        if (m_instance)
-            gst_object_ref(m_instance);
         return *this;
     };
 
-    T* get() {
+    T* get() const {
         return m_instance;
     };
 
     T& operator->() {
+        return *m_instance;
+    }
+    const T& operator->() const {
         return *m_instance;
     }
 
