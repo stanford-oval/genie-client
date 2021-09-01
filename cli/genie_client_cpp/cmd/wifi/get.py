@@ -33,6 +33,8 @@ class View(io.View):
             io.NEWLINE,
             *io.header(CFG.genie_client_cpp.xiaodu.network_interface),
             self.data["interface"],
+            *io.header(str(CFG.genie_client_cpp.xiaodu.paths.dns_config)),
+            self.data["dns"]
         )
 
 def run(target: str) -> View:
@@ -41,5 +43,8 @@ def run(target: str) -> View:
     interface = remote.get(
         "ip", "addr", "show", CFG.genie_client_cpp.xiaodu.network_interface
     )
-    return View({"config": config, "interface": interface})
+    dns = remote.read(
+        CFG.genie_client_cpp.xiaodu.paths.dns_config
+    )
+    return View({"config": config, "interface": interface, "dns": dns})
 
