@@ -156,7 +156,7 @@ void genie::wsClient::handleSound(gint64 id, JsonReader *reader) {
     
     if (!strncmp(name, "news-intro", 10)) {
         g_message("Playing sound message id=%lld name=%s\n", id, name);
-        app->m_audioPlayer->playSound(SOUND_NEWS_INTRO, true);
+        app->m_audioPlayer->playSound(SOUND_NEWS_INTRO);
     } else {
         g_warning("Sound not recognized id=%lld name=%s\n", id, name);
     }
@@ -176,7 +176,7 @@ void genie::wsClient::handleError(gint64 id, JsonReader *reader) {
     const gchar *error = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
     
-    g_warning("Handling id=%lld type=error error=%s\n", error);
+    g_warning("Handling id=%lld type=error error=%s\n", id, error);
 }
 
 void genie::wsClient::handleAskSpecial(gint64 id, JsonReader *reader) {
