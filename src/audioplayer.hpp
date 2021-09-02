@@ -19,11 +19,11 @@
 #ifndef _AUDIOPLAYER_H
 #define _AUDIOPLAYER_H
 
-#include <string>
-#include <gst/gst.h>
-
 #include "app.hpp"
 #include "autoptrs.hpp"
+
+#include <string>
+#include <gst/gst.h>
 
 namespace genie
 {

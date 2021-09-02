@@ -16,12 +16,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "audioplayer.hpp"
+
 #include <glib.h>
 #include <gst/gst.h>
 #include <string.h>
-
-#include "app.hpp"
-#include "audioplayer.hpp"
+#include <json-glib/json-glib.h>
 
 #ifdef STATIC
 #include "gst/gstinitstaticplugins.h"
@@ -189,9 +189,30 @@ gboolean genie::AudioPlayer::say(const gchar *text)
     g_free(location);
     g_object_set(G_OBJECT(source), "method", "POST", NULL);
     g_object_set(G_OBJECT(source), "content-type", "application/json", NULL);
-    gchar *jsonText = g_strdup_printf("{\"text\":\"%s\",\"gender\":\"%s\"}", text, app->m_config->audioVoice);
+    
+    JsonBuilder *builder = json_builder_new();
+    json_builder_begin_object(builder);
+    
+    json_builder_set_member_name(builder, "text");
+    json_builder_add_string_value(builder, text);
+    
+    json_builder_set_member_name(builder, "gender");
+    json_builder_add_string_value(builder, app->m_config->audioVoice);
+    
+    json_builder_end_object(builder);
+    
+    JsonGenerator *gen = json_generator_new();
+    JsonNode *root = json_builder_get_root(builder);
+    json_generator_set_root(gen, root);
+    gchar *jsonText = json_generator_to_data(gen, NULL);
+    
     g_object_set(G_OBJECT(source), "post-data", jsonText, NULL);
+    
     g_free(jsonText);
+    json_node_free(root);
+    g_object_unref(gen);
+    g_object_unref(builder);
+    
     if (app->m_config->audioOutputDevice) {
         g_object_set(G_OBJECT(sink), "device", app->m_config->audioOutputDevice, NULL);
     }
