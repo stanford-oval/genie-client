@@ -29,18 +29,14 @@
 namespace genie
 {
 
-typedef struct {
-    int16_t *data;
-    gsize length;
-} AudioFrame;
-
 class STT
 {
 public:
     STT(App *appInstance);
     ~STT();
     int init();
-    void sendFrame(int16_t *data, gsize length);
+    void send_frame(AudioFrame *frame);
+    void send_done();
     int connect();
 
 private:
@@ -48,9 +44,8 @@ private:
     static void on_connection(SoupSession *session, GAsyncResult *res, gpointer data);
     static void on_message(SoupWebsocketConnection *conn, gint type, GBytes *message, gpointer data);
     static void on_close(SoupWebsocketConnection *conn, gpointer data);
-    void dispatch_frame(AudioFrame *t);
-    void dispatch_queue(gboolean last);
-    gboolean add_queue(int16_t *data, gsize length);
+    void dispatch_frame(AudioFrame *frame);
+    gboolean is_connection_open();
 
 private:
     App *app;

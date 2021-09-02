@@ -16,13 +16,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <glib.h>
 #include <glib-unix.h>
+#include <glib.h>
 
 #include "app.hpp"
-#include "config.hpp"
 #include "audioinput.hpp"
 #include "audioplayer.hpp"
+#include "config.hpp"
 #include "evinput.hpp"
 #include "leds.hpp"
 #include "spotifyd.hpp"
@@ -30,163 +30,177 @@
 #include "tts.hpp"
 #include "wsclient.hpp"
 
-double time_diff(struct timeval x, struct timeval y)
-{
-	return (((double)y.tv_sec*1000000 + (double)y.tv_usec) - ((double)x.tv_sec*1000000 + (double)x.tv_usec));
+double time_diff(struct timeval x, struct timeval y) {
+  return (((double)y.tv_sec * 1000000 + (double)y.tv_usec) -
+          ((double)x.tv_sec * 1000000 + (double)x.tv_usec));
 }
 
-double time_diff_ms(struct timeval x, struct timeval y)
-{
-	return time_diff(x, y) / 1000;
+double time_diff_ms(struct timeval x, struct timeval y) {
+  return time_diff(x, y) / 1000;
 }
 
-genie::App::App()
-{
-    isProcessing = FALSE;
+genie::App::App() { isProcessing = FALSE; }
+
+genie::App::~App() { g_main_loop_unref(main_loop); }
+
+int genie::App::exec() {
+  PROF_PRINT("start main loop\n");
+
+  main_loop = g_main_loop_new(NULL, FALSE);
+
+  g_unix_signal_add(SIGINT, sig_handler, main_loop);
+
+  m_config = std::make_unique<Config>();
+  m_config->load();
+
+  g_setenv("GST_REGISTRY_UPDATE", "no", true);
+
+  m_audioPlayer = std::make_unique<AudioPlayer>(this);
+
+  m_stt = std::make_unique<STT>(this);
+  m_tts = std::make_unique<TTS>(this);
+
+  m_audioInput = std::make_unique<AudioInput>(this);
+  m_audioInput->init();
+
+  m_spotifyd = std::make_unique<Spotifyd>(this);
+  m_spotifyd->init();
+
+  m_wsClient = std::make_unique<wsClient>(this);
+  m_wsClient->init();
+
+  m_evInput = std::make_unique<evInput>(this);
+  m_evInput->init();
+
+  m_leds = std::make_unique<Leds>(this);
+  m_leds->init();
+
+  g_debug("start main loop\n");
+  g_main_loop_run(main_loop);
+  g_debug("main loop returned\n");
+
+  return 0;
 }
 
-genie::App::~App()
-{
-    g_main_loop_unref(main_loop);
+gboolean genie::App::sig_handler(gpointer data) {
+  GMainLoop *loop = reinterpret_cast<GMainLoop *>(data);
+  g_main_loop_quit(loop);
+  return G_SOURCE_REMOVE;
 }
 
-int genie::App::exec()
-{
-    PROF_PRINT("start main loop\n");
-
-    main_loop = g_main_loop_new(NULL, FALSE);
-
-    g_unix_signal_add(SIGINT, sig_handler, main_loop);
-
-    m_config = std::make_unique<Config>();
-    m_config->load();
-
-    g_setenv("GST_REGISTRY_UPDATE", "no", true);
-
-    m_audioPlayer = std::make_unique<AudioPlayer>(this);
-
-    m_stt = std::make_unique<STT>(this);
-    m_tts = std::make_unique<TTS>(this);
-
-    m_audioInput = std::make_unique<AudioInput>(this);
-    m_audioInput->init();
-
-    m_spotifyd = std::make_unique<Spotifyd>(this);
-    m_spotifyd->init();
-
-    m_wsClient = std::make_unique<wsClient>(this);
-    m_wsClient->init();
-
-    m_evInput = std::make_unique<evInput>(this);
-    m_evInput->init();
-
-    m_leds = std::make_unique<Leds>(this);
-    m_leds->init();
-
-    g_debug("start main loop\n");
-    g_main_loop_run(main_loop);
-    g_debug("main loop returned\n");
-
-    return 0;
+void genie::App::print_processing_entry(const char *name, double duration_ms,
+                                        double total_ms) {
+  g_print("%12s: %5.3lf ms (%3d%%)\n", name, duration_ms,
+          (int)((duration_ms / total_ms) * 100));
 }
 
-gboolean genie::App::sig_handler(gpointer data)
-{
-    GMainLoop *loop = reinterpret_cast<GMainLoop *>(data);
-    g_main_loop_quit(loop);
-    return G_SOURCE_REMOVE;
+guint genie::App::dispatch(ActionType type, gpointer payload) {
+  Action *action = g_new(Action, 1);
+  action->type = type;
+  action->app = this;
+  action->payload = payload;
+  return g_idle_add(genie::App::on_action, action);
 }
 
-void genie::App::print_processing_entry(
-    const char *name,
-    double duration_ms,
-    double total_ms
-) {
-    g_print(
-        "%12s: %5.3lf ms (%3d%%)\n",
-        name,
-        duration_ms,
-        (int)((duration_ms / total_ms) * 100)
-    );
+gboolean genie::App::on_action(gpointer data) {
+  Action *action = static_cast<Action *>(data);
+  action->app->handle(action->type, action->payload);
+  g_free(action);
+  return false;
+}
+
+void genie::App::handle(ActionType type, gpointer payload) {
+  switch (type) {
+  case WAKE:
+    g_message("Handling WAKE...\n");
+    g_message("Stopping audio player...\n");
+    m_audioPlayer->stop();
+    g_message("Playing match sound...\n");
+    m_audioPlayer->playSound(SOUND_MATCH);
+    g_message("Connecting STT...\n");
+    m_stt->connect();
+    g_message("Done handling wake.\n");
+    break;
+    
+  case INPUT_SPEECH_FRAME:
+    m_stt->send_frame((AudioFrame *)payload);
+    break;
+    
+  case INPUT_SPEECH_DONE:
+    g_message("Handling INPUT_SPEECH_DONE...");
+    track_processing_event(PROCESSING_BEGIN);
+    track_processing_event(PROCESSING_START_STT);
+    m_audioPlayer->stop();
+    m_audioPlayer->playSound(SOUND_MATCH);
+    m_stt->send_done();
+    break;
+    
+  case INPUT_SPEECH_NOT_DETECTED:
+    g_warning("TODO");
+    break;
+    
+  case INPUT_SPEECH_TIMEOUT:
+    g_warning("TODO");
+    break;
+  }
 }
 
 /**
  * @brief Track an event that is part of a turn's remote processing.
- * 
- * We want to keep a close eye the performance of our 
- * 
- * @param eventType 
+ *
+ * We want to keep a close eye the performance of our
+ *
+ * @param eventType
  */
 void genie::App::track_processing_event(ProcesingEvent_t eventType) {
-    // Unless we are starting a turn or already in a turn just bail out. This
-    // avoids tracking the "Hi..." and any other messages at connect.
-    if (!(eventType == PROCESSING_BEGIN || isProcessing)) {
-        return;
-    }
-    
-    switch (eventType)
-    {
-        case PROCESSING_BEGIN:
-            gettimeofday(&tStartProcessing, NULL);
-            isProcessing = TRUE;
-            break;
-        case PROCESSING_START_STT:
-            gettimeofday(&tStartSTT, NULL);
-            break;
-        case PROCESSING_END_STT:
-            gettimeofday(&tEndSTT, NULL);
-            break;
-        case PROCESSING_START_GENIE:
-            gettimeofday(&tStartGenie, NULL);
-            break;
-        case PROCESSING_END_GENIE:
-            gettimeofday(&tEndGenie, NULL);
-            break;
-        case PROCESSING_START_TTS:
-            gettimeofday(&tStartTTS, NULL);
-            break;
-        case PROCESSING_END_TTS:
-            gettimeofday(&tEndTTS, NULL);
-            break;
-        case PROCESSING_FINISH:
-            int total_ms = time_diff_ms(tStartProcessing, tEndTTS);
-            
-            g_print("############# Processing Performance #################\n");
-            print_processing_entry(
-                "Pre-STT",
-                time_diff_ms(tStartProcessing, tStartSTT),
-                total_ms
-            );
-            print_processing_entry(
-                "STT",
-                time_diff_ms(tStartSTT, tEndSTT),
-                total_ms
-            );
-            print_processing_entry(
-                "STT->Genie",
-                time_diff_ms(tEndSTT, tStartGenie),
-                total_ms
-            );
-            print_processing_entry(
-                "Genie",
-                time_diff_ms(tStartGenie, tEndGenie),
-                total_ms
-            );
-            print_processing_entry(
-                "Genie->TTS",
-                time_diff_ms(tEndGenie, tStartTTS),
-                total_ms
-            );
-            print_processing_entry(
-                "TTS",
-                time_diff_ms(tStartTTS, tEndTTS),
-                total_ms
-            );
-            g_print("------------------------------------------------------\n");
-            print_processing_entry("Total", total_ms, total_ms);
-            g_print("######################################################\n");
-            
-            isProcessing = FALSE;
-            break;
-    }
+  // Unless we are starting a turn or already in a turn just bail out. This
+  // avoids tracking the "Hi..." and any other messages at connect.
+  if (!(eventType == PROCESSING_BEGIN || isProcessing)) {
+    return;
+  }
+
+  switch (eventType) {
+  case PROCESSING_BEGIN:
+    gettimeofday(&tStartProcessing, NULL);
+    isProcessing = TRUE;
+    break;
+  case PROCESSING_START_STT:
+    gettimeofday(&tStartSTT, NULL);
+    break;
+  case PROCESSING_END_STT:
+    gettimeofday(&tEndSTT, NULL);
+    break;
+  case PROCESSING_START_GENIE:
+    gettimeofday(&tStartGenie, NULL);
+    break;
+  case PROCESSING_END_GENIE:
+    gettimeofday(&tEndGenie, NULL);
+    break;
+  case PROCESSING_START_TTS:
+    gettimeofday(&tStartTTS, NULL);
+    break;
+  case PROCESSING_END_TTS:
+    gettimeofday(&tEndTTS, NULL);
+    break;
+  case PROCESSING_FINISH:
+    int total_ms = time_diff_ms(tStartProcessing, tEndTTS);
+
+    g_print("############# Processing Performance #################\n");
+    print_processing_entry("Pre-STT", time_diff_ms(tStartProcessing, tStartSTT),
+                           total_ms);
+    print_processing_entry("STT", time_diff_ms(tStartSTT, tEndSTT), total_ms);
+    print_processing_entry("STT->Genie", time_diff_ms(tEndSTT, tStartGenie),
+                           total_ms);
+    print_processing_entry("Genie", time_diff_ms(tStartGenie, tEndGenie),
+                           total_ms);
+    print_processing_entry("Genie->TTS", time_diff_ms(tEndGenie, tStartTTS),
+                           total_ms);
+    print_processing_entry("TTS", time_diff_ms(tStartTTS, tEndTTS), total_ms);
+    g_print("------------------------------------------------------\n");
+    print_processing_entry("Total", total_ms, total_ms);
+    g_print("######################################################\n");
+
+    isProcessing = FALSE;
+    break;
+  }
 }

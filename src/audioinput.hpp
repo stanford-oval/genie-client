@@ -27,8 +27,16 @@
 #include "app.hpp"
 #include <webrtc/webrtc_vad.h>
 
+#define AUDIO_INPUT_BUFFER_MAX_FRAMES 32
+#define AUDIO_INPUT_VAD_FRAME_LENGTH 480
+
 namespace genie
 {
+    
+enum AudioInputState {
+    INPUT_STATE_WAITING,
+    INPUT_STATE_STREAMING,
+};
 
 class AudioInput
 {
@@ -53,6 +61,7 @@ private:
 
     int16_t *pcm;
     int32_t frame_length;
+    int32_t sample_rate;
     GQueue *pcmQueue;
 
     VadInst *vadInstance;
@@ -60,9 +69,8 @@ private:
     AudioPlayer *audioPlayer;
     STT *stt;
     App *app;
-
-public:
-    struct timeval tStart;
+    
+    static AudioFrame *build_frame(int16_t *samples, gsize length);
 };
 
 }

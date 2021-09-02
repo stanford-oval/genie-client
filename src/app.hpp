@@ -19,28 +19,29 @@
 #ifndef _APP_H
 #define _APP_H
 
-#include <memory>
-#include <glib.h>
-#include "config.hpp"
 #include "config.h"
+#include "config.hpp"
+#include <glib.h>
+#include <memory>
 
 #include <sys/time.h>
-#define PROF_PRINT(...) \
-    do { \
-        struct tm tm; \
-        struct timeval t; \
-        gettimeofday(&t, NULL); \
-        localtime_r(&t.tv_sec, &tm); \
-        fprintf(stderr,"[%.2d:%.2d:%.2d.%.6ld] %s (%s:%d): ", tm.tm_hour, tm.tm_min, tm.tm_sec, t.tv_usec, __func__, __FILE__, __LINE__); \
-        fprintf(stderr, ##__VA_ARGS__); \
-    } while (0)
+#define PROF_PRINT(...)                                                        \
+  do {                                                                         \
+    struct tm tm;                                                              \
+    struct timeval t;                                                          \
+    gettimeofday(&t, NULL);                                                    \
+    localtime_r(&t.tv_sec, &tm);                                               \
+    fprintf(stderr, "[%.2d:%.2d:%.2d.%.6ld] %s (%s:%d): ", tm.tm_hour,         \
+            tm.tm_min, tm.tm_sec, t.tv_usec, __func__, __FILE__, __LINE__);    \
+    fprintf(stderr, ##__VA_ARGS__);                                            \
+  } while (0)
 
-#define PROF_TIME_DIFF(str, start) \
-    do { \
-        struct timeval tEnd; \
-        gettimeofday(&tEnd, NULL); \
-        PROF_PRINT("%s elapsed: %0.3lf ms\n", str, time_diff_ms(start, tEnd)); \
-    } while(0)
+#define PROF_TIME_DIFF(str, start)                                             \
+  do {                                                                         \
+    struct timeval tEnd;                                                       \
+    gettimeofday(&tEnd, NULL);                                                 \
+    PROF_PRINT("%s elapsed: %0.3lf ms\n", str, time_diff_ms(start, tEnd));     \
+  } while (0)
 
 extern double time_diff(struct timeval x, struct timeval y);
 extern double time_diff_ms(struct timeval x, struct timeval y);
@@ -58,55 +59,76 @@ class TTS;
 class wsClient;
 
 enum ProcesingEvent_t {
-    PROCESSING_BEGIN = 0,
-    PROCESSING_START_STT = 1,
-    PROCESSING_END_STT = 2,
-    PROCESSING_START_GENIE = 3,
-    PROCESSING_END_GENIE = 4,
-    PROCESSING_START_TTS = 5,
-    PROCESSING_END_TTS = 6,
-    PROCESSING_FINISH = 7,
+  PROCESSING_BEGIN = 0,
+  PROCESSING_START_STT = 1,
+  PROCESSING_END_STT = 2,
+  PROCESSING_START_GENIE = 3,
+  PROCESSING_END_GENIE = 4,
+  PROCESSING_START_TTS = 5,
+  PROCESSING_END_TTS = 6,
+  PROCESSING_FINISH = 7,
 };
 
-class App
-{
+enum ActionType {
+  WAKE,
+  INPUT_SPEECH_FRAME,
+  INPUT_SPEECH_NOT_DETECTED,
+  INPUT_SPEECH_DONE,
+  INPUT_SPEECH_TIMEOUT,
+};
+
+typedef struct {
+  int16_t *samples;
+  gsize length;
+} AudioFrame;
+
+class App {
 public:
-    App();
-    ~App();
-    int exec();
+  App();
+  ~App();
+  int exec();
 
-    static gboolean sig_handler(gpointer data);
-    
-    void track_processing_event(ProcesingEvent_t eventType);
+  static gboolean sig_handler(gpointer data);
+  static gboolean on_action(gpointer data);
 
-    GMainLoop *main_loop;
-    std::unique_ptr<Config> m_config;
-    std::unique_ptr<AudioInput> m_audioInput;
-    std::unique_ptr<AudioPlayer> m_audioPlayer;
-    std::unique_ptr<evInput> m_evInput;
-    std::unique_ptr<Leds> m_leds;
-    std::unique_ptr<Spotifyd> m_spotifyd;
-    std::unique_ptr<STT> m_stt;
-    std::unique_ptr<TTS> m_tts;
-    std::unique_ptr<wsClient> m_wsClient;
-    
+  void track_processing_event(ProcesingEvent_t eventType);
+  guint dispatch(ActionType type, gpointer payload);
+
+  GMainLoop *main_loop;
+  std::unique_ptr<Config> m_config;
+  std::unique_ptr<AudioInput> m_audioInput;
+  std::unique_ptr<AudioPlayer> m_audioPlayer;
+  std::unique_ptr<evInput> m_evInput;
+  std::unique_ptr<Leds> m_leds;
+  std::unique_ptr<Spotifyd> m_spotifyd;
+  std::unique_ptr<STT> m_stt;
+  std::unique_ptr<TTS> m_tts;
+  std::unique_ptr<wsClient> m_wsClient;
+
+protected:
+  void handle(ActionType type, gpointer payload);
+
 private:
-    gboolean isProcessing;
-    struct timeval tStartProcessing;
-    struct timeval tStartSTT;
-    struct timeval tEndSTT;
-    struct timeval tStartGenie;
-    struct timeval tEndGenie;
-    struct timeval tStartTTS;
-    struct timeval tEndTTS;
-    
-    void print_processing_entry(
-        const char *name,
-        double duration_ms,
-        double total_ms
-    );
+  gboolean isProcessing;
+  struct timeval tStartProcessing;
+  struct timeval tStartSTT;
+  struct timeval tEndSTT;
+  struct timeval tStartGenie;
+  struct timeval tEndGenie;
+  struct timeval tStartTTS;
+  struct timeval tEndTTS;
+
+  void print_processing_entry(const char *name, double duration_ms,
+                              double total_ms);
+  
 };
 
-}
+typedef struct {
+  App *app;
+  ActionType type;
+  gpointer payload;
+} Action;
+
+} // namespace genie
 
 #endif
