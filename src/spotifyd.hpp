@@ -31,7 +31,7 @@ public:
     ~Spotifyd();
     int init();
     int close();
-    gboolean setAccessToken(gchar *token);
+    gboolean setAccessToken(const gchar *token);
 
 protected:
     int spawn();
@@ -41,9 +41,9 @@ protected:
 private:
     App *app;
     GPid child_pid;
-    char *cacheDir;
-    gchar *accessToken;
-    gchar *arch;
+    const char *cacheDir;
+    std::string accessToken;
+    std::string arch;
 };
 
 }

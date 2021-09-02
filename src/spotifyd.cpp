@@ -31,31 +31,29 @@
 
 genie::Spotifyd::Spotifyd(App *appInstance) {
     app = appInstance;
-    cacheDir = g_strdup("/tmp");
+    cacheDir = "/tmp";
     accessToken = g_strdup("");
     child_pid = -1;
 
-    arch = NULL;
     struct utsname un;
     if (!uname(&un)) {
-        arch = g_strdup(un.machine);
+        arch = un.machine;
     }
 }
 
 genie::Spotifyd::~Spotifyd() {
-    g_free(arch);
     close();
 }
 
 int genie::Spotifyd::download()
 {
-    gchar *dlArch;
-    if (!memcmp(arch, "armv7", 5)) {
-        dlArch = (gchar *)"armhf-";
-    } else if (!memcmp(arch, "aarch64", 7)) {
-        dlArch = (gchar *)"arm64-";
+    const gchar *dlArch;
+    if (arch == "armv7l") {
+        dlArch = "armhf-";
+    } else if (arch == "aarch64") {
+        dlArch = "arm64-";
     } else {
-        dlArch = (gchar *)"";
+        dlArch = "";
     }
 
     gchar *cmd = g_strdup_printf("curl https://github.com/stanford-oval/spotifyd/releases/download/%s/spotifyd-linux-%sslim.tar.gz -L | tar -xvz -C %s", SPOTIFYD_VERSION, dlArch, cacheDir);
@@ -67,30 +65,22 @@ int genie::Spotifyd::download()
 
 int genie::Spotifyd::init()
 {
-    if (!arch) {
-        return false;
-    }
-
     gchar *filePath = g_strdup_printf("%s/spotifyd", cacheDir);
-    int fd = g_open(filePath, O_RDONLY);
-    if (fd > 0) {
-        GError *error = NULL;
-        g_close(fd, &error);
-        if (error) {
-            g_error_free(error);
-        }
-        // TODO: check version / update
-    } else {
+    if (!g_file_test(filePath, G_FILE_TEST_IS_EXECUTABLE)) {
         download();
+    } else {
+        // TODO: check version / update
     }
     g_free(filePath);
 
-    return spawn();
+    if (accessToken.length())
+        return spawn();
+    return true;
 }
 
 int genie::Spotifyd::close()
 {
-    if (child_pid) {
+    if (child_pid > 0) {
         g_debug("kill spotifyd pid %d\n", child_pid);
         return kill(child_pid, SIGINT);
     }
@@ -107,41 +97,47 @@ void genie::Spotifyd::child_watch_cb(GPid pid, gint status, gpointer data)
 int genie::Spotifyd::spawn()
 {
     gchar *filePath = g_strdup_printf("%s/spotifyd", cacheDir);
-    gchar *deviceName = g_strdup("genie-cpp");
-
-    gchar *backend;
-    if (!memcmp(arch, "x86_64", 6)) {
-        backend = g_strdup("pulseaudio");
+    const gchar *deviceName = "genie-cpp";
+    const gchar *backend;
+    if (arch == "x86_64") {
+        backend = "pulseaudio";
     } else {
-        backend = g_strdup("alsa");
+        backend = "alsa";
     }
 
-    gchar *argv[] = {
-        filePath, (gchar *)"--no-daemon", (gchar *)"--device-name", deviceName, (gchar *)"--backend", backend, (gchar *)"--token", accessToken, NULL
+    const gchar *argv[] = {
+        filePath, "--no-daemon", "--device-name", deviceName, "--backend", backend, "--token", accessToken.c_str(), nullptr
     };
+    g_debug("spawn spotifyd");
+    for (int i = 0; argv[i]; i++) {
+        g_debug("%s", argv[i]);
+    }
 
     GError *gerror = NULL;
-    g_spawn_async_with_pipes(NULL, argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL,
+    g_spawn_async_with_pipes(NULL, (gchar**) argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL,
         NULL, &child_pid, NULL, NULL, NULL, &gerror);
     if (gerror) {
-        g_error("Spawning child failed: %s\n", gerror->message);
+        g_critical("Spawning spotifyd child failed: %s\n", gerror->message);
         g_error_free(gerror);
         return false;
     }
 
     g_free(filePath);
-    g_free(deviceName);
-    g_free(backend);
 
     g_child_watch_add(child_pid, child_watch_cb, this);
     g_print("spotifyd loaded, pid: %d\n", child_pid);
     return true;
 }
 
-gboolean genie::Spotifyd::setAccessToken(gchar *token)
+gboolean genie::Spotifyd::setAccessToken(const gchar *token)
 {
     if (!token) return false;
-    accessToken = g_strdup(token);
+
+    if (accessToken == token)
+        return true;
+
+    accessToken = token;
+    g_debug("setting spotify access token %s", accessToken.c_str());
     close();
     g_usleep(500);
     return spawn();

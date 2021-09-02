@@ -23,7 +23,7 @@ DESTDIR="/out/lib"
 export LD_LIBRARY_PATH="/usr/local/lib/${SEARCH_ARCH}"
 
 deps=""
-blacklistDeps="libicudata.* libasound.* libxml2.*"
+blocklistDeps="libicudata.* libasound.* libxml2.* libpthread.so.0 libc.so.6 libm.so.6 librt.so.1 libdl.so.2 libresolv.so.2"
 
 findDeps() {
 	local src="${1}"
@@ -34,10 +34,10 @@ findDeps() {
 		if [ -z "${a}" ]; then continue; fi
 
 		isBL=0
-		for bl in ${blacklistDeps}; do
+		for bl in ${blocklistDeps}; do
 			echo "${a}" | grep -qe "${bl}"
 			if [ ${?} -eq 0 ]; then
-				echo "blacklist dependency ${a}"
+				echo "blocklist dependency ${a}"
 				isBL=1
 			fi
 		done

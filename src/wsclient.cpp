@@ -22,23 +22,25 @@
 #include <glib-object.h>
 #include <libsoup/soup.h>
 #include <string.h>
-#include<fstream>
+#include <fstream>
+
 #include "wsclient.hpp"
 #include "tts.hpp"
+#include "spotifyd.hpp"
 
 gboolean genie::wsClient::checkIsConnected() {
     if (wconn == NULL) {
         g_warning("GENIE websocket connection is NULL\n");
         return false;
     }
-    
+
     SoupWebsocketState wconnState = soup_websocket_connection_get_state(wconn);
-    
+
     if (wconnState != SOUP_WEBSOCKET_STATE_OPEN) {
         g_warning("WS connection not open (state %d)\n", wconnState);
         return false;
     }
-    
+
     return true;
 }
 
@@ -47,10 +49,10 @@ void genie::wsClient::sendJSON(JsonBuilder *builder) {
     JsonNode *root = json_builder_get_root(builder);
     json_generator_set_root(gen, root);
     gchar *str = json_generator_to_data(gen, NULL);
-    
+
     PROF_PRINT("[SERVER WS] sending: %s", str);
     soup_websocket_connection_send_text(wconn, str);
-    
+
     json_node_free(root);
     g_object_unref(gen);
     g_free(str);
@@ -76,7 +78,7 @@ void genie::wsClient::sendCommand(gchar *data)
 
     sendJSON(builder);
     g_object_unref(builder);
-    
+
     gettimeofday(&tStart, NULL);
     app->track_processing_event(PROCESSING_START_GENIE);
     tInit = true;
@@ -105,7 +107,7 @@ void genie::wsClient::sendThingtalk(gchar *data)
     json_builder_add_int_value(builder, seq);
 
     json_builder_end_object(builder);
-    
+
     sendJSON(builder);
     g_object_unref(builder);
 
@@ -116,13 +118,12 @@ void genie::wsClient::handleConversationID(JsonReader *reader) {
     json_reader_read_member(reader, "id");
     const gchar *text = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
-    
+
     if (conversationId) {
         g_free(conversationId);
     }
     conversationId = g_strdup(text);
     g_message("Set conversation id: %s\n", conversationId);
-    acceptStream = true;
 }
 
 void genie::wsClient::handleText(gint64 id, JsonReader *reader) {
@@ -134,18 +135,18 @@ void genie::wsClient::handleText(gint64 id, JsonReader *reader) {
         );
         return;
     }
-    
+
     json_reader_read_member(reader, "text");
     const gchar *text = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
-    
+
     if (tInit) {
         app->track_processing_event(PROCESSING_END_GENIE);
         tInit = false;
     }
 
     app->m_audioPlayer->say(g_strdup(text));
-    
+
     lastSaidTextID = id;
 }
 
@@ -153,7 +154,7 @@ void genie::wsClient::handleSound(gint64 id, JsonReader *reader) {
     json_reader_read_member(reader, "name");
     const gchar *name = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
-    
+
     if (!strncmp(name, "news-intro", 10)) {
         g_message(
             "Playing sound message id=%" G_GINT64_FORMAT " name=%s\n", id, name
@@ -170,36 +171,32 @@ void genie::wsClient::handleAudio(gint64 id, JsonReader *reader) {
     json_reader_read_member(reader, "url");
     const gchar *url = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
-    
+
     g_message(
         "Playing audio message id=%" G_GINT64_FORMAT " url=%s\n", id, url
     );
     app->m_audioPlayer->playURI((gchar *)url);
 }
 
-void genie::wsClient::handleError(gint64 id, JsonReader *reader) {
+void genie::wsClient::handleError(JsonReader *reader) {
     json_reader_read_member(reader, "error");
     const gchar *error = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
-    
+
     g_warning(
-        "Handling id=%" G_GINT64_FORMAT " type=error error=%s\n", id, error
+        "Handling type=error error=%s\n", error
     );
 }
 
-void genie::wsClient::handleAskSpecial(gint64 id, JsonReader *reader) {
+void genie::wsClient::handleAskSpecial(JsonReader *reader) {
     // Agent state -- asking a follow up or not
     json_reader_read_member(reader, "ask");
     const gchar *ask = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
-    g_debug(
-        "TODO Ignoring id=%" G_GINT64_FORMAT " type=askSpecial ask=%s\n",
-        id,
-        ask
-    );
+    g_debug("TODO Ignoring type=askSpecial ask=%s\n", ask);
 }
 
-void genie::wsClient::handlePing(gint64 id, JsonReader *reader) {
+void genie::wsClient::handlePing(JsonReader *reader) {
     if (!checkIsConnected()) {
         return;
     }
@@ -212,9 +209,32 @@ void genie::wsClient::handlePing(gint64 id, JsonReader *reader) {
     json_builder_add_string_value(builder, "pong");
 
     json_builder_end_object(builder);
-    
+
     sendJSON(builder);
     g_object_unref(builder);
+}
+
+void genie::wsClient::handleNewDevice(JsonReader *reader) {
+    json_reader_read_member(reader, "state");
+
+    json_reader_read_member(reader, "kind");
+    const gchar *kind = json_reader_get_string_value(reader);
+    if (strcmp(kind, "com.spotify") != 0) {
+        g_debug("Ignoring new-device of type %s", kind);
+        json_reader_end_member(reader);
+        goto out;
+    }
+    json_reader_end_member(reader);
+
+    if (json_reader_read_member(reader, "accessToken")) {
+        const gchar *accessToken = json_reader_get_string_value(reader);
+        app->m_spotifyd->setAccessToken(accessToken);
+    }
+    json_reader_end_member(reader);
+
+out:
+     // exit the state reader
+    json_reader_end_member(reader);
 }
 
 void genie::wsClient::on_message(
@@ -227,7 +247,7 @@ void genie::wsClient::on_message(
         g_warning("Invalid message data type: %d\n", data_type);
         return;
     }
-    
+
     wsClient *obj = reinterpret_cast<wsClient *>(data);
     gsize sz;
     const gchar *ptr;
@@ -244,49 +264,46 @@ void genie::wsClient::on_message(
     const char *type = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
 
-    if (strncmp(type, "id", 2) == 0) {
+    // first handle the protocol objects that do not have a sequential ID
+    // (because they don't go into the history)
+    if (strcmp(type, "id") == 0) {
         obj->handleConversationID(reader);
+    } else if (strcmp(type, "askSpecial") == 0) {
+        obj->handleAskSpecial(reader);
+    } else if (strcmp(type, "error") == 0) {
+        obj->handleError(reader);
+    } else if (strcmp(type, "ping") == 0) {
+        obj->handlePing(reader);
+    } else if (strcmp(type, "new-device") == 0) {
+        obj->handleNewDevice(reader);
     } else {
+        // now handle all the normal messages
         json_reader_read_member(reader, "id");
         gint64 id = json_reader_get_int_value(reader);
         json_reader_end_member(reader);
-        
+
         g_debug("Handling message id=%" G_GINT64_FORMAT ", setting this->seq", id);
         obj->seq = id;
 
-        if (obj->acceptStream) {
-            if (strncmp(type, "text", 4) == 0) {
-                obj->handleText(id, reader);
-            } else if (strncmp(type, "sound", 5) == 0) {
-                obj->handleSound(id, reader);
-            } else if (strncmp(type, "audio", 5) == 0) {
-                obj->handleAudio(id, reader);
-            } else if (strncmp(type, "error", 5) == 0) {
-                obj->handleError(id, reader);
-            } else if (strncmp(type, "askSpecial", 10) == 0) {
-                obj->handleAskSpecial(id, reader);
-            } else if (strncmp(type, "ping", 4) == 0) {
-                obj->handlePing(id, reader);
-            } else if (
-                strncmp(type, "command", 7) == 0 // Parrot commands back
-                || strncmp(type, "new-program", 11) == 0 // ThingTalk stuff
-                || strncmp(type, "rdl", 3) == 0 // External link
-                || strncmp(type, "link", 4) == 0 // Internal link (skill conf)
-                || strncmp(type, "button", 6) == 0 // Clickable command
-                || strncmp(type, "video", 5) == 0 
-                || strncmp(type, "picture", 7) == 0
-                || strncmp(type, "choice", 5) == 0
-            ) {
-                g_debug("Ignored message id=%" G_GINT64_FORMAT " type=%s", id, type);
-            } else {
-                g_warning("Unhandled message id=%" G_GINT64_FORMAT " type=%s\n", id, type);
-            }
+        if (strcmp(type, "text") == 0) {
+            obj->handleText(id, reader);
+        } else if (strcmp(type, "sound") == 0) {
+            obj->handleSound(id, reader);
+        } else if (strcmp(type, "audio") == 0) {
+            obj->handleAudio(id, reader);
+        }  else if (
+            strcmp(type, "command") == 0 // Parrot commands back
+            || strcmp(type, "new-program") == 0 // ThingTalk stuff
+            || strcmp(type, "rdl") == 0 // External link
+            || strcmp(type, "link") == 0 // Internal link (skill conf)
+            || strcmp(type, "button") == 0 // Clickable command
+            || strcmp(type, "video") == 0
+            || strcmp(type, "picture") == 0
+            || strcmp(type, "choice") == 0
+        ) {
+            g_debug("Ignored message id=%" G_GINT64_FORMAT " type=%s", id, type);
         } else {
-            g_warning(
-                "Ignored message id=%" G_GINT64_FORMAT " type=%s -- not accepting stream\n",
-                id,
-                type
-            );
+            g_warning("Unhandled message id=%" G_GINT64_FORMAT " type=%s\n", id, type);
         }
     }
 
@@ -303,7 +320,7 @@ void genie::wsClient::on_close(SoupWebsocketConnection *conn, gpointer data)
 
     gushort code = soup_websocket_connection_get_close_code(conn);
     g_print("Genie WebSocket connection closed: %d %s\n", code, close_data);
-    
+
     obj->connect();
 }
 
@@ -320,10 +337,10 @@ void genie::wsClient::on_connection(SoupSession *session, GAsyncResult *res, gpo
         g_error_free(error);
         return;
     }
+    g_debug("Connected successfully to Genie conversation websocket");
 
     soup_websocket_connection_set_max_incoming_payload_size(conn, 512000);
     obj->setConnection(conn);
-    obj->acceptStream = false;
 
     g_signal_connect(conn, "message", G_CALLBACK(genie::wsClient::on_message), data);
     g_signal_connect(conn, "closed",  G_CALLBACK(genie::wsClient::on_close),   data);
@@ -372,17 +389,17 @@ void genie::wsClient::connect()
     if (app->m_config->conversationId) {
         soup_uri_set_query_from_fields(uri,
             "skip_history", "1",
+            "sync_devices", "1",
             "id", app->m_config->conversationId,
             nullptr);
     } else {
         soup_uri_set_query_from_fields(uri,
             "skip_history", "1",
+            "sync_devices", "1",
             nullptr);
     }
 
-    gchar *uristr = soup_uri_to_string(uri, false);
-    msg = soup_message_new(SOUP_METHOD_GET, uristr);
-    g_free(uristr);
+    msg = soup_message_new_from_uri(SOUP_METHOD_GET, uri);
     soup_uri_free(uri);
 
     if (accessToken) {

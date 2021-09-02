@@ -42,7 +42,7 @@ protected:
 private:
     void setConnection(SoupWebsocketConnection *conn);
     void sendJSON(JsonBuilder *builder);
-    
+
     // Socket event handlers
     static void on_connection(
         SoupSession *session,
@@ -56,22 +56,22 @@ private:
         gpointer data
     );
     static void on_close(SoupWebsocketConnection *conn, gpointer data);
-    
+
     // Message handlers
     void handleConversationID(JsonReader *reader);
     void handleText(gint64 id, JsonReader *reader);
     void handleSound(gint64 id, JsonReader *reader);
     void handleAudio(gint64 id, JsonReader *reader);
-    void handleError(gint64 id, JsonReader *reader);
-    void handleAskSpecial(gint64 id, JsonReader *reader);
-    void handlePing(gint64 id, JsonReader *reader);
+    void handleError(JsonReader *reader);
+    void handlePing(JsonReader *reader);
+    void handleAskSpecial(JsonReader *reader);
+    void handleNewDevice(JsonReader *reader);
 
 private:
     App *app;
     gchar *conversationId;
     gchar *url;
     SoupWebsocketConnection *wconn;
-    gboolean acceptStream;
     gchar *accessToken;
     int seq;
 
