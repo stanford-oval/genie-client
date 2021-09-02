@@ -111,19 +111,19 @@ void genie::AudioPlayer::on_pad_added(GstElement *element, GstPad *pad, gpointer
     gst_object_unref(sinkpad);
 }
 
-gboolean genie::AudioPlayer::playSound(enum Sound_t id)
+gboolean genie::AudioPlayer::playSound(enum Sound_t id, AudioDestination destination)
 {
     if (id == SOUND_MATCH) {
-        return playLocation("assets/match.oga");
+        return playLocation("assets/match.oga", destination);
     } else if (id == SOUND_NO_MATCH) {
-        return playLocation("assets/no-match.oga");
+        return playLocation("assets/no-match.oga", destination);
     } else if (id == SOUND_NEWS_INTRO) {
-        return playLocation("assets/news-intro.oga");
+        return playLocation("assets/news-intro.oga", destination);
     }
     return false;
 }
 
-gboolean genie::AudioPlayer::playLocation(const gchar *location) {
+gboolean genie::AudioPlayer::playLocation(const gchar *location, AudioDestination destination) {
     if (!location || strlen(location) < 1)
         return false;
 
@@ -134,7 +134,7 @@ gboolean genie::AudioPlayer::playLocation(const gchar *location) {
         path = g_build_filename(g_get_current_dir(), location, nullptr);
     gchar* uri = g_strdup_printf("file://%s", path);
 
-    gboolean ok = playURI(uri);
+    gboolean ok = playURI(uri, destination);
 
     g_free(uri);
     g_free(path);
@@ -142,7 +142,22 @@ gboolean genie::AudioPlayer::playLocation(const gchar *location) {
     return ok;
 }
 
-gboolean genie::AudioPlayer::playURI(const gchar *uri)
+static const gchar*
+getAudioOutput(const genie::Config& config, genie::AudioDestination destination) {
+    switch(destination) {
+    case genie::AudioDestination::MUSIC:
+        return config.audioOutputDeviceMusic;
+    case genie::AudioDestination::ALERT:
+        return config.audioOutputDeviceAlerts;
+    case genie::AudioDestination::VOICE:
+        return config.audioOutputDeviceVoice;
+    default:
+        g_warn_if_reached();
+        return config.audioOutputDeviceMusic;
+    }
+}
+
+gboolean genie::AudioPlayer::playURI(const gchar *uri, AudioDestination destination)
 {
     if (!uri || strlen(uri) < 1)
         return false;
@@ -150,8 +165,9 @@ gboolean genie::AudioPlayer::playURI(const gchar *uri)
     auto sink = auto_gst_ptr<GstElement>(
         gst_element_factory_make(app->m_config->audioSink, "audio-output"),
         adopt_mode::ref_sink);
-    if (app->m_config->audioOutputDevice)
-        g_object_set(G_OBJECT(sink.get()), "device", app->m_config->audioOutputDevice, NULL);
+    const char* output_device = getAudioOutput(*app->m_config, destination);
+    if (output_device)
+        g_object_set(G_OBJECT(sink.get()), "device", output_device, NULL);
 
     auto pipeline = auto_gst_ptr<GstElement>(gst_element_factory_make("playbin", "audio-player"), adopt_mode::ref_sink);
     g_object_set(G_OBJECT(pipeline.get()),
@@ -189,32 +205,33 @@ gboolean genie::AudioPlayer::say(const gchar *text)
     g_free(location);
     g_object_set(G_OBJECT(source), "method", "POST", NULL);
     g_object_set(G_OBJECT(source), "content-type", "application/json", NULL);
-    
+
     JsonBuilder *builder = json_builder_new();
     json_builder_begin_object(builder);
-    
+
     json_builder_set_member_name(builder, "text");
     json_builder_add_string_value(builder, text);
-    
+
     json_builder_set_member_name(builder, "gender");
     json_builder_add_string_value(builder, app->m_config->audioVoice);
-    
+
     json_builder_end_object(builder);
-    
+
     JsonGenerator *gen = json_generator_new();
     JsonNode *root = json_builder_get_root(builder);
     json_generator_set_root(gen, root);
     gchar *jsonText = json_generator_to_data(gen, NULL);
-    
+
     g_object_set(G_OBJECT(source), "post-data", jsonText, NULL);
-    
+
     g_free(jsonText);
     json_node_free(root);
     g_object_unref(gen);
     g_object_unref(builder);
-    
-    if (app->m_config->audioOutputDevice) {
-        g_object_set(G_OBJECT(sink), "device", app->m_config->audioOutputDevice, NULL);
+
+    const char* output_device = getAudioOutput(*app->m_config, AudioDestination::VOICE);
+    if (output_device) {
+        g_object_set(G_OBJECT(sink), "device", output_device, NULL);
     }
 
     gst_bin_add_many(GST_BIN(pipeline.get()), source, decoder, sink, NULL);

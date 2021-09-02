@@ -52,14 +52,20 @@ struct AudioTask {
     }
 };
 
+enum class AudioDestination {
+    VOICE,
+    MUSIC,
+    ALERT
+};
+
 class AudioPlayer
 {
 public:
     AudioPlayer(App *appInstance);
     ~AudioPlayer();
-    gboolean playSound(enum Sound_t id);
-    gboolean playURI(const gchar *uri);
-    gboolean playLocation(const gchar *location);
+    gboolean playSound(enum Sound_t id, AudioDestination destination = AudioDestination::ALERT);
+    gboolean playURI(const gchar *uri, AudioDestination destination = AudioDestination::MUSIC);
+    gboolean playLocation(const gchar *location, AudioDestination destination = AudioDestination::MUSIC);
     gboolean say(const gchar *text);
     gboolean clean_queue();
     gboolean stop();
