@@ -29,7 +29,7 @@ class Config
 public:
     Config();
     ~Config();
-    int load();
+    void load();
 
     gchar *genieURL;
     gchar *genieAccessToken;
@@ -37,7 +37,9 @@ public:
     gchar *nlURL;
     gchar *audioInputDevice;
     gchar *audioSink;
-    gchar *audioOutputDevice;
+    gchar *audioOutputDeviceMusic;
+    gchar *audioOutputDeviceVoice;
+    gchar *audioOutputDeviceAlerts;
     gchar *audioVoice;
 protected:
 private:

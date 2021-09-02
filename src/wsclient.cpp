@@ -159,7 +159,7 @@ void genie::wsClient::handleSound(gint64 id, JsonReader *reader) {
         g_message(
             "Playing sound message id=%" G_GINT64_FORMAT " name=%s\n", id, name
         );
-        app->m_audioPlayer->playSound(SOUND_NEWS_INTRO);
+        app->m_audioPlayer->playSound(SOUND_NEWS_INTRO, AudioDestination::MUSIC);
     } else {
         g_warning(
             "Sound not recognized id=%" G_GINT64_FORMAT " name=%s\n", id, name
@@ -175,7 +175,7 @@ void genie::wsClient::handleAudio(gint64 id, JsonReader *reader) {
     g_message(
         "Playing audio message id=%" G_GINT64_FORMAT " url=%s\n", id, url
     );
-    app->m_audioPlayer->playURI((gchar *)url);
+    app->m_audioPlayer->playURI(url, AudioDestination::MUSIC);
 }
 
 void genie::wsClient::handleError(JsonReader *reader) {
