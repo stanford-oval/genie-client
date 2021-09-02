@@ -85,12 +85,12 @@ void genie::STT::on_message(SoupWebsocketConnection *conn, gint type,
         PROF_PRINT("STT text: %s\n", text);
 
         gboolean wakewordFound = false;
-        if (!memcmp(text, "Computer,", 9) || !memcmp(text, "computer,", 9) ||
-            !memcmp(text, "Computer.", 9) || !memcmp(text, "computer.", 9)) {
+        if (!strncmp(text, "Computer,", 9) || !strncmp(text, "computer,", 9) ||
+            !strncmp(text, "Computer.", 9) || !strncmp(text, "computer.", 9)) {
           text += 9;
           wakewordFound = true;
-        } else if (!memcmp(text, "Computer", 8) ||
-                   !memcmp(text, "computer", 8)) {
+        } else if (!strncmp(text, "Computer", 8) ||
+                   !strncmp(text, "computer", 8)) {
           text += 8;
           wakewordFound = true;
         }
@@ -208,7 +208,7 @@ gboolean genie::STT::is_connection_open() {
 /**
  * @brief Queue an audio input (speech) frame to be sent to the Speech-To-Text
  * (STT) service.
- * 
+ *
  * @param frame Audio frame to send.
  */
 void genie::STT::send_frame(AudioFrame *frame) {
@@ -219,7 +219,7 @@ void genie::STT::send_frame(AudioFrame *frame) {
       AudioFrame *queued_frame = (AudioFrame *)g_queue_pop_head(queue);
       dispatch_frame(queued_frame);
     }
-    
+
     dispatch_frame(frame);
   } else {
     // The connection is not open yet, queue the frame to be sent when it does
