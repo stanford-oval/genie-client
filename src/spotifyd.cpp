@@ -27,6 +27,8 @@
 #include <sys/utsname.h>
 #include <string.h>
 
+#include <vector>
+
 #define SPOTIFYD_VERSION "v0.3.3"
 
 genie::Spotifyd::Spotifyd(App *appInstance) {
@@ -105,16 +107,26 @@ int genie::Spotifyd::spawn()
         backend = "alsa";
     }
 
-    const gchar *argv[] = {
-        filePath, "--no-daemon", "--device-name", deviceName, "--backend", backend, "--token", accessToken.c_str(), nullptr
+    std::vector<const gchar*> argv {
+        filePath, "--no-daemon",
+        "--device-name", deviceName,
+        "--device-type", "speaker",
+        "--backend", backend,
+        "--token", accessToken.c_str(),
     };
+    if (strcmp(backend, "alsa") == 0 && app->m_config->audioOutputDeviceMusic) {
+        argv.push_back("--device");
+        argv.push_back(app->m_config->audioOutputDeviceMusic);
+    }
+    argv.push_back(nullptr);
+
     g_debug("spawn spotifyd");
     for (int i = 0; argv[i]; i++) {
         g_debug("%s", argv[i]);
     }
 
     GError *gerror = NULL;
-    g_spawn_async_with_pipes(NULL, (gchar**) argv, NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL,
+    g_spawn_async_with_pipes(NULL, (gchar**) argv.data(), NULL, G_SPAWN_DO_NOT_REAP_CHILD, NULL,
         NULL, &child_pid, NULL, NULL, NULL, &gerror);
     if (gerror) {
         g_critical("Spawning spotifyd child failed: %s\n", gerror->message);
