@@ -3,6 +3,7 @@ import re
 from clavier import log as logging, CFG
 
 from genie_client_cpp.remote import Remote
+from genie_client_cpp.context import Context
 from genie_client_cpp.ps_entry import PSEntry
 
 
@@ -23,12 +24,14 @@ def add_to(subparsers):
 
     parser.add_argument(
         "target",
+        nargs="?",
         help=(
             "_destination_ argument for `ssh` or 'adb' to use Android debugger "
             "over a USB cable"
         ),
     )
 
+@Context.inject_current
 def run(target: str):
     LOG.info("Killing client...", target=target)
 

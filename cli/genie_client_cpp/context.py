@@ -117,13 +117,12 @@ class Context:
     @classmethod
     def inject_current(cls, fn: Callable) -> Callable:
         @wraps(fn)
-        def wrapped(**kwds):
+        def wrapped(*args, **kwds):
             field_names = {field.name for field in fields(cls)}
             if current := cls.current():
                 for name, value in kwds.items():
                     if name in field_names and value is None:
                         context_value = getattr(current, name)
                         kwds[name] = context_value
-            return fn(**kwds)
-
+            return fn(*args, **kwds)
         return wrapped

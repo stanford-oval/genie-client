@@ -18,8 +18,17 @@ def add_to(subparsers):
     )
 
     parser.add_argument(
+        "-t",
+        "--target",
+        help=(
+            "_destination_ argument for `ssh` or 'adb' to use Android debugger "
+            "over a USB cable"
+        ),
+    )
+
+    parser.add_argument(
         "-n",
-        "--wifi-network",
+        "--wifi-name",
         help="Network name (SSID)",
     )
 
@@ -43,32 +52,23 @@ def add_to(subparsers):
         help="Reconfigure the interface after set",
     )
 
-    parser.add_argument(
-        "target",
-        nargs="?",
-        help=(
-            "_destination_ argument for `ssh` or 'adb' to use Android debugger "
-            "over a USB cable"
-        ),
-    )
-
 
 @Context.inject_current
 def run(
     target: str,
-    wifi_network: str,
+    wifi_name: str,
     wifi_password: str,
     dns_servers: List[str],
     reconfigure: bool,
 ):
     remote = Remote.create(target)
-    if wifi_network is not None and wifi_password is not None:
+    if wifi_name is not None and wifi_password is not None:
         remote.write_lines(
             CFG.genie_client_cpp.xiaodu.paths.wifi_config,
             "ctrl_interface=/var/run/wpa_supplicant",
             "update_config=1",
             "network={",
-            f'    ssid="{wifi_network}"',
+            f'    ssid="{wifi_name}"',
             f'    psk="{wifi_password}"',
             "}",
         )
