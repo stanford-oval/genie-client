@@ -120,16 +120,9 @@ class Context:
         def wrapped(**kwds):
             field_names = {field.name for field in fields(cls)}
             if current := cls.current():
-                LOG.info(
-                    "Got current",
-                    current=current,
-                    kwds=kwds,
-                    field_names=field_names,
-                )
                 for name, value in kwds.items():
                     if name in field_names and value is None:
                         context_value = getattr(current, name)
-                        LOG.info("Setting!", name=name, value=context_value)
                         kwds[name] = context_value
             return fn(**kwds)
 
