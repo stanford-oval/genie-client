@@ -50,7 +50,7 @@ void genie::wsClient::sendJSON(JsonBuilder *builder) {
     json_generator_set_root(gen, root);
     gchar *str = json_generator_to_data(gen, NULL);
 
-    PROF_PRINT("[SERVER WS] sending: %s", str);
+    PROF_PRINT("[SERVER WS] sending: %s\n", str);
     soup_websocket_connection_send_text(wconn, str);
 
     json_node_free(root);
