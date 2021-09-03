@@ -25,7 +25,7 @@
 #include <fstream>
 
 #include "wsclient.hpp"
-#include "tts.hpp"
+#include "audioplayer.hpp"
 #include "spotifyd.hpp"
 
 gboolean genie::wsClient::checkIsConnected() {
