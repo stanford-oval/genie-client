@@ -27,12 +27,16 @@
 #include <glib.h>
 #include <webrtc/webrtc_vad.h>
 
+#define AUDIO_INPUT_VAD_FRAME_LENGTH 480
+
 namespace genie {
 
 class AudioInput {
 public:
   static const int32_t BUFFER_MAX_FRAMES = 32;
-  static const int32_t VAD_FRAME_LENGTH = 480;
+  // static const int32_t VAD_FRAME_LENGTH = 480;
+  static const int VAD_IS_SILENT = 0;
+  static const int VAD_NOT_SILENT = 1;
 
   enum class State {
     WAITING,
@@ -49,7 +53,7 @@ protected:
   static void *loop(gpointer data);
 
 private:
-  gboolean running;
+  bool running;
   snd_pcm_t *alsa_handle = NULL;
 
   void *porcupine_library;
@@ -60,19 +64,32 @@ private:
   const char *(*pv_status_to_string_func)(pv_status_t);
 
   int16_t *pcm;
-  int32_t frame_length;
+  int32_t pv_frame_length;
   int32_t sample_rate;
-  GQueue *pcm_queue;
+  GQueue *frame_buffer;
 
   VadInst *vad_instance;
   App *app;
 
-  gint vad_start_frame_count;
-  gint vad_done_frame_count;
+  int32_t vad_start_frame_count;
+  int32_t vad_done_frame_count;
+  
+  // How many frames we need to be woke before we go into `State::LISTENING`,
+  // where we terminate input after the `vad_done_frame_count`
+  int32_t min_woke_frame_count;
+  
+  // Loop state variables
+  State state = State::WAITING;
+  int32_t state_woke_frame_count;
+  int32_t state_vad_frame_count;
 
-  static AudioFrame *build_frame(int16_t *samples, gsize length);
+  AudioFrame *read_frame(int32_t frame_length);
 
-  gint ms_to_vad_frame_count(gint ms);
+  int32_t ms_to_frames(int32_t frame_length, int32_t ms);
+  void loop_waiting();
+  void loop_woke();
+  void loop_listening();
+  void transition(State to_state);
 };
 
 } // namespace genie

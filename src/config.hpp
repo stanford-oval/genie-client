@@ -29,6 +29,7 @@ public:
   static const gint VAD_MAX_MS = 5000;
   static const gint DEFAULT_VAD_START_SPEAKING_MS = 2000;
   static const gint DEFAULT_VAD_DONE_SPEAKING_MS = 500;
+  static const gint DEFAULT_MIN_WOKE_MS = 1000;
 
   Config();
   ~Config();
@@ -46,6 +47,7 @@ public:
   gchar *audioVoice;
   gint vad_start_speaking_ms;
   gint vad_done_speaking_ms;
+  gint vad_min_woke_ms;
 
 protected:
 private:

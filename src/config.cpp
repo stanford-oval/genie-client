@@ -146,56 +146,62 @@ void genie::Config::load() {
     vad_start_speaking_ms =
         g_key_file_get_integer(key_file, "vad", "start_speaking_ms", &error);
     if (error) {
-        g_error_free(error);
-        vad_start_speaking_ms = DEFAULT_VAD_START_SPEAKING_MS;
+      g_error_free(error);
+      vad_start_speaking_ms = DEFAULT_VAD_START_SPEAKING_MS;
     }
     if (vad_start_speaking_ms < VAD_MIN_MS) {
-        g_warning(
-            "CONFIG [vad] start_speaking_ms must be %d or greater, "
-            "found %d. Setting to default (%d).",
-            VAD_MIN_MS,
-            vad_start_speaking_ms,
-            DEFAULT_VAD_START_SPEAKING_MS
-        );
-        vad_start_speaking_ms = DEFAULT_VAD_START_SPEAKING_MS;
+      g_warning("CONFIG [vad] start_speaking_ms must be %d or greater, "
+                "found %d. Setting to default (%d).",
+                VAD_MIN_MS, vad_start_speaking_ms,
+                DEFAULT_VAD_START_SPEAKING_MS);
+      vad_start_speaking_ms = DEFAULT_VAD_START_SPEAKING_MS;
     }
     if (vad_start_speaking_ms > VAD_MAX_MS) {
-        g_warning(
-            "CONFIG [vad] start_speaking_ms must be %d or less, "
-            "found %d. Setting to default (%d).",
-            VAD_MAX_MS,
-            vad_start_speaking_ms,
-            DEFAULT_VAD_START_SPEAKING_MS
-        );
-        vad_start_speaking_ms = DEFAULT_VAD_START_SPEAKING_MS;
+      g_warning("CONFIG [vad] start_speaking_ms must be %d or less, "
+                "found %d. Setting to default (%d).",
+                VAD_MAX_MS, vad_start_speaking_ms,
+                DEFAULT_VAD_START_SPEAKING_MS);
+      vad_start_speaking_ms = DEFAULT_VAD_START_SPEAKING_MS;
     }
-    
+
     error = NULL;
     vad_done_speaking_ms =
         g_key_file_get_integer(key_file, "vad", "done_speaking_ms", &error);
     if (error) {
-        g_error_free(error);
-        vad_done_speaking_ms = DEFAULT_VAD_DONE_SPEAKING_MS;
+      g_error_free(error);
+      vad_done_speaking_ms = DEFAULT_VAD_DONE_SPEAKING_MS;
     }
     if (vad_done_speaking_ms < VAD_MIN_MS) {
-        g_warning(
-            "CONFIG [vad] done_speaking_ms must be %d or greater, "
-            "found %d. Setting to default (%d).",
-            VAD_MIN_MS,
-            vad_done_speaking_ms,
-            DEFAULT_VAD_DONE_SPEAKING_MS
-        );
-        vad_done_speaking_ms = DEFAULT_VAD_DONE_SPEAKING_MS;
+      g_warning("CONFIG [vad] done_speaking_ms must be %d or greater, "
+                "found %d. Setting to default (%d).",
+                VAD_MIN_MS, vad_done_speaking_ms, DEFAULT_VAD_DONE_SPEAKING_MS);
+      vad_done_speaking_ms = DEFAULT_VAD_DONE_SPEAKING_MS;
     }
     if (vad_done_speaking_ms > VAD_MAX_MS) {
-        g_warning(
-            "CONFIG [vad] done_speaking_ms must be %d or less, "
-            "found %d. Setting to default (%d).",
-            VAD_MAX_MS,
-            vad_done_speaking_ms,
-            DEFAULT_VAD_DONE_SPEAKING_MS
-        );
-        vad_done_speaking_ms = DEFAULT_VAD_DONE_SPEAKING_MS;
+      g_warning("CONFIG [vad] done_speaking_ms must be %d or less, "
+                "found %d. Setting to default (%d).",
+                VAD_MAX_MS, vad_done_speaking_ms, DEFAULT_VAD_DONE_SPEAKING_MS);
+      vad_done_speaking_ms = DEFAULT_VAD_DONE_SPEAKING_MS;
+    }
+
+    error = NULL;
+    vad_min_woke_ms =
+        g_key_file_get_integer(key_file, "vad", "min_woke_ms", &error);
+    if (error) {
+      g_error_free(error);
+      vad_min_woke_ms = DEFAULT_MIN_WOKE_MS;
+    }
+    if (vad_min_woke_ms < VAD_MIN_MS) {
+      g_warning("CONFIG [vad] min_woke_ms must be %d or greater, "
+                "found %d. Setting to default (%d).",
+                VAD_MIN_MS, vad_min_woke_ms, DEFAULT_VAD_DONE_SPEAKING_MS);
+      vad_min_woke_ms = DEFAULT_MIN_WOKE_MS;
+    }
+    if (vad_min_woke_ms > VAD_MAX_MS) {
+      g_warning("CONFIG [vad] min_woke_ms must be %d or less, "
+                "found %d. Setting to default (%d).",
+                VAD_MAX_MS, vad_min_woke_ms, DEFAULT_VAD_DONE_SPEAKING_MS);
+      vad_min_woke_ms = DEFAULT_MIN_WOKE_MS;
     }
   }
 }

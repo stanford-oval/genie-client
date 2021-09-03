@@ -28,16 +28,16 @@
 genie::AudioInput::AudioInput(App *appInstance) {
   app = appInstance;
   vad_instance = WebRtcVad_Create();
-  pcm_queue = g_queue_new();
+  frame_buffer = g_queue_new();
 }
 
 genie::AudioInput::~AudioInput() {
   running = false;
   WebRtcVad_Free(vad_instance);
-  while (!g_queue_is_empty(pcm_queue)) {
-    g_free(g_queue_pop_head(pcm_queue));
+  while (!g_queue_is_empty(frame_buffer)) {
+    g_free(g_queue_pop_head(frame_buffer));
   }
-  g_queue_free(pcm_queue);
+  g_queue_free(frame_buffer);
   free(pcm);
   snd_pcm_close(alsa_handle);
   pv_porcupine_delete_func(porcupine);
@@ -191,16 +191,18 @@ int genie::AudioInput::init() {
     return -2;
   }
 
-  frame_length = pv_porcupine_frame_length_func();
+  pv_frame_length = pv_porcupine_frame_length_func();
 
-  pcm = (int16_t *)malloc(frame_length * sizeof(int16_t));
+  pcm = (int16_t *)malloc(
+      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
+      sizeof(int16_t));
   if (!pcm) {
     g_error("failed to allocate memory for audio buffer\n");
     return -2;
   }
 
   g_print("Initialized wakeword engine, frame length %d, sample rate %d\n",
-          frame_length, sample_rate);
+          pv_frame_length, sample_rate);
 
   if (WebRtcVad_Init(vad_instance)) {
     g_error("failed to initialize webrtc vad\n");
@@ -213,24 +215,31 @@ int genie::AudioInput::init() {
     return -2;
   }
 
-  if (WebRtcVad_ValidRateAndFrameLength(sample_rate, frame_length)) {
-    g_debug("invalid rate %d or framelength %d", sample_rate, frame_length);
+  if (WebRtcVad_ValidRateAndFrameLength(sample_rate, pv_frame_length)) {
+    g_debug("invalid rate %d or framelength %d", sample_rate, pv_frame_length);
   }
 
-  vad_start_frame_count =
-      ms_to_vad_frame_count(app->m_config->vad_start_speaking_ms);
-  g_message("Calculated start VAD frame count: %d", vad_start_frame_count);
+  vad_start_frame_count = ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH,
+                                       app->m_config->vad_start_speaking_ms);
+  g_message("Calculated start VAD: %d ms -> %d frames",
+            app->m_config->vad_start_speaking_ms, vad_start_frame_count);
 
-  vad_done_frame_count =
-      ms_to_vad_frame_count(app->m_config->vad_done_speaking_ms);
-  g_message("Calculated done VAD frame count: %d", vad_done_frame_count);
+  vad_done_frame_count = ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH,
+                                      app->m_config->vad_done_speaking_ms);
+  g_message("Calculated done VAD: %d ms -> %d frames",
+            app->m_config->vad_done_speaking_ms, vad_done_frame_count);
 
-  GError *gerror = NULL;
-  g_thread_try_new("audioInputThread", (GThreadFunc)loop,
-                   reinterpret_cast<AudioInput *>(this), &gerror);
-  if (gerror) {
-    g_print("audioInputThread Error: g_thread_try_new() %s\n", gerror->message);
-    g_error_free(gerror);
+  min_woke_frame_count = ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH,
+                                      app->m_config->vad_min_woke_ms);
+  g_message("Calculated min woke frames: %d ms -> %d frames",
+            app->m_config->vad_min_woke_ms, min_woke_frame_count);
+
+  GError *thread_error = NULL;
+  g_thread_try_new("audioInputThread", (GThreadFunc)loop, this, &thread_error);
+  if (thread_error) {
+    g_print("audioInputThread Error: g_thread_try_new() %s\n",
+            thread_error->message);
+    g_error_free(thread_error);
     return false;
   }
   running = true;
@@ -238,112 +247,180 @@ int genie::AudioInput::init() {
   return 0;
 }
 
-gint genie::AudioInput::ms_to_vad_frame_count(gint ms) {
-  return (gint)((((double)sample_rate / 1000) * ms) / (double)VAD_FRAME_LENGTH);
+/**
+ * @brief Convert `ms` milliseconds to number of frames at a given
+ * `frame_length` (in samples).
+ *
+ * Uses `this->sample_rate` to calculate how samples per second.
+ *
+ * @param frame_length
+ * @param ms
+ * @return int32_t
+ */
+int32_t genie::AudioInput::ms_to_frames(int32_t frame_length, int32_t ms) {
+  //     floor <-  (samples/sec * (     seconds     )) / (samples/frame)
+  return (int32_t)((sample_rate * ((double)ms / 1000)) / frame_length);
 }
 
-genie::AudioFrame *genie::AudioInput::build_frame(int16_t *samples,
-                                                  gsize length) {
+genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
+  const int read_frames = snd_pcm_readi(alsa_handle, pcm, frame_length);
+
+  if (read_frames < 0) {
+    g_error("'snd_pcm_readi' failed with '%s'\n", snd_strerror(read_frames));
+    return NULL;
+  }
+
+  if (read_frames != frame_length) {
+    g_message("read %d frames instead of %d\n", read_frames, frame_length);
+    return NULL;
+  }
+
   AudioFrame *frame = g_new(AudioFrame, 1);
-  frame->samples = (int16_t *)g_malloc(length * sizeof(int16_t));
-  memcpy(frame->samples, samples, length * sizeof(int16_t));
-  frame->length = length;
+  frame->samples = (int16_t *)g_malloc(frame_length * sizeof(int16_t));
+  memcpy(frame->samples, pcm, frame_length * sizeof(int16_t));
+  frame->length = frame_length;
   return frame;
+}
+
+void genie::AudioInput::transition(State to_state) {
+  // Reset state variables
+  state_woke_frame_count = 0;
+  state_vad_frame_count = 0;
+
+  switch (to_state) {
+  case State::WAITING:
+    g_message("[AudioInput] -> State::WAITING\n");
+    state = State::WAITING;
+    break;
+  case State::WOKE:
+    g_message("[AudioInput] -> State::WOKE\n");
+    state = State::WOKE;
+    break;
+  case State::LISTENING:
+    g_message("[AudioInput] -> State::LISTENING\n");
+    state = State::LISTENING;
+    break;
+  }
+}
+
+void genie::AudioInput::loop_waiting() {
+  AudioFrame *new_frame = read_frame(pv_frame_length);
+
+  if (!new_frame) {
+    return;
+  }
+
+  // Drop from the queue if there are too many items
+  while (g_queue_get_length(frame_buffer) > BUFFER_MAX_FRAMES) {
+    AudioFrame *dropped_frame = (AudioFrame *)g_queue_pop_head(frame_buffer);
+    g_free(dropped_frame->samples);
+    g_free(dropped_frame);
+  }
+
+  // Add the new frame to the queue
+  g_queue_push_tail(frame_buffer, new_frame);
+
+  // Check the new frame for the wake-word
+  int32_t keyword_index = -1;
+  pv_status_t status =
+      pv_porcupine_process_func(porcupine, new_frame->samples, &keyword_index);
+
+  if (status != PV_STATUS_SUCCESS) {
+    // Picovoice error!
+    g_error("'pv_porcupine_process' failed with '%s'\n",
+            pv_status_to_string_func(status));
+    return;
+  }
+
+  if (keyword_index == -1) {
+    // wake-word not found
+    return;
+  }
+
+  g_message("Detected keyword!\n");
+
+  app->dispatch(WAKE, NULL);
+
+  g_debug("Sending prior %d frames\n", g_queue_get_length(frame_buffer));
+
+  while (!g_queue_is_empty(frame_buffer)) {
+    AudioFrame *queued_frame = (AudioFrame *)g_queue_pop_head(frame_buffer);
+    app->dispatch(INPUT_SPEECH_FRAME, queued_frame);
+  }
+
+  transition(State::WOKE);
+}
+
+void genie::AudioInput::loop_woke() {
+  AudioFrame *new_frame = read_frame(AUDIO_INPUT_VAD_FRAME_LENGTH);
+
+  if (!new_frame) {
+    return;
+  }
+
+  app->dispatch(INPUT_SPEECH_FRAME, new_frame);
+
+  state_woke_frame_count += 1;
+
+  // We stay "woke" for at minimum `min_woke_frame_count` frames
+  if (state_woke_frame_count < min_woke_frame_count) {
+    return;
+  }
+
+  int silence = WebRtcVad_Process(vad_instance, sample_rate, new_frame->samples,
+                                  new_frame->length);
+
+  if (silence == VAD_IS_SILENT) {
+    state_vad_frame_count += 1;
+
+    if (state_vad_frame_count >= vad_start_frame_count) {
+      // We have not detected speech over the start frame count
+      app->dispatch(INPUT_SPEECH_NOT_DETECTED, NULL);
+      transition(State::WAITING);
+    }
+  } else if (silence == VAD_NOT_SILENT) {
+    // We detected speech, transition to listenting state
+    transition(State::LISTENING);
+  }
+}
+
+void genie::AudioInput::loop_listening() {
+  AudioFrame *new_frame = read_frame(AUDIO_INPUT_VAD_FRAME_LENGTH);
+
+  if (!new_frame) {
+    return;
+  }
+
+  app->dispatch(INPUT_SPEECH_FRAME, new_frame);
+
+  int silence = WebRtcVad_Process(vad_instance, sample_rate, new_frame->samples,
+                                  new_frame->length);
+
+  if (silence == VAD_IS_SILENT) {
+    state_vad_frame_count += 1;
+  } else if (silence == 1) {
+    state_vad_frame_count = 0;
+  }
+  if (state_vad_frame_count >= vad_done_frame_count) {
+    app->dispatch(INPUT_SPEECH_DONE, NULL);
+    transition(State::WAITING);
+  }
 }
 
 void *genie::AudioInput::loop(gpointer data) {
   AudioInput *obj = reinterpret_cast<AudioInput *>(data);
-  pv_status_t status;
-  State state = State::WAITING;
-  int vad_count = 0;
-
-  int32_t frame_length = obj->frame_length;
 
   while (obj->running) {
-    const int count = snd_pcm_readi(obj->alsa_handle, obj->pcm, frame_length);
-    if (count < 0) {
-      g_error("'snd_pcm_readi' failed with '%s'\n", snd_strerror(count));
+    switch (obj->state) {
+    case State::WAITING:
+      obj->loop_waiting();
       break;
-    } else if (count != frame_length) {
-      g_print("read %d frames instead of %d\n", count, frame_length);
-      continue;
-    }
-
-    AudioFrame *new_frame = build_frame(obj->pcm, frame_length);
-
-    if (state == State::WAITING) {
-      if (g_queue_get_length(obj->pcm_queue) > BUFFER_MAX_FRAMES) {
-        AudioFrame *dropped_frame =
-            (AudioFrame *)g_queue_pop_head(obj->pcm_queue);
-        g_free(dropped_frame->samples);
-        g_free(dropped_frame);
-      }
-
-      g_queue_push_tail(obj->pcm_queue, new_frame);
-
-      int32_t keyword_index = -1;
-      status = obj->pv_porcupine_process_func(
-          obj->porcupine, new_frame->samples, &keyword_index);
-
-      if (status != PV_STATUS_SUCCESS) {
-        g_error("'pv_porcupine_process' failed with '%s'\n",
-                obj->pv_status_to_string_func(status));
-        break;
-      }
-
-      if (keyword_index != -1) {
-        g_message("detected keyword\n");
-
-        obj->app->dispatch(WAKE, NULL);
-
-        g_debug("send prior %d frames\n", g_queue_get_length(obj->pcm_queue));
-
-        while (!g_queue_is_empty(obj->pcm_queue)) {
-          AudioFrame *queued_frame =
-              (AudioFrame *)g_queue_pop_head(obj->pcm_queue);
-          obj->app->dispatch(INPUT_SPEECH_FRAME, queued_frame);
-        }
-
-        frame_length = VAD_FRAME_LENGTH;
-        state = State::WOKE;
-      }
-
-    } else if (state == State::WOKE) {
-      obj->app->dispatch(INPUT_SPEECH_FRAME, new_frame);
-      int silence = WebRtcVad_Process(obj->vad_instance, obj->sample_rate,
-                                      new_frame->samples, new_frame->length);
-      if (silence == 0) {
-        vad_count += 1;
-
-        if (vad_count >= obj->vad_start_frame_count) {
-          // We have not detected speech
-          state = State::WAITING;
-          obj->app->dispatch(INPUT_SPEECH_NOT_DETECTED, NULL);
-          vad_count = 0;
-          frame_length = obj->frame_length;
-        }
-      } else if (silence == 1) {
-        // We detected speech, transition to listenting state
-        g_message("Input speech detected, transitioning to LISTENING...\n");
-        vad_count = 0;
-        state = State::LISTENING;
-      }
-
-    } else if (state == State::LISTENING) {
-      obj->app->dispatch(INPUT_SPEECH_FRAME, new_frame);
-      int silence = WebRtcVad_Process(obj->vad_instance, obj->sample_rate,
-                                      new_frame->samples, new_frame->length);
-      if (silence == 0) {
-        vad_count += 1;
-      } else if (silence == 1) {
-        vad_count = 0;
-      }
-      if (vad_count >= obj->vad_done_frame_count) {
-        state = State::WAITING;
-        obj->app->dispatch(INPUT_SPEECH_DONE, NULL);
-        vad_count = 0;
-        frame_length = obj->frame_length;
-      }
+    case State::WOKE:
+      obj->loop_woke();
+      break;
+    case State::LISTENING:
+      obj->loop_listening();
+      break;
     }
   }
 
