@@ -119,6 +119,8 @@ gboolean genie::AudioPlayer::playSound(enum Sound_t id, AudioDestination destina
         return playLocation("assets/no-match.oga", destination);
     } else if (id == SOUND_NEWS_INTRO) {
         return playLocation("assets/news-intro.oga", destination);
+    } else if (id == SOUND_ALARM_CLOCK_ELAPSED) {
+        return playLocation("assets/alarm-clock-elapsed.oga", destination);
     }
     return false;
 }

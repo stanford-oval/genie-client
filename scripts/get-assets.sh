@@ -25,5 +25,6 @@ wget https://github.com/Picovoice/porcupine/raw/master/lib/common/porcupine_para
 #ffmpeg -y -i /usr/share/sounds/freedesktop/stereo/dialog-warning.oga -ar 22050 -ac 1 ${DESTDIR}/no-match.wav
 cp /usr/share/sounds/freedesktop/stereo/message-new-instant.oga ${DESTDIR}/match.oga
 cp /usr/share/sounds/freedesktop/stereo/dialog-warning.oga ${DESTDIR}/no-match.oga
+cp /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga ${DESTDIR}/alarm-clock-elapsed.oga
 
 exit 0

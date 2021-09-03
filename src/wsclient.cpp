@@ -155,11 +155,16 @@ void genie::wsClient::handleSound(gint64 id, JsonReader *reader) {
     const gchar *name = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
 
-    if (!strncmp(name, "news-intro", 10)) {
+    if (strcmp(name, "news-intro") == 0) {
         g_message(
             "Playing sound message id=%" G_GINT64_FORMAT " name=%s\n", id, name
         );
         app->m_audioPlayer->playSound(SOUND_NEWS_INTRO, AudioDestination::MUSIC);
+    } else if (strcmp(name, "alarm-clock-elapsed") == 0) {
+        g_message(
+            "Playing sound message id=%" G_GINT64_FORMAT " name=%s\n", id, name
+        );
+        app->m_audioPlayer->playSound(SOUND_ALARM_CLOCK_ELAPSED, AudioDestination::MUSIC);
     } else {
         g_warning(
             "Sound not recognized id=%" G_GINT64_FORMAT " name=%s\n", id, name

@@ -32,6 +32,7 @@ enum Sound_t {
     SOUND_NO_MATCH = -1,
     SOUND_MATCH = 0,
     SOUND_NEWS_INTRO = 1,
+    SOUND_ALARM_CLOCK_ELAPSED = 2,
 };
 
 struct AudioTask {
