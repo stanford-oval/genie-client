@@ -111,6 +111,7 @@ void genie::App::handle(ActionType type, gpointer payload) {
   switch (type) {
   case WAKE:
     g_message("Handling WAKE...\n");
+    system("amixer -D hw:audiocodec cset name='hd' 128");
     g_message("Stopping audio player...\n");
     m_audioPlayer->stop();
     g_message("Playing match sound...\n");
@@ -131,6 +132,7 @@ void genie::App::handle(ActionType type, gpointer payload) {
     m_audioPlayer->stop();
     m_audioPlayer->playSound(SOUND_MATCH);
     m_stt->send_done();
+    system("amixer -D hw:audiocodec cset name='hd' 255");
     break;
 
   case INPUT_SPEECH_NOT_DETECTED:
