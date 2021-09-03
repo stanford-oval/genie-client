@@ -109,7 +109,7 @@ gboolean genie::App::on_action(gpointer data) {
 
 void genie::App::handle(ActionType type, gpointer payload) {
   switch (type) {
-  case ActionType::WAKE:
+  case ActionType::WAKE: {
     g_message("Handling WAKE...\n");
     system("amixer -D hw:audiocodec cset name='hd' 128");
     g_message("Stopping audio player...\n");
@@ -120,32 +120,41 @@ void genie::App::handle(ActionType type, gpointer payload) {
     m_stt->connect();
     g_message("Done handling wake.\n");
     break;
+  }
 
-  case ActionType::SPEECH_FRAME:
+  case ActionType::SPEECH_FRAME: {
     m_stt->send_frame((AudioFrame *)payload);
     break;
+  }
 
-  case ActionType::SPEECH_DONE:
+  case ActionType::SPEECH_DONE: {
     g_message("Handling SPEECH_DONE...");
     track_processing_event(PROCESSING_BEGIN);
     track_processing_event(PROCESSING_START_STT);
+    bool ok = m_stt->send_done();
     m_audioPlayer->stop();
-    m_audioPlayer->playSound(SOUND_MATCH);
-    m_stt->send_done();
+    if (ok) {
+      m_audioPlayer->playSound(SOUND_MATCH);
+    } else {
+      m_audioPlayer->playSound(SOUND_NO_MATCH);
+    }
     system("amixer -D hw:audiocodec cset name='hd' 255");
     break;
+  }
 
-  case ActionType::SPEECH_NOT_DETECTED:
+  case ActionType::SPEECH_NOT_DETECTED: {
     g_message("Handling SPEECH_NOT_DETECTED...");
     m_audioPlayer->stop();
     m_audioPlayer->playSound(SOUND_NO_MATCH);
     m_stt->send_done();
     system("amixer -D hw:audiocodec cset name='hd' 255");
     break;
+  }
 
-  case ActionType::SPEECH_TIMEOUT:
+  case ActionType::SPEECH_TIMEOUT: {
     g_warning("TODO");
     break;
+  }
   }
 }
 

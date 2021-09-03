@@ -34,7 +34,7 @@ public:
   ~STT();
   int init();
   void send_frame(AudioFrame *frame);
-  void send_done();
+  bool send_done();
   int connect();
 
 private:

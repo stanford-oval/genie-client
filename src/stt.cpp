@@ -234,7 +234,7 @@ void genie::STT::send_frame(AudioFrame *frame) {
   }
 }
 
-void genie::STT::send_done() {
+bool genie::STT::send_done() {
   if (is_connection_open()) {
     flush_queue();
     // Send an empty terminator?!?
@@ -242,12 +242,15 @@ void genie::STT::send_done() {
     int16_t *empty = (int16_t *)malloc(0);
     soup_websocket_connection_send_binary(wconn, empty, 0);
     free(empty);
+    return true;
   } else {
-    // queue the empty frame marker to be sent later
-    AudioFrame *empty = g_new(AudioFrame, 1);
-    empty->length = 0;
-    empty->samples = (int16_t *)malloc(0);
-    g_queue_push_tail(queue, empty);
+    g_warning("Speech done, but connection not open; dropping queue.");
+    while (!g_queue_is_empty(queue)) {
+      AudioFrame *frame = (AudioFrame *)g_queue_pop_head(queue);
+      g_free(frame->samples);
+      g_free(frame);
+    }
+    return false;
   }
 }
 
