@@ -21,30 +21,36 @@
 
 #include <glib.h>
 
-namespace genie
-{
+namespace genie {
 
-class Config
-{
+class Config {
 public:
-    Config();
-    ~Config();
-    void load();
+  static const gint VAD_MIN_MS = 100;
+  static const gint VAD_MAX_MS = 5000;
+  static const gint DEFAULT_VAD_START_SPEAKING_MS = 2000;
+  static const gint DEFAULT_VAD_DONE_SPEAKING_MS = 500;
 
-    gchar *genieURL;
-    gchar *genieAccessToken;
-    gchar *conversationId;
-    gchar *nlURL;
-    gchar *audioInputDevice;
-    gchar *audioSink;
-    gchar *audioOutputDeviceMusic;
-    gchar *audioOutputDeviceVoice;
-    gchar *audioOutputDeviceAlerts;
-    gchar *audioVoice;
+  Config();
+  ~Config();
+  void load();
+
+  gchar *genieURL;
+  gchar *genieAccessToken;
+  gchar *conversationId;
+  gchar *nlURL;
+  gchar *audioInputDevice;
+  gchar *audioSink;
+  gchar *audioOutputDeviceMusic;
+  gchar *audioOutputDeviceVoice;
+  gchar *audioOutputDeviceAlerts;
+  gchar *audioVoice;
+  gint vad_start_speaking_ms;
+  gint vad_done_speaking_ms;
+
 protected:
 private:
 };
 
-}
+} // namespace genie
 
 #endif

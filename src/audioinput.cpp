@@ -27,17 +27,17 @@
 
 genie::AudioInput::AudioInput(App *appInstance) {
   app = appInstance;
-  vadInstance = WebRtcVad_Create();
-  pcmQueue = g_queue_new();
+  vad_instance = WebRtcVad_Create();
+  pcm_queue = g_queue_new();
 }
 
 genie::AudioInput::~AudioInput() {
   running = false;
-  WebRtcVad_Free(vadInstance);
-  while (!g_queue_is_empty(pcmQueue)) {
-    g_free(g_queue_pop_head(pcmQueue));
+  WebRtcVad_Free(vad_instance);
+  while (!g_queue_is_empty(pcm_queue)) {
+    g_free(g_queue_pop_head(pcm_queue));
   }
-  g_queue_free(pcmQueue);
+  g_queue_free(pcm_queue);
   free(pcm);
   snd_pcm_close(alsa_handle);
   pv_porcupine_delete_func(porcupine);
@@ -202,21 +202,26 @@ int genie::AudioInput::init() {
   g_print("Initialized wakeword engine, frame length %d, sample rate %d\n",
           frame_length, sample_rate);
 
-  if (WebRtcVad_Init(vadInstance)) {
+  if (WebRtcVad_Init(vad_instance)) {
     g_error("failed to initialize webrtc vad\n");
     return -2;
   }
 
   int vadMode = 3;
-  if (WebRtcVad_set_mode(vadInstance, vadMode)) {
+  if (WebRtcVad_set_mode(vad_instance, vadMode)) {
     g_error("unable to set vad mode to %d", vadMode);
     return -2;
   }
-  vadThreshold = 32;
 
   if (WebRtcVad_ValidRateAndFrameLength(sample_rate, frame_length)) {
     g_debug("invalid rate %d or framelength %d", sample_rate, frame_length);
   }
+
+  vad_start_frame_count = ms_to_vad_frame_count(app->m_config->vad_start_speaking_ms);
+  g_message("Calculated start VAD frame count: %d", vad_start_frame_count);
+
+  vad_done_frame_count = ms_to_vad_frame_count(app->m_config->vad_done_speaking_ms);
+  g_message("Calculated done VAD frame count: %d", vad_done_frame_count);
 
   GError *gerror = NULL;
   g_thread_try_new("audioInputThread", (GThreadFunc)loop,
@@ -231,7 +236,12 @@ int genie::AudioInput::init() {
   return 0;
 }
 
-genie::AudioFrame *genie::AudioInput::build_frame(int16_t *samples, gsize length) {
+gint genie::AudioInput::ms_to_vad_frame_count(gint ms) {
+  return (gint)((((double)sample_rate / 1000) * ms) / (double)VAD_FRAME_LENGTH);
+}
+
+genie::AudioFrame *genie::AudioInput::build_frame(int16_t *samples,
+                                                  gsize length) {
   AudioFrame *frame = g_new(AudioFrame, 1);
   frame->samples = (int16_t *)g_malloc(length * sizeof(int16_t));
   memcpy(frame->samples, samples, length * sizeof(int16_t));
@@ -242,7 +252,8 @@ genie::AudioFrame *genie::AudioInput::build_frame(int16_t *samples, gsize length
 void *genie::AudioInput::loop(gpointer data) {
   AudioInput *obj = reinterpret_cast<AudioInput *>(data);
   pv_status_t status;
-  int state = INPUT_STATE_WAITING, vadCounter = 0;
+  State state = State::WAITING;
+  int vad_count = 0;
 
   int32_t frame_length = obj->frame_length;
 
@@ -258,15 +269,15 @@ void *genie::AudioInput::loop(gpointer data) {
 
     AudioFrame *new_frame = build_frame(obj->pcm, frame_length);
 
-    if (state == INPUT_STATE_WAITING) {
-      if (g_queue_get_length(obj->pcmQueue) > AUDIO_INPUT_BUFFER_MAX_FRAMES) {
+    if (state == State::WAITING) {
+      if (g_queue_get_length(obj->pcm_queue) > BUFFER_MAX_FRAMES) {
         AudioFrame *dropped_frame =
-            (AudioFrame *)g_queue_pop_head(obj->pcmQueue);
+            (AudioFrame *)g_queue_pop_head(obj->pcm_queue);
         g_free(dropped_frame->samples);
         g_free(dropped_frame);
       }
 
-      g_queue_push_tail(obj->pcmQueue, new_frame);
+      g_queue_push_tail(obj->pcm_queue, new_frame);
 
       int32_t keyword_index = -1;
       status = obj->pv_porcupine_process_func(
@@ -283,31 +294,51 @@ void *genie::AudioInput::loop(gpointer data) {
 
         obj->app->dispatch(WAKE, NULL);
 
-        g_debug("send prior %d frames\n", g_queue_get_length(obj->pcmQueue));
+        g_debug("send prior %d frames\n", g_queue_get_length(obj->pcm_queue));
 
-        while (!g_queue_is_empty(obj->pcmQueue)) {
+        while (!g_queue_is_empty(obj->pcm_queue)) {
           AudioFrame *queued_frame =
-              (AudioFrame *)g_queue_pop_head(obj->pcmQueue);
+              (AudioFrame *)g_queue_pop_head(obj->pcm_queue);
           obj->app->dispatch(INPUT_SPEECH_FRAME, queued_frame);
         }
 
-        frame_length = AUDIO_INPUT_VAD_FRAME_LENGTH;
-        state = INPUT_STATE_STREAMING;
+        frame_length = VAD_FRAME_LENGTH;
+        state = State::WOKE;
       }
 
-    } else if (state == INPUT_STATE_STREAMING) {
+    } else if (state == State::WOKE) {
       obj->app->dispatch(INPUT_SPEECH_FRAME, new_frame);
-      int silence = WebRtcVad_Process(obj->vadInstance, obj->sample_rate,
+      int silence = WebRtcVad_Process(obj->vad_instance, obj->sample_rate,
                                       new_frame->samples, new_frame->length);
       if (silence == 0) {
-        vadCounter += 1;
+        vad_count += 1;
+
+        if (vad_count >= obj->vad_start_frame_count) {
+          // We have not detected speech
+          state = State::WAITING;
+          obj->app->dispatch(INPUT_SPEECH_NOT_DETECTED, NULL);
+          vad_count = 0;
+          frame_length = obj->frame_length;
+        }
       } else if (silence == 1) {
-        vadCounter = 0;
+        // We detected speech, transition to listenting state
+        vad_count = 0;
+        state = State::LISTENING;
       }
-      if (vadCounter >= obj->vadThreshold) {
-        state = INPUT_STATE_WAITING;
+
+    } else if (state == State::LISTENING) {
+      obj->app->dispatch(INPUT_SPEECH_FRAME, new_frame);
+      int silence = WebRtcVad_Process(obj->vad_instance, obj->sample_rate,
+                                      new_frame->samples, new_frame->length);
+      if (silence == 0) {
+        vad_count += 1;
+      } else if (silence == 1) {
+        vad_count = 0;
+      }
+      if (vad_count >= obj->vad_done_frame_count) {
+        state = State::WAITING;
         obj->app->dispatch(INPUT_SPEECH_DONE, NULL);
-        vadCounter = 0;
+        vad_count = 0;
         frame_length = obj->frame_length;
       }
     }
