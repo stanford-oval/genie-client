@@ -140,6 +140,7 @@ void genie::App::handle(ActionType type, gpointer payload) {
     m_audioPlayer->stop();
     m_audioPlayer->playSound(SOUND_NO_MATCH);
     m_stt->send_done();
+    system("amixer -D hw:audiocodec cset name='hd' 255");
     break;
 
   case INPUT_SPEECH_TIMEOUT:
