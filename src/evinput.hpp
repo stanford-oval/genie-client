@@ -20,6 +20,7 @@
 #define _EVINPUT_H
 
 #include "app.hpp"
+#include "libevdev/libevdev.h"
 
 namespace genie {
 

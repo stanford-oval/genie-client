@@ -16,6 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "evinput.hpp"
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -25,9 +26,6 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-
-#include "evinput.hpp"
-#include "libevdev/libevdev.h"
 
 #define GPIO_KEY_DEV "/dev/input/event0"
 

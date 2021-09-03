@@ -69,12 +69,12 @@ enum ProcesingEvent_t {
   PROCESSING_FINISH = 7,
 };
 
-enum ActionType {
+enum class ActionType {
   WAKE,
-  INPUT_SPEECH_FRAME,
-  INPUT_SPEECH_NOT_DETECTED,
-  INPUT_SPEECH_DONE,
-  INPUT_SPEECH_TIMEOUT,
+  SPEECH_FRAME,
+  SPEECH_NOT_DETECTED,
+  SPEECH_DONE,
+  SPEECH_TIMEOUT,
 };
 
 typedef struct {

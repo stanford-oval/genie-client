@@ -339,13 +339,13 @@ void genie::AudioInput::loop_waiting() {
 
   g_message("Detected keyword!\n");
 
-  app->dispatch(WAKE, NULL);
+  app->dispatch(ActionType::WAKE, NULL);
 
   g_debug("Sending prior %d frames\n", g_queue_get_length(frame_buffer));
 
   while (!g_queue_is_empty(frame_buffer)) {
     AudioFrame *queued_frame = (AudioFrame *)g_queue_pop_head(frame_buffer);
-    app->dispatch(INPUT_SPEECH_FRAME, queued_frame);
+    app->dispatch(ActionType::SPEECH_FRAME, queued_frame);
   }
 
   transition(State::WOKE);
@@ -358,7 +358,7 @@ void genie::AudioInput::loop_woke() {
     return;
   }
 
-  app->dispatch(INPUT_SPEECH_FRAME, new_frame);
+  app->dispatch(ActionType::SPEECH_FRAME, new_frame);
 
   state_woke_frame_count += 1;
 
@@ -375,7 +375,7 @@ void genie::AudioInput::loop_woke() {
 
     if (state_vad_frame_count >= vad_start_frame_count) {
       // We have not detected speech over the start frame count
-      app->dispatch(INPUT_SPEECH_NOT_DETECTED, NULL);
+      app->dispatch(ActionType::SPEECH_NOT_DETECTED, NULL);
       transition(State::WAITING);
     }
   } else if (silence == VAD_NOT_SILENT) {
@@ -391,7 +391,7 @@ void genie::AudioInput::loop_listening() {
     return;
   }
 
-  app->dispatch(INPUT_SPEECH_FRAME, new_frame);
+  app->dispatch(ActionType::SPEECH_FRAME, new_frame);
 
   int silence = WebRtcVad_Process(vad_instance, sample_rate, new_frame->samples,
                                   new_frame->length);
@@ -402,7 +402,7 @@ void genie::AudioInput::loop_listening() {
     state_vad_frame_count = 0;
   }
   if (state_vad_frame_count >= vad_done_frame_count) {
-    app->dispatch(INPUT_SPEECH_DONE, NULL);
+    app->dispatch(ActionType::SPEECH_DONE, NULL);
     transition(State::WAITING);
   }
 }
