@@ -226,11 +226,23 @@ void genie::wsClient::handleNewDevice(JsonReader *reader) {
     }
     json_reader_end_member(reader);
 
-    if (json_reader_read_member(reader, "accessToken")) {
-        const gchar *accessToken = json_reader_get_string_value(reader);
-        app->m_spotifyd->setAccessToken(accessToken);
+    {
+        const gchar *access_token = nullptr, *username = nullptr;
+
+        if (json_reader_read_member(reader, "accessToken")) {
+            access_token = json_reader_get_string_value(reader);
+        }
+        json_reader_end_member(reader);
+
+        if (json_reader_read_member(reader, "id")) {
+            username = json_reader_get_string_value(reader);
+        }
+        json_reader_end_member(reader);
+
+        if (access_token && username) {
+            app->m_spotifyd->set_credentials(username, access_token);
+        }
     }
-    json_reader_end_member(reader);
 
 out:
      // exit the state reader
