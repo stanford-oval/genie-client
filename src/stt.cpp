@@ -137,6 +137,13 @@ void genie::STT::on_close(SoupWebsocketConnection *conn, gpointer data) {
   obj->acceptStream = false;
 }
 
+void genie::STT::flush_queue() {
+  while (!g_queue_is_empty(queue)) {
+    AudioFrame *queued_frame = (AudioFrame *)g_queue_pop_head(queue);
+    dispatch_frame(queued_frame);
+  }
+}
+
 void genie::STT::on_connection(SoupSession *session, GAsyncResult *res,
                                gpointer data) {
   STT *obj = reinterpret_cast<STT *>(data);
@@ -160,6 +167,8 @@ void genie::STT::on_connection(SoupSession *session, GAsyncResult *res,
 
   soup_websocket_connection_send_text(conn, "{ \"ver\": 1 }");
   obj->acceptStream = true;
+
+  obj->flush_queue();
 
   g_signal_connect(conn, "message", G_CALLBACK(genie::STT::on_message), data);
   g_signal_connect(conn, "closed", G_CALLBACK(genie::STT::on_close), data);
@@ -215,10 +224,7 @@ void genie::STT::send_frame(AudioFrame *frame) {
   if (is_connection_open()) {
     // If we can send frames (connection is open) then send any queued ones
     // followed by the frame we just received.
-    while (!g_queue_is_empty(queue)) {
-      AudioFrame *queued_frame = (AudioFrame *)g_queue_pop_head(queue);
-      dispatch_frame(queued_frame);
-    }
+    flush_queue();
 
     dispatch_frame(frame);
   } else {
@@ -230,19 +236,15 @@ void genie::STT::send_frame(AudioFrame *frame) {
 
 void genie::STT::send_done() {
   if (is_connection_open()) {
-    while (!g_queue_is_empty(queue)) {
-      AudioFrame *queued_frame = (AudioFrame *)g_queue_pop_head(queue);
-      dispatch_frame(queued_frame);
-    }
+    flush_queue();
     // Send an empty terminator?!?
     soup_websocket_connection_send_binary(wconn, 0, 0);
   } else {
-    g_warning("STT connection never opened, aborting");
-    while (!g_queue_is_empty(queue)) {
-      AudioFrame *frame = (AudioFrame *)g_queue_pop_head(queue);
-      g_free(frame->samples);
-      g_free(frame);
-    }
+    // queue the empty frame marker to be sent later
+    AudioFrame *empty = g_new(AudioFrame, 1);
+    empty->length = 0;
+    empty->samples = nullptr;
+    g_queue_push_tail(queue, empty);
   }
 }
 
