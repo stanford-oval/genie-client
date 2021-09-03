@@ -33,7 +33,7 @@ class AudioInput {
 public:
   static const int32_t BUFFER_MAX_FRAMES = 32;
   static const int32_t VAD_FRAME_LENGTH = 480;
-  
+
   enum class State {
     WAITING,
     WOKE,
@@ -71,7 +71,7 @@ private:
   gint vad_done_frame_count;
 
   static AudioFrame *build_frame(int16_t *samples, gsize length);
-  
+
   gint ms_to_vad_frame_count(gint ms);
 };
 

@@ -217,10 +217,12 @@ int genie::AudioInput::init() {
     g_debug("invalid rate %d or framelength %d", sample_rate, frame_length);
   }
 
-  vad_start_frame_count = ms_to_vad_frame_count(app->m_config->vad_start_speaking_ms);
+  vad_start_frame_count =
+      ms_to_vad_frame_count(app->m_config->vad_start_speaking_ms);
   g_message("Calculated start VAD frame count: %d", vad_start_frame_count);
 
-  vad_done_frame_count = ms_to_vad_frame_count(app->m_config->vad_done_speaking_ms);
+  vad_done_frame_count =
+      ms_to_vad_frame_count(app->m_config->vad_done_speaking_ms);
   g_message("Calculated done VAD frame count: %d", vad_done_frame_count);
 
   GError *gerror = NULL;
