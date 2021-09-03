@@ -73,11 +73,12 @@ def run(
             "}",
         )
 
+    # Do this _before_ DNS to try to avoid the system's prepend?
+    if reconfigure:
+        remote.run("wpa_cli", "reconfigure")
+
     if dns_servers:
         remote.write_lines(
             CFG.genie_client_cpp.xiaodu.paths.dns_config,
             *(f"nameserver {server}" for server in dns_servers)
         )
-
-    if reconfigure:
-        remote.run("wpa_cli", "reconfigure")
