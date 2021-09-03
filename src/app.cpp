@@ -109,52 +109,52 @@ gboolean genie::App::on_action(gpointer data) {
 
 void genie::App::handle(ActionType type, gpointer payload) {
   switch (type) {
-  case ActionType::WAKE: {
-    g_message("Handling WAKE...\n");
-    system("amixer -D hw:audiocodec cset name='hd' 128");
-    g_message("Stopping audio player...\n");
-    m_audioPlayer->stop();
-    g_message("Playing match sound...\n");
-    m_audioPlayer->playSound(SOUND_MATCH);
-    g_message("Connecting STT...\n");
-    m_stt->connect();
-    g_message("Done handling wake.\n");
-    break;
-  }
-
-  case ActionType::SPEECH_FRAME: {
-    m_stt->send_frame((AudioFrame *)payload);
-    break;
-  }
-
-  case ActionType::SPEECH_DONE: {
-    g_message("Handling SPEECH_DONE...");
-    track_processing_event(PROCESSING_BEGIN);
-    track_processing_event(PROCESSING_START_STT);
-    bool ok = m_stt->send_done();
-    m_audioPlayer->stop();
-    if (ok) {
+    case ActionType::WAKE: {
+      g_message("Handling WAKE...\n");
+      system("amixer -D hw:audiocodec cset name='hd' 128");
+      g_message("Stopping audio player...\n");
+      m_audioPlayer->stop();
+      g_message("Playing match sound...\n");
       m_audioPlayer->playSound(SOUND_MATCH);
-    } else {
-      m_audioPlayer->playSound(SOUND_NO_MATCH);
+      g_message("Connecting STT...\n");
+      m_stt->connect();
+      g_message("Done handling wake.\n");
+      break;
     }
-    system("amixer -D hw:audiocodec cset name='hd' 255");
-    break;
-  }
 
-  case ActionType::SPEECH_NOT_DETECTED: {
-    g_message("Handling SPEECH_NOT_DETECTED...");
-    m_audioPlayer->stop();
-    m_audioPlayer->playSound(SOUND_NO_MATCH);
-    m_stt->send_done();
-    system("amixer -D hw:audiocodec cset name='hd' 255");
-    break;
-  }
+    case ActionType::SPEECH_FRAME: {
+      m_stt->send_frame((AudioFrame *)payload);
+      break;
+    }
 
-  case ActionType::SPEECH_TIMEOUT: {
-    g_warning("TODO");
-    break;
-  }
+    case ActionType::SPEECH_DONE: {
+      g_message("Handling SPEECH_DONE...");
+      track_processing_event(PROCESSING_BEGIN);
+      track_processing_event(PROCESSING_START_STT);
+      bool ok = m_stt->send_done();
+      m_audioPlayer->stop();
+      if (ok) {
+        m_audioPlayer->playSound(SOUND_MATCH);
+      } else {
+        m_audioPlayer->playSound(SOUND_NO_MATCH);
+      }
+      system("amixer -D hw:audiocodec cset name='hd' 255");
+      break;
+    }
+
+    case ActionType::SPEECH_NOT_DETECTED: {
+      g_message("Handling SPEECH_NOT_DETECTED...");
+      m_audioPlayer->stop();
+      m_audioPlayer->playSound(SOUND_NO_MATCH);
+      m_stt->send_done();
+      system("amixer -D hw:audiocodec cset name='hd' 255");
+      break;
+    }
+
+    case ActionType::SPEECH_TIMEOUT: {
+      g_warning("TODO");
+      break;
+    }
   }
 }
 
@@ -173,47 +173,47 @@ void genie::App::track_processing_event(ProcesingEvent_t eventType) {
   }
 
   switch (eventType) {
-  case PROCESSING_BEGIN:
-    gettimeofday(&tStartProcessing, NULL);
-    isProcessing = TRUE;
-    break;
-  case PROCESSING_START_STT:
-    gettimeofday(&tStartSTT, NULL);
-    break;
-  case PROCESSING_END_STT:
-    gettimeofday(&tEndSTT, NULL);
-    break;
-  case PROCESSING_START_GENIE:
-    gettimeofday(&tStartGenie, NULL);
-    break;
-  case PROCESSING_END_GENIE:
-    gettimeofday(&tEndGenie, NULL);
-    break;
-  case PROCESSING_START_TTS:
-    gettimeofday(&tStartTTS, NULL);
-    break;
-  case PROCESSING_END_TTS:
-    gettimeofday(&tEndTTS, NULL);
-    break;
-  case PROCESSING_FINISH:
-    int total_ms = time_diff_ms(tStartProcessing, tEndTTS);
+    case PROCESSING_BEGIN:
+      gettimeofday(&tStartProcessing, NULL);
+      isProcessing = TRUE;
+      break;
+    case PROCESSING_START_STT:
+      gettimeofday(&tStartSTT, NULL);
+      break;
+    case PROCESSING_END_STT:
+      gettimeofday(&tEndSTT, NULL);
+      break;
+    case PROCESSING_START_GENIE:
+      gettimeofday(&tStartGenie, NULL);
+      break;
+    case PROCESSING_END_GENIE:
+      gettimeofday(&tEndGenie, NULL);
+      break;
+    case PROCESSING_START_TTS:
+      gettimeofday(&tStartTTS, NULL);
+      break;
+    case PROCESSING_END_TTS:
+      gettimeofday(&tEndTTS, NULL);
+      break;
+    case PROCESSING_FINISH:
+      int total_ms = time_diff_ms(tStartProcessing, tEndTTS);
 
-    g_print("############# Processing Performance #################\n");
-    print_processing_entry("Pre-STT", time_diff_ms(tStartProcessing, tStartSTT),
-                           total_ms);
-    print_processing_entry("STT", time_diff_ms(tStartSTT, tEndSTT), total_ms);
-    print_processing_entry("STT->Genie", time_diff_ms(tEndSTT, tStartGenie),
-                           total_ms);
-    print_processing_entry("Genie", time_diff_ms(tStartGenie, tEndGenie),
-                           total_ms);
-    print_processing_entry("Genie->TTS", time_diff_ms(tEndGenie, tStartTTS),
-                           total_ms);
-    print_processing_entry("TTS", time_diff_ms(tStartTTS, tEndTTS), total_ms);
-    g_print("------------------------------------------------------\n");
-    print_processing_entry("Total", total_ms, total_ms);
-    g_print("######################################################\n");
+      g_print("############# Processing Performance #################\n");
+      print_processing_entry(
+          "Pre-STT", time_diff_ms(tStartProcessing, tStartSTT), total_ms);
+      print_processing_entry("STT", time_diff_ms(tStartSTT, tEndSTT), total_ms);
+      print_processing_entry("STT->Genie", time_diff_ms(tEndSTT, tStartGenie),
+                             total_ms);
+      print_processing_entry("Genie", time_diff_ms(tStartGenie, tEndGenie),
+                             total_ms);
+      print_processing_entry("Genie->TTS", time_diff_ms(tEndGenie, tStartTTS),
+                             total_ms);
+      print_processing_entry("TTS", time_diff_ms(tStartTTS, tEndTTS), total_ms);
+      g_print("------------------------------------------------------\n");
+      print_processing_entry("Total", total_ms, total_ms);
+      g_print("######################################################\n");
 
-    isProcessing = FALSE;
-    break;
+      isProcessing = FALSE;
+      break;
   }
 }
