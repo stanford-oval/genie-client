@@ -19,34 +19,33 @@
 #ifndef _SPOTIFYD_H
 #define _SPOTIFYD_H
 
-#include <string>
 #include "app.hpp"
+#include <string>
 
 namespace genie {
 
-class Spotifyd
-{
+class Spotifyd {
 public:
-    Spotifyd(App *appInstance);
-    ~Spotifyd();
-    int init();
-    int close();
-    gboolean set_credentials(const gchar *username, const gchar *token);
+  Spotifyd(App *appInstance);
+  ~Spotifyd();
+  int init();
+  int close();
+  gboolean set_credentials(const gchar *username, const gchar *token);
 
 protected:
-    int spawn();
-    int download();
-    static void child_watch_cb(GPid pid, gint status, gpointer data);
+  int spawn();
+  int download();
+  static void child_watch_cb(GPid pid, gint status, gpointer data);
 
 private:
-    App *app;
-    GPid child_pid;
-    const char *cacheDir;
-    std::string m_username;
-    std::string m_access_token;
-    std::string arch;
+  App *app;
+  GPid child_pid;
+  const char *cacheDir;
+  std::string m_username;
+  std::string m_access_token;
+  std::string arch;
 };
 
-}
+} // namespace genie
 
 #endif

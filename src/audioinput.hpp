@@ -73,11 +73,11 @@ private:
 
   int32_t vad_start_frame_count;
   int32_t vad_done_frame_count;
-  
+
   // How many frames we need to be woke before we go into `State::LISTENING`,
   // where we terminate input after the `vad_done_frame_count`
   int32_t min_woke_frame_count;
-  
+
   // Loop state variables
   State state = State::WAITING;
   int32_t state_woke_frame_count;

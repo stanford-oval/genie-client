@@ -119,7 +119,6 @@ private:
 
   void print_processing_entry(const char *name, double duration_ms,
                               double total_ms);
-
 };
 
 typedef struct {

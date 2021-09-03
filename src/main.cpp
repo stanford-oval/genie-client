@@ -19,9 +19,9 @@
 #include "app.hpp"
 
 int main(/*int argc, char *argv[]*/) {
-    using namespace genie;
+  using namespace genie;
 
-    App app;
+  App app;
 
-    return app.exec();
+  return app.exec();
 }

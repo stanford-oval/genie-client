@@ -19,67 +19,58 @@
 #ifndef _WSCLIENT_H
 #define _WSCLIENT_H
 
-#include <libsoup/soup.h>
-#include <json-glib/json-glib.h>
 #include "app.hpp"
+#include <json-glib/json-glib.h>
+#include <libsoup/soup.h>
 
-namespace genie
-{
+namespace genie {
 
-class wsClient
-{
+class wsClient {
 public:
-    wsClient(App *appInstance);
-    ~wsClient();
-    int init();
-    void sendCommand(gchar *data);
-    void sendThingtalk(gchar *data);
-    gboolean checkIsConnected();
+  wsClient(App *appInstance);
+  ~wsClient();
+  int init();
+  void sendCommand(gchar *data);
+  void sendThingtalk(gchar *data);
+  gboolean checkIsConnected();
 
 protected:
-    void connect();
+  void connect();
 
 private:
-    void setConnection(SoupWebsocketConnection *conn);
-    void sendJSON(JsonBuilder *builder);
+  void setConnection(SoupWebsocketConnection *conn);
+  void sendJSON(JsonBuilder *builder);
 
-    // Socket event handlers
-    static void on_connection(
-        SoupSession *session,
-        GAsyncResult *res,
-        gpointer data
-    );
-    static void on_message(
-        SoupWebsocketConnection *conn,
-        gint type,
-        GBytes *message,
-        gpointer data
-    );
-    static void on_close(SoupWebsocketConnection *conn, gpointer data);
+  // Socket event handlers
+  static void on_connection(SoupSession *session, GAsyncResult *res,
+                            gpointer data);
+  static void on_message(SoupWebsocketConnection *conn, gint type,
+                         GBytes *message, gpointer data);
+  static void on_close(SoupWebsocketConnection *conn, gpointer data);
 
-    // Message handlers
-    void handleConversationID(JsonReader *reader);
-    void handleText(gint64 id, JsonReader *reader);
-    void handleSound(gint64 id, JsonReader *reader);
-    void handleAudio(gint64 id, JsonReader *reader);
-    void handleError(JsonReader *reader);
-    void handlePing(JsonReader *reader);
-    void handleAskSpecial(JsonReader *reader);
-    void handleNewDevice(JsonReader *reader);
+  // Message handlers
+  void handleConversationID(JsonReader *reader);
+  void handleText(gint64 id, JsonReader *reader);
+  void handleSound(gint64 id, JsonReader *reader);
+  void handleAudio(gint64 id, JsonReader *reader);
+  void handleError(JsonReader *reader);
+  void handlePing(JsonReader *reader);
+  void handleAskSpecial(JsonReader *reader);
+  void handleNewDevice(JsonReader *reader);
 
 private:
-    App *app;
-    gchar *conversationId;
-    gchar *url;
-    SoupWebsocketConnection *wconn;
-    gchar *accessToken;
-    int seq;
+  App *app;
+  gchar *conversationId;
+  gchar *url;
+  SoupWebsocketConnection *wconn;
+  gchar *accessToken;
+  int seq;
 
-    struct timeval tStart;
-    gboolean tInit;
-    gint64 lastSaidTextID;
+  struct timeval tStart;
+  gboolean tInit;
+  gint64 lastSaidTextID;
 };
 
-}
+} // namespace genie
 
 #endif

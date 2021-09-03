@@ -16,47 +16,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "leds.hpp"
+#include <fcntl.h>
+#include <glib-unix.h>
 #include <glib.h>
 #include <glib/gstdio.h>
-#include <glib-unix.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <string.h>
-#include "leds.hpp"
+#include <sys/stat.h>
+#include <sys/types.h>
 
-genie::Leds::Leds(App *appInstance)
-{
-    app = appInstance;
-}
+genie::Leds::Leds(App *appInstance) { app = appInstance; }
 
-genie::Leds::~Leds()
-{
-}
+genie::Leds::~Leds() {}
 
-int genie::Leds::init()
-{
-    return true;
-}
+int genie::Leds::init() { return true; }
 
-int genie::Leds::setEffect(int mode)
-{
-    if (mode < 0 || mode > 7) return false;
+int genie::Leds::setEffect(int mode) {
+  if (mode < 0 || mode > 7)
+    return false;
 
-    char buffer[8];
-	memset(buffer, 0, sizeof(buffer));
-	snprintf(buffer, sizeof(buffer) - 1, "%d", mode);
+  char buffer[8];
+  memset(buffer, 0, sizeof(buffer));
+  snprintf(buffer, sizeof(buffer) - 1, "%d", mode);
 
-    int fd = g_open("...", O_WRONLY);
-    if (fd > 0) {
-        write(fd, buffer, sizeof(buffer));
-    }
+  int fd = g_open("...", O_WRONLY);
+  if (fd > 0) {
+    write(fd, buffer, sizeof(buffer));
+  }
 
-    GError *error = NULL;
-    g_close(fd, &error);
-    if (error) {
-        g_error_free(error);
-    }
+  GError *error = NULL;
+  g_close(fd, &error);
+  if (error) {
+    g_error_free(error);
+  }
 
-    return true;
+  return true;
 }

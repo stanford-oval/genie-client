@@ -21,60 +21,51 @@
 namespace genie {
 
 enum class adopt_mode {
-    owned,
-    ref,
-    ref_sink,
+  owned,
+  ref,
+  ref_sink,
 };
 
-template<typename T>
-class auto_gst_ptr {
+template <typename T> class auto_gst_ptr {
 private:
-    T* m_instance;
+  T *m_instance;
 
 public:
-    auto_gst_ptr() : m_instance(nullptr) {}
+  auto_gst_ptr() : m_instance(nullptr) {}
 
-    auto_gst_ptr(T* instance, adopt_mode mode) : m_instance(instance) {
-        if (m_instance) {
-            if (mode == adopt_mode::ref)
-                gst_object_ref(m_instance);
-            else if (mode == adopt_mode::ref_sink)
-                gst_object_ref_sink(m_instance);
-        }
+  auto_gst_ptr(T *instance, adopt_mode mode) : m_instance(instance) {
+    if (m_instance) {
+      if (mode == adopt_mode::ref)
+        gst_object_ref(m_instance);
+      else if (mode == adopt_mode::ref_sink)
+        gst_object_ref_sink(m_instance);
     }
+  }
 
-    auto_gst_ptr(const auto_gst_ptr& other) : m_instance(other.m_instance) {
-        if (m_instance)
-            gst_object_ref(m_instance);
-    }
+  auto_gst_ptr(const auto_gst_ptr &other) : m_instance(other.m_instance) {
+    if (m_instance)
+      gst_object_ref(m_instance);
+  }
 
-    ~auto_gst_ptr() {
-        if (m_instance)
-            gst_object_unref(m_instance);
-    }
+  ~auto_gst_ptr() {
+    if (m_instance)
+      gst_object_unref(m_instance);
+  }
 
-    auto_gst_ptr<T>& operator=(const auto_gst_ptr<T>& other) {
-        if (other.m_instance)
-            gst_object_ref(other.m_instance);
-        this->~auto_gst_ptr();
-        m_instance = other.m_instance;
-        return *this;
-    };
+  auto_gst_ptr<T> &operator=(const auto_gst_ptr<T> &other) {
+    if (other.m_instance)
+      gst_object_ref(other.m_instance);
+    this->~auto_gst_ptr();
+    m_instance = other.m_instance;
+    return *this;
+  };
 
-    T* get() const {
-        return m_instance;
-    };
+  T *get() const { return m_instance; };
 
-    T& operator->() {
-        return *m_instance;
-    }
-    const T& operator->() const {
-        return *m_instance;
-    }
+  T &operator->() { return *m_instance; }
+  const T &operator->() const { return *m_instance; }
 
-    explicit operator bool() {
-        return !!m_instance;
-    }
+  explicit operator bool() { return !!m_instance; }
 };
 
-}
+} // namespace genie

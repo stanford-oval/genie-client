@@ -21,38 +21,32 @@
 
 #include "app.hpp"
 
-namespace genie
-{
+namespace genie {
 
-struct InputEventSource
-{
+struct InputEventSource {
   GSource source;
   struct libevdev *device;
   GPollFD event_poll_fd;
 };
 
-class evInput
-{
+class evInput {
 public:
-    evInput(App *appInstance);
-    ~evInput();
-    int init();
+  evInput(App *appInstance);
+  ~evInput();
+  int init();
 
 private:
-    App *app;
-    static gboolean event_prepare(GSource *source, gint *timeout);
-    static gboolean event_check(GSource *source);
-    static gboolean event_dispatch(GSource *g_source, GSourceFunc callback, gpointer user_data);
+  App *app;
+  static gboolean event_prepare(GSource *source, gint *timeout);
+  static gboolean event_check(GSource *source);
+  static gboolean event_dispatch(GSource *g_source, GSourceFunc callback,
+                                 gpointer user_data);
 
-    GSourceFuncs event_funcs = {
-        event_prepare,
-        event_check,
-        event_dispatch,
-        NULL, NULL, NULL
-    };
-    GSource *source;
+  GSourceFuncs event_funcs = {event_prepare, event_check, event_dispatch,
+                              NULL,          NULL,        NULL};
+  GSource *source;
 };
 
-}
+} // namespace genie
 
 #endif

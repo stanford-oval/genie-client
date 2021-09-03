@@ -21,21 +21,19 @@
 
 #include "app.hpp"
 
-namespace genie
-{
+namespace genie {
 
-class Leds
-{
+class Leds {
 public:
-    Leds(App *appInstance);
-    ~Leds();
-    int init();
-    int setEffect(int mode);
+  Leds(App *appInstance);
+  ~Leds();
+  int init();
+  int setEffect(int mode);
 
 private:
-    App *app;
+  App *app;
 };
 
-}
+} // namespace genie
 
 #endif

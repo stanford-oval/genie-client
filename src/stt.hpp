@@ -20,49 +20,49 @@
 #define _STT_H
 
 #include "app.hpp"
-#include <glib.h>
-#include <libsoup/soup.h>
 #include "audioinput.hpp"
 #include "audioplayer.hpp"
 #include "wsclient.hpp"
+#include <glib.h>
+#include <libsoup/soup.h>
 
-namespace genie
-{
+namespace genie {
 
-class STT
-{
+class STT {
 public:
-    STT(App *appInstance);
-    ~STT();
-    int init();
-    void send_frame(AudioFrame *frame);
-    void send_done();
-    int connect();
+  STT(App *appInstance);
+  ~STT();
+  int init();
+  void send_frame(AudioFrame *frame);
+  void send_done();
+  int connect();
 
 private:
-    void setConnection(SoupWebsocketConnection *conn);
-    static void on_connection(SoupSession *session, GAsyncResult *res, gpointer data);
-    static void on_message(SoupWebsocketConnection *conn, gint type, GBytes *message, gpointer data);
-    static void on_close(SoupWebsocketConnection *conn, gpointer data);
+  void setConnection(SoupWebsocketConnection *conn);
+  static void on_connection(SoupSession *session, GAsyncResult *res,
+                            gpointer data);
+  static void on_message(SoupWebsocketConnection *conn, gint type,
+                         GBytes *message, gpointer data);
+  static void on_close(SoupWebsocketConnection *conn, gpointer data);
 
-    void flush_queue();
-    void dispatch_frame(AudioFrame *frame);
-    gboolean is_connection_open();
+  void flush_queue();
+  void dispatch_frame(AudioFrame *frame);
+  gboolean is_connection_open();
 
 private:
-    App *app;
-    gchar *url;
-    gboolean connected;
-    SoupWebsocketConnection *wconn;
-    gboolean acceptStream;
-    GQueue *queue;
+  App *app;
+  gchar *url;
+  gboolean connected;
+  SoupWebsocketConnection *wconn;
+  gboolean acceptStream;
+  GQueue *queue;
 
-    struct timeval tConnect;
-    struct timeval tFirstFrame;
-    struct timeval tLastFrame;
-    gboolean firstFrame;
+  struct timeval tConnect;
+  struct timeval tFirstFrame;
+  struct timeval tLastFrame;
+  gboolean firstFrame;
 };
 
-}
+} // namespace genie
 
 #endif
