@@ -324,6 +324,7 @@ void *genie::AudioInput::loop(gpointer data) {
         }
       } else if (silence == 1) {
         // We detected speech, transition to listenting state
+        g_message("Input speech detected, transitioning to LISTENING...\n");
         vad_count = 0;
         state = State::LISTENING;
       }

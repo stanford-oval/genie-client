@@ -134,7 +134,10 @@ void genie::App::handle(ActionType type, gpointer payload) {
     break;
 
   case INPUT_SPEECH_NOT_DETECTED:
-    g_warning("TODO");
+    g_message("Handling INPUT_SPEECH_NOT_DETECTED...");
+    m_audioPlayer->stop();
+    m_audioPlayer->playSound(SOUND_NO_MATCH);
+    m_stt->send_done();
     break;
 
   case INPUT_SPEECH_TIMEOUT:
