@@ -1,4 +1,4 @@
-// -*- mode: cpp; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+// -*- mode: cpp; indent-tabs-mode: nil; c-basic-offset: 2 -*-
 //
 // This file is part of Genie
 //
@@ -23,8 +23,8 @@
 #include "config.hpp"
 #include <glib.h>
 #include <memory>
-
 #include <sys/time.h>
+
 #define PROF_PRINT(...)                                                        \
   do {                                                                         \
     struct tm tm;                                                              \
