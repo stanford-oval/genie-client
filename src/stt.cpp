@@ -238,12 +238,15 @@ void genie::STT::send_done() {
   if (is_connection_open()) {
     flush_queue();
     // Send an empty terminator?!?
-    soup_websocket_connection_send_binary(wconn, 0, 0);
+
+    int16_t* empty = (int16_t*) malloc(0);
+    soup_websocket_connection_send_binary(wconn, empty, 0);
+    free(empty);
   } else {
     // queue the empty frame marker to be sent later
     AudioFrame *empty = g_new(AudioFrame, 1);
     empty->length = 0;
-    empty->samples = nullptr;
+    empty->samples = (int16_t*) malloc(0);
     g_queue_push_tail(queue, empty);
   }
 }
