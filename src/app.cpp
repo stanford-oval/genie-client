@@ -27,7 +27,6 @@
 #include "leds.hpp"
 #include "spotifyd.hpp"
 #include "stt.hpp"
-#include "tts.hpp"
 #include "wsclient.hpp"
 
 double time_diff(struct timeval x, struct timeval y) {
@@ -58,7 +57,6 @@ int genie::App::exec() {
   m_audioPlayer = std::make_unique<AudioPlayer>(this);
 
   m_stt = std::make_unique<STT>(this);
-  m_tts = std::make_unique<TTS>(this);
 
   m_audioInput = std::make_unique<AudioInput>(this);
   m_audioInput->init();
@@ -95,7 +93,7 @@ void genie::App::print_processing_entry(const char *name, double duration_ms,
 }
 
 guint genie::App::dispatch(ActionType type, gpointer payload) {
-  Action *action = g_new(Action, 1);
+  Action *action = new Action;
   action->type = type;
   action->app = this;
   action->payload = payload;
@@ -105,7 +103,7 @@ guint genie::App::dispatch(ActionType type, gpointer payload) {
 gboolean genie::App::on_action(gpointer data) {
   Action *action = static_cast<Action *>(data);
   action->app->handle(action->type, action->payload);
-  g_free(action);
+  delete action;
   return false;
 }
 
@@ -121,11 +119,11 @@ void genie::App::handle(ActionType type, gpointer payload) {
     m_stt->connect();
     g_message("Done handling wake.\n");
     break;
-    
+
   case INPUT_SPEECH_FRAME:
     m_stt->send_frame((AudioFrame *)payload);
     break;
-    
+
   case INPUT_SPEECH_DONE:
     g_message("Handling INPUT_SPEECH_DONE...");
     track_processing_event(PROCESSING_BEGIN);
@@ -134,11 +132,11 @@ void genie::App::handle(ActionType type, gpointer payload) {
     m_audioPlayer->playSound(SOUND_MATCH);
     m_stt->send_done();
     break;
-    
+
   case INPUT_SPEECH_NOT_DETECTED:
     g_warning("TODO");
     break;
-    
+
   case INPUT_SPEECH_TIMEOUT:
     g_warning("TODO");
     break;

@@ -102,7 +102,6 @@ public:
   std::unique_ptr<Leds> m_leds;
   std::unique_ptr<Spotifyd> m_spotifyd;
   std::unique_ptr<STT> m_stt;
-  std::unique_ptr<TTS> m_tts;
   std::unique_ptr<wsClient> m_wsClient;
 
 protected:
@@ -120,7 +119,7 @@ private:
 
   void print_processing_entry(const char *name, double duration_ms,
                               double total_ms);
-  
+
 };
 
 typedef struct {

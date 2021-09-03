@@ -75,7 +75,6 @@ executable(
   'audioinput.cpp',
   'audioplayer.cpp',
   'stt.cpp',
-  'tts.cpp',
   'spotifyd.cpp',
   link_args : _linkArgs,
   install : true,

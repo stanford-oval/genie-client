@@ -272,15 +272,15 @@ gboolean genie::AudioPlayer::add_queue(const auto_gst_ptr<GstElement>& p, const 
 
 gboolean genie::AudioPlayer::clean_queue()
 {
-    if (playing) {
+    if (playingTask) {
         delete playingTask;
         playingTask = nullptr;
-        playing = false;
     }
     while (!g_queue_is_empty(playerQueue)) {
         AudioTask *t = (AudioTask *)g_queue_pop_head(playerQueue);
         delete t;
     }
+    playing = false;
     return true;
 }
 
@@ -292,6 +292,7 @@ gboolean genie::AudioPlayer::stop()
         gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PAUSED);
         playing = false;
     }
+    clean_queue();
     return true;
 }
 

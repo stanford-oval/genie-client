@@ -44,6 +44,8 @@ private:
     static void on_connection(SoupSession *session, GAsyncResult *res, gpointer data);
     static void on_message(SoupWebsocketConnection *conn, gint type, GBytes *message, gpointer data);
     static void on_close(SoupWebsocketConnection *conn, gpointer data);
+
+    void flush_queue();
     void dispatch_frame(AudioFrame *frame);
     gboolean is_connection_open();
 
@@ -54,7 +56,7 @@ private:
     SoupWebsocketConnection *wconn;
     gboolean acceptStream;
     GQueue *queue;
-    
+
     struct timeval tConnect;
     struct timeval tFirstFrame;
     struct timeval tLastFrame;
