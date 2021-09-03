@@ -93,7 +93,7 @@ void genie::App::print_processing_entry(const char *name, double duration_ms,
 }
 
 guint genie::App::dispatch(ActionType type, gpointer payload) {
-  Action *action = g_new(Action, 1);
+  Action *action = new Action;
   action->type = type;
   action->app = this;
   action->payload = payload;
@@ -103,7 +103,7 @@ guint genie::App::dispatch(ActionType type, gpointer payload) {
 gboolean genie::App::on_action(gpointer data) {
   Action *action = static_cast<Action *>(data);
   action->app->handle(action->type, action->payload);
-  g_free(action);
+  delete action;
   return false;
 }
 
