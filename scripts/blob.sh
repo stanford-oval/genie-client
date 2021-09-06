@@ -75,6 +75,10 @@ for a in ${deps}; do
 done
 chmod +x ${DESTDIR}/*
 
+# strip dependencies
+echo "stripping deps ..."
+find ${DESTDIR} -type f -exec strip {} \;
+
 mkdir -p /out/src
 cp -p build/src/genie /out/src/
 
