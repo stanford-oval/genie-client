@@ -12,6 +12,7 @@ if test "$IP_ADDRESS" = "adb" ; then
     fi
     adb push scripts/launch.sh /opt/duer/dcslaunch.sh
     test -f build/config.ini && adb push build/config.ini /opt/genie/config.ini
+    adb push scripts/asoundrc /opt/genie/.asoundrc
     adb push build/src/genie /opt/genie/genie
 else
     if [ ${LIGHT} -eq 0 ]; then
@@ -23,5 +24,6 @@ else
     fi
     scp scripts/launch.sh root@$IP_ADDRESS:/opt/duer/dcslaunch.sh
     test -f build/config.ini && scp build/config.ini root@$IP_ADDRESS:/opt/genie/
+    scp scripts/asoundrc root@$IP_ADDRESS:/opt/genie/.asoundrc
     scp build/src/genie root@$IP_ADDRESS:/opt/genie/
 fi

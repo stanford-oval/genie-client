@@ -76,6 +76,7 @@ def deploy_all(target: str, log=LOG):
     remote.push(BUILD_PATHS.lib, DEPLOY_PATHS.lib)
     remote.push(BUILD_PATHS.assets, DEPLOY_PATHS.assets)
     remote.push(SCRIPT_PATHS.launch, DEPLOY_PATHS.launch)
+    remote.push(SCRIPT_PATHS.asoundrc, DEPLOY_PATHS.asoundrc)
     remote.push(BUILD_PATHS.config, DEPLOY_PATHS.config)
     remote.push(BUILD_PATHS.exe, DEPLOY_PATHS.exe)
 
