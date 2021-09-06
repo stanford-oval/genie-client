@@ -1,6 +1,7 @@
 #!/bin/bash
 cd /opt/genie
 export TZ=UTC
+export HOME=/opt/genie
 if [ -z "$(pidof ntpd)" ]; then
 	/usr/bin/start_ntp.sh &
 fi
