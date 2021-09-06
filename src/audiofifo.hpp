@@ -16,42 +16,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _CONFIG_H
-#define _CONFIG_H
+#ifndef _AUDIOFIFO_H
+#define _AUDIOFIFO_H
 
+#include "app.hpp"
 #include <glib.h>
 
 namespace genie {
 
-class Config {
+class AudioFIFO {
 public:
-  static const gint VAD_MIN_MS = 100;
-  static const gint VAD_MAX_MS = 5000;
-  static const gint DEFAULT_VAD_START_SPEAKING_MS = 2000;
-  static const gint DEFAULT_VAD_DONE_SPEAKING_MS = 500;
-  static const gint DEFAULT_MIN_WOKE_MS = 1000;
+  AudioFIFO(App *appInstance);
+  ~AudioFIFO();
+  int init();
+  bool isReading();
 
-  Config();
-  ~Config();
-  void load();
-
-  gchar *genieURL;
-  gchar *genieAccessToken;
-  gchar *conversationId;
-  gchar *nlURL;
-  gchar *audioInputDevice;
-  gchar *audioSink;
-  gchar *audioOutputDeviceMusic;
-  gchar *audioOutputDeviceVoice;
-  gchar *audioOutputDeviceAlerts;
-  gchar *audioOutputFIFO;
-  gchar *audioVoice;
-  gint vad_start_speaking_ms;
-  gint vad_done_speaking_ms;
-  gint vad_min_woke_ms;
+  int16_t *pcm;
 
 protected:
+  static void *loop(gpointer data);
+
 private:
+  bool running;
+  bool reading;
+  int fd;
+  int32_t frame_length;
+  App *app;
 };
 
 } // namespace genie

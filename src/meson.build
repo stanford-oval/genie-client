@@ -73,6 +73,7 @@ executable(
   'leds.cpp',
   'wsclient.cpp',
   'audioinput.cpp',
+  'audiofifo.cpp',
   'audioplayer.cpp',
   'stt.cpp',
   'spotifyd.cpp',

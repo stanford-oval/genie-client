@@ -21,6 +21,7 @@
 
 #include "app.hpp"
 #include "audioinput.hpp"
+#include "audiofifo.hpp"
 #include "audioplayer.hpp"
 #include "config.hpp"
 #include "evinput.hpp"
@@ -53,6 +54,9 @@ int genie::App::exec() {
   m_config->load();
 
   g_setenv("GST_REGISTRY_UPDATE", "no", true);
+
+  m_audioFIFO = std::make_unique<AudioFIFO>(this);
+  m_audioFIFO->init();
 
   m_audioPlayer = std::make_unique<AudioPlayer>(this);
 

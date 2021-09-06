@@ -75,7 +75,6 @@ void genie::Config::load() {
       g_message("No conversation ID in config file, using xiaodu");
       conversationId = g_strdup("xiaodu");
       g_error_free(error);
-      return;
     } else {
       g_debug("conversationId: %s\n", conversationId);
     }
@@ -133,6 +132,13 @@ void genie::Config::load() {
       }
 
       g_free(output);
+    }
+
+    error = NULL;
+    audioOutputFIFO = g_key_file_get_string(key_file, "audio", "output_fifo", &error);
+    if (error) {
+      g_error_free(error);
+      audioOutputFIFO = g_strdup("/tmp/playback.fifo");
     }
 
     error = NULL;
