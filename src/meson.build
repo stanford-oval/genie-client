@@ -77,6 +77,7 @@ executable(
   'wsclient.cpp',
   'audioinput.cpp',
   'audiofifo.cpp',
+  'pa_ringbuffer.c',
   'audioplayer.cpp',
   'stt.cpp',
   'spotifyd.cpp',
