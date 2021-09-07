@@ -14,12 +14,12 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
         with paths.configure("cli") as cli:
             cli.root = paths.repo / "cli"
 
-        with paths.configure("build") as build:
-            build.root = paths.repo / "build"
-            build.assets = build.root / "assets"
-            build.lib = build.root / "lib"
-            build.config = build.root / "config.ini"
-            build.exe = build.root / "src" / "genie"
+        with paths.configure("out") as out:
+            out.root = paths.repo / "out"
+            out.assets = out.root / "assets"
+            out.lib = out.root / "lib"
+            out.config = out.root / "config.ini"
+            out.exe = out.root / "src" / "genie"
 
         with paths.configure("scripts") as scripts:
             scripts.root = paths.repo / "scripts"

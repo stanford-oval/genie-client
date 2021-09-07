@@ -72,7 +72,7 @@ def run(arch: str = DEFAULT_ARCH, static: bool = False, exe_only: bool = False):
         "run",
         {
             "rm": True,
-            "volume": f"{CFG.genie_client_cpp.paths.build.root}:/out",
+            "volume": f"{CFG.genie_client_cpp.paths.out.root}:/out",
             "security-opt": "label=disable",
             "env": f"ARCH={arch}",
         },

@@ -2,7 +2,11 @@
 assets/*
 !assets/.gitkeep
 !assets/news-intro.oga
+# Meson build directory
 /build/
+# Build output directory
+/out/
+# Place for assorted temporary files
 /tmp/
 
 # macOS Finder artifact
