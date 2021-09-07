@@ -62,6 +62,9 @@ else
   endforeach
 endif
 
+_deps += dependency('speex')
+_deps += dependency('speexdsp')
+
 _deps += dependency('webrtcvad', static : true)
 
 executable(

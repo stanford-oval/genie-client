@@ -8,7 +8,7 @@ RUN apt-get update && \
     apt-get -y --allow-unauthenticated install build-essential pkg-config ninja-build git nano wget \
         libasound2-dev libglib2.0-dev libjson-glib-dev libsoup2.4-dev libevdev-dev libgstreamer1.0-dev \
         python3-pip flex bison libmount-dev libffi-dev libsemanage-dev libpulse-dev libogg-dev libvorbis-dev libmpg123-dev \
-        sound-theme-freedesktop
+        libspeex-dev libspeexdsp-dev sound-theme-freedesktop
 
 RUN pip3 install meson==0.54.0
 RUN mkdir -p /src/scripts /out
