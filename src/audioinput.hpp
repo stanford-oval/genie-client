@@ -27,6 +27,9 @@
 #include <glib.h>
 #include <webrtc/webrtc_vad.h>
 
+#include <speex/speex_echo.h>
+#include <speex/speex_preprocess.h>
+
 #define AUDIO_INPUT_VAD_FRAME_LENGTH 480
 
 namespace genie {
@@ -67,6 +70,9 @@ private:
   int32_t pv_frame_length;
   int32_t sample_rate;
   GQueue *frame_buffer;
+
+  SpeexEchoState *echo_state;
+  SpeexPreprocessState *pp_state;
 
   VadInst *vad_instance;
   App *app;

@@ -234,6 +234,13 @@ int genie::AudioInput::init() {
   g_message("Calculated min woke frames: %d ms -> %d frames",
             app->m_config->vad_min_woke_ms, min_woke_frame_count);
 
+  echo_state = speex_echo_state_init_mc(
+      pv_frame_length,
+      ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH, 250), 1, 1);
+  speex_echo_ctl(echo_state, SPEEX_ECHO_SET_SAMPLING_RATE, &(sample_rate));
+
+  pp_state = speex_preprocess_state_init(pv_frame_length, sample_rate);
+
   GError *thread_error = NULL;
   g_thread_try_new("audioInputThread", (GThreadFunc)loop, this, &thread_error);
   if (thread_error) {
