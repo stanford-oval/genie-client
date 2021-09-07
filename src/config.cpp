@@ -34,6 +34,20 @@ genie::Config::~Config() {
   g_free(audioOutputDeviceVoice);
   g_free(audioOutputDeviceAlerts);
   g_free(audioVoice);
+  g_free(audio_output_device);
+}
+
+gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
+                                 const char *key, const char *default_value) {
+  GError *error = NULL;
+  gchar *value = g_key_file_get_string(key_file, section, key, &error);
+  if (error != NULL) {
+    g_warning("Failed to load [%s] %s from config file, using default '%s'",
+              section, key, default_value);
+    g_error_free(error);
+    return strdup(default_value);
+  }
+  return value;
 }
 
 void genie::Config::load() {
@@ -209,5 +223,8 @@ void genie::Config::load() {
                 VAD_MAX_MS, vad_min_woke_ms, DEFAULT_VAD_DONE_SPEAKING_MS);
       vad_min_woke_ms = DEFAULT_MIN_WOKE_MS;
     }
+
+    audio_output_device =
+        get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
   }
 }

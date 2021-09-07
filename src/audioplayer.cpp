@@ -45,54 +45,54 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
                                             gpointer data) {
   AudioPlayer *obj = (AudioPlayer *)data;
   switch (GST_MESSAGE_TYPE(msg)) {
-  case GST_MESSAGE_STREAM_STATUS:
-    // PROF_PRINT("Stream status changed\n");
+    case GST_MESSAGE_STREAM_STATUS:
+      // PROF_PRINT("Stream status changed\n");
 
-    // Dig into the status message... we want to know when the audio
-    // stream starts, 'cause that's what we consider the when we deliver
-    // to the user -- it ends both the TTS window and entire run of
-    // processing tracking.
-    GstStreamStatusType type;
-    GstElement *owner;
-    gst_message_parse_stream_status(msg, &type, &owner);
+      // Dig into the status message... we want to know when the audio
+      // stream starts, 'cause that's what we consider the when we deliver
+      // to the user -- it ends both the TTS window and entire run of
+      // processing tracking.
+      GstStreamStatusType type;
+      GstElement *owner;
+      gst_message_parse_stream_status(msg, &type, &owner);
 
-    // By printing all status events and timing when the audio starts
-    // it seems like we want the "enter" type event.
-    //
-    // There are actually _two_ of them fired, and we want the second --
-    // which is convinient for us, because we can track the event _both_
-    // times, with the second time over-writing the first, which results
-    // in the desired state.
-    if (type == GST_STREAM_STATUS_TYPE_ENTER) {
-      obj->app->track_processing_event(PROCESSING_END_TTS);
+      // By printing all status events and timing when the audio starts
+      // it seems like we want the "enter" type event.
+      //
+      // There are actually _two_ of them fired, and we want the second --
+      // which is convinient for us, because we can track the event _both_
+      // times, with the second time over-writing the first, which results
+      // in the desired state.
+      if (type == GST_STREAM_STATUS_TYPE_ENTER) {
+        obj->app->track_processing_event(PROCESSING_END_TTS);
+      }
+      break;
+    case GST_MESSAGE_EOS:
+      g_debug("End of stream\n");
+      // PROF_TIME_DIFF("End of stream", obj->playingTask->tStart);
+      obj->app->track_processing_event(PROCESSING_FINISH);
+      delete obj->playingTask;
+      obj->playingTask = NULL;
+      obj->playing = false;
+      obj->dispatch_queue();
+      break;
+    case GST_MESSAGE_ERROR: {
+      gchar *debug;
+      GError *error = NULL;
+      gst_message_parse_error(msg, &error, &debug);
+      g_free(debug);
+
+      g_printerr("Error: %s\n", error->message);
+      g_error_free(error);
+
+      delete obj->playingTask;
+      obj->playingTask = NULL;
+      obj->playing = false;
+      obj->dispatch_queue();
+      break;
     }
-    break;
-  case GST_MESSAGE_EOS:
-    g_debug("End of stream\n");
-    // PROF_TIME_DIFF("End of stream", obj->playingTask->tStart);
-    obj->app->track_processing_event(PROCESSING_FINISH);
-    delete obj->playingTask;
-    obj->playingTask = NULL;
-    obj->playing = false;
-    obj->dispatch_queue();
-    break;
-  case GST_MESSAGE_ERROR: {
-    gchar *debug;
-    GError *error = NULL;
-    gst_message_parse_error(msg, &error, &debug);
-    g_free(debug);
-
-    g_printerr("Error: %s\n", error->message);
-    g_error_free(error);
-
-    delete obj->playingTask;
-    obj->playingTask = NULL;
-    obj->playing = false;
-    obj->dispatch_queue();
-    break;
-  }
-  default:
-    break;
+    default:
+      break;
   }
 
   return true;
@@ -144,15 +144,15 @@ gboolean genie::AudioPlayer::playLocation(const gchar *location,
 static const gchar *getAudioOutput(const genie::Config &config,
                                    genie::AudioDestination destination) {
   switch (destination) {
-  case genie::AudioDestination::MUSIC:
-    return config.audioOutputDeviceMusic;
-  case genie::AudioDestination::ALERT:
-    return config.audioOutputDeviceAlerts;
-  case genie::AudioDestination::VOICE:
-    return config.audioOutputDeviceVoice;
-  default:
-    g_warn_if_reached();
-    return config.audioOutputDeviceMusic;
+    case genie::AudioDestination::MUSIC:
+      return config.audioOutputDeviceMusic;
+    case genie::AudioDestination::ALERT:
+      return config.audioOutputDeviceAlerts;
+    case genie::AudioDestination::VOICE:
+      return config.audioOutputDeviceVoice;
+    default:
+      g_warn_if_reached();
+      return config.audioOutputDeviceMusic;
   }
 }
 
@@ -304,4 +304,87 @@ gboolean genie::AudioPlayer::resume() {
     playing = true;
   }
   return true;
+}
+
+snd_mixer_elem_t *
+genie::AudioPlayer::get_mixer_element(snd_mixer_t *handle,
+                                      const char *selem_name) {
+  snd_mixer_selem_id_t *sid;
+
+  snd_mixer_open(&handle, 0);
+  snd_mixer_attach(handle, app->m_config->audio_output_device);
+  snd_mixer_selem_register(handle, NULL, NULL);
+  snd_mixer_load(handle);
+
+  snd_mixer_selem_id_alloca(&sid);
+  snd_mixer_selem_id_set_index(sid, 0);
+  snd_mixer_selem_id_set_name(sid, selem_name);
+  return snd_mixer_find_selem(handle, sid);
+}
+
+int genie::AudioPlayer::adjust_playback_volume(long delta) {
+  long min, max, current, updated;
+  int err = 0;
+  snd_mixer_t *handle = NULL;
+  snd_mixer_selem_id_t *sid;
+
+  snd_mixer_open(&handle, 0);
+  snd_mixer_attach(handle, app->m_config->audio_output_device);
+  snd_mixer_selem_register(handle, NULL, NULL);
+  snd_mixer_load(handle);
+
+  snd_mixer_selem_id_alloca(&sid);
+  snd_mixer_selem_id_set_index(sid, 0);
+  snd_mixer_selem_id_set_name(sid, "LINEOUT volume");
+  snd_mixer_elem_t *elem = snd_mixer_find_selem(handle, sid);
+
+  err = snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+  if (err != 0) {
+    g_warning("Error getting playback volume range, code=%d", err);
+    snd_mixer_close(handle);
+    return err;
+  }
+
+  err =
+      snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_MONO, &current);
+  if (err != 0) {
+    g_warning("Error getting current playback volume, code=%d", err);
+    snd_mixer_close(handle);
+    return err;
+  }
+
+  updated = current + delta;
+
+  if (updated > max) {
+    g_message(
+        "Can not adjust playback volume to %ld, max is %ld. Capping at max",
+        updated, max);
+    updated = max;
+  } else if (updated < min) {
+    g_message(
+        "Can not adjust playback volume to %ld; min is %ld. Capping at min",
+        updated, min);
+    updated = min;
+  }
+
+  if (updated == current) {
+    g_message("Volume already at %ld", current);
+    snd_mixer_close(handle);
+    return 0;
+  }
+
+  snd_mixer_selem_set_playback_volume_all(elem, updated);
+  
+  g_message("Updated playback volume to %ld", updated);
+  
+  snd_mixer_close(handle);
+  return 0;
+}
+
+int genie::AudioPlayer::increment_playback_volume() {
+  return adjust_playback_volume(1);
+}
+
+int genie::AudioPlayer::decrement_playback_volume() {
+  return adjust_playback_volume(-1);
 }

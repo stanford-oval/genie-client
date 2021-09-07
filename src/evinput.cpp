@@ -29,47 +29,57 @@
 
 #define GPIO_KEY_DEV "/dev/input/event0"
 
-genie::evInput::evInput(App *appInstance) { app = appInstance; }
+genie::EVInput::EVInput(App *app) { this->app = app; }
 
-genie::evInput::~evInput() {}
+genie::EVInput::~EVInput() {}
 
-gboolean genie::evInput::event_prepare(GSource *source, gint *timeout) {
+gboolean genie::EVInput::event_prepare(GSource *source, gint *timeout) {
   *timeout = -1;
   return false;
 }
 
-gboolean genie::evInput::event_check(GSource *source) {
+gboolean genie::EVInput::event_check(GSource *source) {
   InputEventSource *event_source = (InputEventSource *)source;
   gboolean rc;
   rc = (event_source->event_poll_fd.revents & G_IO_IN);
   return rc;
 }
 
-gboolean genie::evInput::event_dispatch(GSource *g_source, GSourceFunc callback,
+gboolean genie::EVInput::event_dispatch(GSource *g_source, GSourceFunc callback,
                                         gpointer user_data) {
+  EVInput *ev_input = static_cast<EVInput *>(user_data);
   InputEventSource *source = (InputEventSource *)g_source;
-  struct input_event ev;
-  int rc;
+  input_event ev;
+  int rc = 0;
 
-  rc = libevdev_next_event(source->device, LIBEVDEV_READ_FLAG_NORMAL, &ev);
   while (rc != -EAGAIN) {
+    rc = libevdev_next_event(source->device, LIBEVDEV_READ_FLAG_NORMAL, &ev);
+
     g_print("read ev err %d\n", rc);
     if (rc == 0) {
-      g_print("Event type %d (%s), code %d (%s), value %d\n", ev.type,
+      g_debug("Event type %d (%s), code %d (%s), value %d\n", ev.type,
               libevdev_event_type_get_name(ev.type), ev.code,
               libevdev_event_code_get_name(ev.type, ev.code), ev.value);
+      // Dispatch key events
+      if (ev.type == EV_KEY) {
+        input_event *payload = (input_event *)g_malloc(sizeof(input_event));
+        memcpy(payload, &ev, sizeof(input_event));
+        ev_input->app->dispatch(ActionType::DEVICE_KEY, payload);
+      }
     } else {
       g_print("source read failed %s\n", strerror(-rc));
       break;
     }
-
-    rc = libevdev_next_event(source->device, LIBEVDEV_READ_FLAG_NORMAL, &ev);
   }
 
-  return true;
+  return callback(user_data);
 }
 
-int genie::evInput::init() {
+gboolean genie::EVInput::callback(gpointer user_data) {
+  return G_SOURCE_CONTINUE;
+}
+
+int genie::EVInput::init() {
   int fd;
   int rc = 1;
 
@@ -107,6 +117,7 @@ int genie::evInput::init() {
   g_source_set_priority(source, G_PRIORITY_DEFAULT);
   g_source_add_poll(source, &event_source->event_poll_fd);
   g_source_set_can_recurse(source, true);
+  g_source_set_callback(source, (GSourceFunc)callback, this, NULL);
   g_source_attach(source, NULL);
 
   return true;
