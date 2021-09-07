@@ -4,3 +4,6 @@ assets/*
 !assets/news-intro.oga
 build/
 /tmp/
+
+# macOS Finder artifact
+.DS_Store
