@@ -71,7 +71,7 @@ int genie::App::exec() {
   m_wsClient = std::make_unique<wsClient>(this);
   m_wsClient->init();
 
-  m_evInput = std::make_unique<evInput>(this);
+  m_evInput = std::make_unique<EVInput>(this);
   m_evInput->init();
 
   m_leds = std::make_unique<Leds>(this);
@@ -157,6 +157,23 @@ void genie::App::handle(ActionType type, gpointer payload) {
 
     case ActionType::SPEECH_TIMEOUT: {
       g_warning("TODO");
+      break;
+    }
+
+    case ActionType::DEVICE_KEY: {
+      input_event *ev = (input_event *)payload;
+      g_message("Handling DEVICE_KEY, code=%d, value=%d\n", ev->code,
+                ev->value);
+      if (ev->type == 1 && ev->code == KEY_VOLUMEUP && ev->value == 1) {
+        m_audioPlayer->increment_playback_volume();
+      }
+      if (ev->type == 1 && ev->code == KEY_VOLUMEDOWN && ev->value == 1) {
+        m_audioPlayer->decrement_playback_volume();
+      }
+      
+      g_free(ev);
+      // long volume = m_audioPlayer->get_volume();
+      // g_message("Volume: %ld", volume);
       break;
     }
   }

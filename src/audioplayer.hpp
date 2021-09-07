@@ -22,6 +22,7 @@
 #include "app.hpp"
 #include "autoptrs.hpp"
 
+#include <alsa/asoundlib.h>
 #include <gst/gst.h>
 #include <string>
 
@@ -70,6 +71,10 @@ public:
   gboolean clean_queue();
   gboolean stop();
   gboolean resume();
+  long get_volume();
+  int adjust_playback_volume(long delta);
+  int increment_playback_volume();
+  int decrement_playback_volume();
 
 private:
   void dispatch_queue();
@@ -80,6 +85,8 @@ private:
   GQueue *playerQueue;
   AudioTask *playingTask;
   App *app;
+  snd_mixer_elem_t *get_mixer_element(snd_mixer_t *handle,
+                                      const char *selem_name);
 };
 
 } // namespace genie

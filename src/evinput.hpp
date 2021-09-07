@@ -20,7 +20,6 @@
 #define _EVINPUT_H
 
 #include "app.hpp"
-#include "libevdev/libevdev.h"
 
 namespace genie {
 
@@ -30,10 +29,10 @@ struct InputEventSource {
   GPollFD event_poll_fd;
 };
 
-class evInput {
+class EVInput {
 public:
-  evInput(App *appInstance);
-  ~evInput();
+  EVInput(App *app);
+  ~EVInput();
   int init();
 
 private:
@@ -42,7 +41,8 @@ private:
   static gboolean event_check(GSource *source);
   static gboolean event_dispatch(GSource *g_source, GSourceFunc callback,
                                  gpointer user_data);
-
+  static gboolean callback(gpointer user_data);
+  
   GSourceFuncs event_funcs = {event_prepare, event_check, event_dispatch,
                               NULL,          NULL,        NULL};
   GSource *source;

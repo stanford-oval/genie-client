@@ -24,6 +24,7 @@
 #include <glib.h>
 #include <memory>
 #include <sys/time.h>
+#include "libevdev/libevdev.h"
 
 #define PROF_PRINT(...)                                                        \
   do {                                                                         \
@@ -52,7 +53,7 @@ class Config;
 class AudioInput;
 class AudioFIFO;
 class AudioPlayer;
-class evInput;
+class EVInput;
 class Leds;
 class Spotifyd;
 class STT;
@@ -76,6 +77,7 @@ enum class ActionType {
   SPEECH_NOT_DETECTED,
   SPEECH_DONE,
   SPEECH_TIMEOUT,
+  DEVICE_KEY,
 };
 
 typedef struct {
@@ -100,7 +102,7 @@ public:
   std::unique_ptr<AudioInput> m_audioInput;
   std::unique_ptr<AudioFIFO> m_audioFIFO;
   std::unique_ptr<AudioPlayer> m_audioPlayer;
-  std::unique_ptr<evInput> m_evInput;
+  std::unique_ptr<EVInput> m_evInput;
   std::unique_ptr<Leds> m_leds;
   std::unique_ptr<Spotifyd> m_spotifyd;
   std::unique_ptr<STT> m_stt;
