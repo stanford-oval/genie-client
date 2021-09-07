@@ -21,6 +21,7 @@
 
 #include "app.hpp"
 #include <glib.h>
+#include "pa_ringbuffer.h"
 
 namespace genie {
 
@@ -30,8 +31,7 @@ public:
   ~AudioFIFO();
   int init();
   bool isReading();
-
-  int16_t *pcm;
+  PaUtilRingBuffer ring_buffer;
 
 protected:
   static void *loop(gpointer data);
@@ -41,6 +41,7 @@ private:
   bool reading;
   int fd;
   int32_t frame_length;
+  int16_t *pcm;
   App *app;
 };
 

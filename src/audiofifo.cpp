@@ -36,6 +36,7 @@ genie::AudioFIFO::~AudioFIFO() {
   if (fd > 0) {
     close(fd);
   }
+  free(ring_buffer.buffer);
 }
 
 int genie::AudioFIFO::init() {
@@ -74,6 +75,24 @@ int genie::AudioFIFO::init() {
     return false;
   }
 
+  int32_t buffer_size = frame_length * 32;
+  int32_t sample_size = sizeof(int16_t);
+  void *buffer = calloc(buffer_size, sample_size);
+  if (buffer == NULL) {
+    g_printerr("failed to allocate memory for ring buffer, errno = %d\n",
+               errno);
+    close(fd);
+    return false;
+  }
+
+  ring_buffer_size_t r1 = PaUtil_InitializeRingBuffer(
+      &ring_buffer, sample_size, buffer_size, buffer);
+  if (r1 == -1) {
+    g_printerr("failed to initialize ring buffer\n");
+    close(fd);
+    return false;
+  }
+
   running = true;
   GError *thread_error = NULL;
   g_thread_try_new("audioFIFOThread", (GThreadFunc)loop, this, &thread_error);
@@ -92,21 +111,23 @@ int genie::AudioFIFO::init() {
 void *genie::AudioFIFO::loop(gpointer data) {
   AudioFIFO *obj = reinterpret_cast<AudioFIFO *>(data);
 
+  int32_t sample_size = sizeof(int16_t);
   while (obj->running) {
-    int result = read(obj->fd, (int16_t *)obj->pcm, obj->frame_length);
+    int result = read(obj->fd, obj->pcm, obj->frame_length);
     if (result < 0) {
       if (errno != EAGAIN) {
         g_warning("read() returned %d, errno = %d\n", result, errno);
       }
     }
     if (result > 0) {
+      // g_debug("readAudioFIFO %d bytes\n", result);
+      ring_buffer_size_t wresult = PaUtil_WriteRingBuffer(
+          &obj->ring_buffer, obj->pcm, result / sample_size);
+      if (wresult < (result / sample_size)) {
+        g_warning("readAudioFIFO lost %ld frames\n",
+                  (result / sample_size) - wresult);
+      }
       obj->reading = true;
-      g_debug("readAudioFIFO %d bytes\n", result);
-      /*AudioFrame *frame = g_new(AudioFrame, 1);
-      frame->samples = (int16_t *)g_malloc(result * sizeof(int16_t));
-      frame->length = result;
-      memcpy(frame->samples, obj->pcm, result);
-      g_queue_push_tail(obj->frame_buffer, frame);*/
     } else if (result == 0) {
       obj->reading = false;
     }
