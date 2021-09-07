@@ -2,7 +2,7 @@
 assets/*
 !assets/.gitkeep
 !assets/news-intro.oga
-build/
+/build/
 /tmp/
 
 # macOS Finder artifact
