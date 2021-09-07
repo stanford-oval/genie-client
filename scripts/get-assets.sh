@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 
-if [ -z "${1}" ] || [ "${1}" == "amd64" ]; then
+if [ -z "${1}" ] || [ "${1}" == "amd64" ] || [ "${1}" == "amd64/" ]; then
     LIB_PATH="linux/x86_64"
 elif [ "${1}" == "armhf" ] || [ "${1}" == "arm32v7/" ]; then
     LIB_PATH="raspberry-pi/cortex-a72"
