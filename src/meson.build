@@ -81,6 +81,7 @@ executable(
   'audioplayer.cpp',
   'stt.cpp',
   'spotifyd.cpp',
+  'dns_controller.cpp',
   link_args : _linkArgs,
   install : true,
   dependencies : _deps

@@ -16,6 +16,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef _AUTOPTRS_HPP
+#define _AUTOPTRS_HPP
+
+#include <glib-object.h>
 #include <gst/gst.h>
 
 namespace genie {
@@ -24,6 +28,48 @@ enum class adopt_mode {
   owned,
   ref,
   ref_sink,
+};
+
+template <typename T> class auto_gobject_ptr {
+private:
+  T *m_instance;
+
+public:
+  auto_gobject_ptr() : m_instance(nullptr) {}
+
+  auto_gobject_ptr(T *instance, adopt_mode mode) : m_instance(instance) {
+    if (m_instance) {
+      if (mode == adopt_mode::ref)
+        g_object_ref(m_instance);
+      else if (mode == adopt_mode::ref_sink)
+        g_object_ref_sink(m_instance);
+    }
+  }
+
+  auto_gobject_ptr(const auto_gobject_ptr &other) : m_instance(other.m_instance) {
+    if (m_instance)
+      g_object_ref(m_instance);
+  }
+
+  ~auto_gobject_ptr() {
+    if (m_instance)
+      g_object_unref(m_instance);
+  }
+
+  auto_gobject_ptr<T> &operator=(const auto_gobject_ptr<T> &other) {
+    if (other.m_instance)
+      g_object_ref(other.m_instance);
+    this->~auto_gobject_ptr();
+    m_instance = other.m_instance;
+    return *this;
+  };
+
+  T *get() const { return m_instance; };
+
+  T &operator->() { return *m_instance; }
+  const T &operator->() const { return *m_instance; }
+
+  explicit operator bool() { return !!m_instance; }
 };
 
 template <typename T> class auto_gst_ptr {
@@ -68,4 +114,13 @@ public:
   explicit operator bool() { return !!m_instance; }
 };
 
+template <typename T, void (*deleter)(T*)>
+struct fn_deleter {
+  void operator()(T* obj) {
+    deleter(obj);
+  }
+};
+
 } // namespace genie
+
+#endif

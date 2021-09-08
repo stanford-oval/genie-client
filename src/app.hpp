@@ -24,7 +24,6 @@
 #include <glib.h>
 #include <memory>
 #include <sys/time.h>
-#include "libevdev/libevdev.h"
 
 #define PROF_PRINT(...)                                                        \
   do {                                                                         \
@@ -59,6 +58,7 @@ class Spotifyd;
 class STT;
 class TTS;
 class wsClient;
+class DNSController;
 
 enum ProcesingEvent_t {
   PROCESSING_BEGIN = 0,
@@ -107,6 +107,7 @@ public:
   std::unique_ptr<Spotifyd> m_spotifyd;
   std::unique_ptr<STT> m_stt;
   std::unique_ptr<wsClient> m_wsClient;
+  std::unique_ptr<DNSController> m_dns_controller;
 
 protected:
   void handle(ActionType type, gpointer payload);
