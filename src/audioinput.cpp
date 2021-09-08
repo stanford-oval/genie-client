@@ -23,7 +23,16 @@
 #include <stdio.h>
 
 #include "audioinput.hpp"
+#include "audiofifo.hpp"
 #include "pv_porcupine.h"
+
+#define DEBUG_DUMP_STREAMS
+
+#ifdef DEBUG_DUMP_STREAMS
+FILE *fp_input;
+FILE *fp_output;
+FILE *fp_filter;
+#endif
 
 genie::AudioInput::AudioInput(App *appInstance) {
   app = appInstance;
@@ -42,6 +51,11 @@ genie::AudioInput::~AudioInput() {
   snd_pcm_close(alsa_handle);
   pv_porcupine_delete_func(porcupine);
   dlclose(porcupine_library);
+#ifdef DEBUG_DUMP_STREAMS
+  fclose(fp_input);
+  fclose(fp_output);
+  fclose(fp_filter);
+#endif
 }
 
 int genie::AudioInput::init() {
@@ -201,6 +215,22 @@ int genie::AudioInput::init() {
     return -2;
   }
 
+  pcmOutput = (int16_t *)malloc(
+      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
+      sizeof(int16_t));
+  if (!pcmOutput) {
+    g_error("failed to allocate memory for audio buffer\n");
+    return -2;
+  }
+
+  pcmFilter = (int16_t *)malloc(
+      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
+      sizeof(int16_t));
+  if (!pcmFilter) {
+    g_error("failed to allocate memory for audio buffer\n");
+    return -2;
+  }
+
   g_print("Initialized wakeword engine, frame length %d, sample rate %d\n",
           pv_frame_length, sample_rate);
 
@@ -236,10 +266,16 @@ int genie::AudioInput::init() {
 
   echo_state = speex_echo_state_init_mc(
       pv_frame_length,
-      ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH, 250), 1, 1);
+      ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH, 500), 1, 1);
   speex_echo_ctl(echo_state, SPEEX_ECHO_SET_SAMPLING_RATE, &(sample_rate));
 
-  pp_state = speex_preprocess_state_init(pv_frame_length, sample_rate);
+  PaUtil_AdvanceRingBufferReadIndex(&app->m_audioFIFO.get()->ring_buffer, PaUtil_GetRingBufferReadAvailable(&app->m_audioFIFO.get()->ring_buffer));
+
+#ifdef DEBUG_DUMP_STREAMS
+  fp_input = fopen("/tmp/input.raw", "wb+");
+  fp_output = fopen("/tmp/playback.raw", "wb+");
+  fp_filter = fopen("/tmp/filter.raw", "wb+");
+#endif
 
   GError *thread_error = NULL;
   g_thread_try_new("audioInputThread", (GThreadFunc)loop, this, &thread_error);
@@ -284,7 +320,31 @@ genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
 
   AudioFrame *frame = g_new(AudioFrame, 1);
   frame->samples = (int16_t *)g_malloc(frame_length * sizeof(int16_t));
-  memcpy(frame->samples, pcm, frame_length * sizeof(int16_t));
+
+#ifdef DEBUG_DUMP_STREAMS
+  fwrite(pcm, sizeof(int16_t), frame_length, fp_input);
+#endif
+  if (app->m_audioFIFO->isReading()) {
+    int timeout = 128;
+    while (PaUtil_GetRingBufferReadAvailable(
+               &app->m_audioFIFO.get()->ring_buffer) < frame_length &&
+           timeout > 0) {
+      usleep(1);
+      timeout--;
+    }
+    PaUtil_ReadRingBuffer(&app->m_audioFIFO.get()->ring_buffer, pcmOutput,
+                          frame_length);
+    speex_echo_cancellation(echo_state, (const spx_int16_t *)pcm,
+                            (const int16_t *)pcmOutput,
+                            (spx_int16_t *)pcmFilter);
+    memcpy(frame->samples, pcmFilter, frame_length * sizeof(int16_t));
+#ifdef DEBUG_DUMP_STREAMS
+    fwrite(pcmOutput, sizeof(int16_t), frame_length, fp_output);
+    fwrite(pcmFilter, sizeof(int16_t), frame_length, fp_filter);
+#endif
+  } else {
+    memcpy(frame->samples, pcm, frame_length * sizeof(int16_t));
+  }
   frame->length = frame_length;
   return frame;
 }

@@ -67,6 +67,8 @@ private:
   const char *(*pv_status_to_string_func)(pv_status_t);
 
   int16_t *pcm;
+  int16_t *pcmOutput;
+  int16_t *pcmFilter;
   int32_t pv_frame_length;
   int32_t sample_rate;
   GQueue *frame_buffer;
