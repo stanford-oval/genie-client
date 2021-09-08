@@ -82,6 +82,7 @@ executable(
   'stt.cpp',
   'spotifyd.cpp',
   link_args : _linkArgs,
+  cpp_args : ['-DG_LOG_USE_STRUCTURED=1'],
   install : true,
   dependencies : _deps
 )
