@@ -29,6 +29,7 @@
 #include "spotifyd.hpp"
 #include "stt.hpp"
 #include "wsclient.hpp"
+#include "dns_controller.hpp"
 
 double time_diff(struct timeval x, struct timeval y) {
   return (((double)y.tv_sec * 1000000 + (double)y.tv_usec) -
@@ -77,6 +78,9 @@ int genie::App::exec() {
 
   m_leds = std::make_unique<Leds>(this);
   m_leds->init();
+
+  if (m_config->dns_controller_enabled)
+    m_dns_controller = std::make_unique<DNSController>();
 
   g_debug("start main loop\n");
   g_main_loop_run(main_loop);

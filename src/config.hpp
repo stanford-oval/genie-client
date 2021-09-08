@@ -56,6 +56,8 @@ public:
    */
   gchar *audio_output_device;
 
+  bool dns_controller_enabled;
+
 protected:
 private:
   gchar *get_string(GKeyFile *key_file, const char *section, const char *key,

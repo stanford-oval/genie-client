@@ -16,40 +16,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _EVINPUT_H
-#define _EVINPUT_H
+#ifndef _DNS_CONTROLLER_H
+#define _DNS_CONTROLLER_H
 
-#include "app.hpp"
+#include <glib.h>
+#include <gio/gio.h>
 
-#include <libevdev/libevdev.h>
+#include "autoptrs.hpp"
 
 namespace genie {
 
-struct InputEventSource {
-  GSource source;
-  struct libevdev *device;
-  GPollFD event_poll_fd;
-};
 
-class EVInput {
-public:
-  EVInput(App *app);
-  ~EVInput();
-  int init();
-
+class DNSController {
 private:
-  App *app;
-  static gboolean event_prepare(GSource *source, gint *timeout);
-  static gboolean event_check(GSource *source);
-  static gboolean event_dispatch(GSource *g_source, GSourceFunc callback,
-                                 gpointer user_data);
-  static gboolean callback(gpointer user_data);
+    auto_gobject_ptr<GFileMonitor> m_file_monitor;
+    static void on_changed(GFileMonitor *monitor, GFile *file, GFile *other_file, GFileMonitorEvent event, gpointer self);
+    void update_dns_config();
 
-  GSourceFuncs event_funcs = {event_prepare, event_check, event_dispatch,
-                              NULL,          NULL,        NULL};
-  GSource *source;
+public:
+    DNSController();
+    ~DNSController();
+
+    DNSController(const DNSController&) = delete;
+    DNSController& operator=(const DNSController&) = delete;
 };
 
-} // namespace genie
+}
 
 #endif
