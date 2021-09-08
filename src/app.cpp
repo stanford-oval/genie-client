@@ -49,6 +49,7 @@ int genie::App::exec() {
   main_loop = g_main_loop_new(NULL, FALSE);
 
   g_unix_signal_add(SIGINT, sig_handler, main_loop);
+  g_unix_signal_add(SIGTERM, sig_handler, main_loop);
 
   m_config = std::make_unique<Config>();
   m_config->load();
@@ -170,7 +171,7 @@ void genie::App::handle(ActionType type, gpointer payload) {
       if (ev->type == 1 && ev->code == KEY_VOLUMEDOWN && ev->value == 1) {
         m_audioPlayer->decrement_playback_volume();
       }
-      
+
       g_free(ev);
       // long volume = m_audioPlayer->get_volume();
       // g_message("Volume: %ld", volume);
