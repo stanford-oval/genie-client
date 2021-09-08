@@ -31,6 +31,7 @@
 	"extensions": [
 		"ms-vscode.cpptools",
 		"streetsidesoftware.code-spell-checker",
+		"asabil.meson",
 	],
 	
 	// This did _not_ work... seemed to have build using it, but then brought up
