@@ -18,7 +18,6 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             build.root = paths.repo / "build"
             build.assets = build.root / "assets"
             build.lib = build.root / "lib"
-            paths.asoundrc = paths.install / ".asoundrc"
             build.config = build.root / "config.ini"
             build.exe = build.root / "src" / "genie"
 
