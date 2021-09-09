@@ -30,8 +30,8 @@ public:
   wsClient(App *appInstance);
   ~wsClient();
   int init();
-  void sendCommand(gchar *data);
-  void sendThingtalk(gchar *data);
+  void sendCommand(const char *data);
+  void sendThingtalk(const char *data);
   gboolean checkIsConnected();
 
 protected:

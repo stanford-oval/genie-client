@@ -63,6 +63,11 @@ public:
     m_instance = other.m_instance;
     return *this;
   };
+  auto_gobject_ptr<T> &operator=(nullptr_t ptr) {
+    this->~auto_gobject_ptr();
+    m_instance = nullptr;
+    return *this;
+  }
 
   T *get() const { return m_instance; };
 
@@ -105,6 +110,11 @@ public:
     m_instance = other.m_instance;
     return *this;
   };
+  auto_gst_ptr<T> &operator=(nullptr_t ptr) {
+    this->~auto_gobject_ptr();
+    m_instance = nullptr;
+    return *this;
+  }
 
   T *get() const { return m_instance; };
 

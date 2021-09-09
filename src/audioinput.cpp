@@ -318,8 +318,7 @@ genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
     return NULL;
   }
 
-  AudioFrame *frame = g_new(AudioFrame, 1);
-  frame->samples = (int16_t *)g_malloc(frame_length * sizeof(int16_t));
+  AudioFrame *frame = new AudioFrame(frame_length);
 
 #ifdef DEBUG_DUMP_STREAMS
   fwrite(pcm, sizeof(int16_t), frame_length, fp_input);
@@ -345,7 +344,6 @@ genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
   } else {
     memcpy(frame->samples, pcm, frame_length * sizeof(int16_t));
   }
-  frame->length = frame_length;
   return frame;
 }
 
