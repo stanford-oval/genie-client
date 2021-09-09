@@ -56,17 +56,22 @@ def run(
 ):
     tag = f"genie-builder:{arch}"
 
+    opts = {
+        "build-arg": [
+            f"ARCH={arch}/", # TODO Why is this `/` added here?
+            f"STATIC={int(static)}"
+        ],
+        "tag": tag,
+        "file": CFG.genie_client_cpp.paths.scripts.dockerfile,
+    }
+
+    if plain:
+        opts["progress"] = "plain"
+
     sh.run(
         "docker",
         "build",
-        {
-            "build-arg": [
-                f"ARCH={arch}/", # TODO Why is this `/` added here?
-                f"STATIC={int(static)}"
-            ],
-            "tag": tag,
-            "file": CFG.genie_client_cpp.paths.scripts.dockerfile,
-        },
+        opts,
         ".",
         chdir=CFG.genie_client_cpp.paths.repo,
         log=LOG,
@@ -79,20 +84,15 @@ def run(
     else:
         script = "/src/scripts/blob.sh"
 
-    opts = {
-        "rm": True,
-        "volume": f"{CFG.genie_client_cpp.paths.out.root}:/out",
-        "security-opt": "label=disable",
-        "env": f"ARCH={arch}",
-    }
-
-    if plain:
-        opts["progress"] = "plain"
-
     sh.run(
         "docker",
         "run",
-        opts,
+        {
+            "rm": True,
+            "volume": f"{CFG.genie_client_cpp.paths.out.root}:/out",
+            "security-opt": "label=disable",
+            "env": f"ARCH={arch}",
+        },
         tag,
         script,
         chdir=CFG.genie_client_cpp.paths.repo,
