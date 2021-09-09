@@ -40,7 +40,20 @@ def add_to(subparsers):
         help="Only copy the resulting binary over from the build container",
     )
 
-def run(arch: str = DEFAULT_ARCH, static: bool = False, exe_only: bool = False):
+    parser.add_argument(
+        "-p",
+        "--plain",
+        action=BooleanOptionalAction,
+        default=False,
+        help="Pass `--progress plain` to `docker build` (real Docker only!)",
+    )
+
+def run(
+    arch: str = DEFAULT_ARCH,
+    static: bool = False,
+    exe_only: bool = False,
+    plain: bool = False
+):
     tag = f"genie-builder:{arch}"
 
     sh.run(
@@ -66,16 +79,20 @@ def run(arch: str = DEFAULT_ARCH, static: bool = False, exe_only: bool = False):
     else:
         script = "/src/scripts/blob.sh"
 
+    opts = {
+        "rm": True,
+        "volume": f"{CFG.genie_client_cpp.paths.out.root}:/out",
+        "security-opt": "label=disable",
+        "env": f"ARCH={arch}",
+    }
+
+    if plain:
+        opts["progress"] = "plain"
 
     sh.run(
         "docker",
         "run",
-        {
-            "rm": True,
-            "volume": f"{CFG.genie_client_cpp.paths.out.root}:/out",
-            "security-opt": "label=disable",
-            "env": f"ARCH={arch}",
-        },
+        opts,
         tag,
         script,
         chdir=CFG.genie_client_cpp.paths.repo,
