@@ -309,7 +309,7 @@ genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
   const int read_frames = snd_pcm_readi(alsa_handle, pcm, frame_length);
 
   if (read_frames < 0) {
-    g_error("'snd_pcm_readi' failed with '%s'\n", snd_strerror(read_frames));
+    g_critical("'snd_pcm_readi' failed with '%s'\n", snd_strerror(read_frames));
     return NULL;
   }
 
@@ -318,8 +318,7 @@ genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
     return NULL;
   }
 
-  AudioFrame *frame = g_new(AudioFrame, 1);
-  frame->samples = (int16_t *)g_malloc(frame_length * sizeof(int16_t));
+  AudioFrame *frame = new AudioFrame(frame_length);
 
 #ifdef DEBUG_DUMP_STREAMS
   fwrite(pcm, sizeof(int16_t), frame_length, fp_input);
@@ -345,7 +344,6 @@ genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
   } else {
     memcpy(frame->samples, pcm, frame_length * sizeof(int16_t));
   }
-  frame->length = frame_length;
   return frame;
 }
 
@@ -394,7 +392,7 @@ void genie::AudioInput::loop_waiting() {
 
   if (status != PV_STATUS_SUCCESS) {
     // Picovoice error!
-    g_error("'pv_porcupine_process' failed with '%s'\n",
+    g_critical("'pv_porcupine_process' failed with '%s'\n",
             pv_status_to_string_func(status));
     return;
   }

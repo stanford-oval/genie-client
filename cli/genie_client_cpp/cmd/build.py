@@ -47,7 +47,6 @@ def run(arch: str = DEFAULT_ARCH, static: bool = False, exe_only: bool = False):
         "docker",
         "build",
         {
-            "progress": "plain",
             "build-arg": [
                 f"ARCH={arch}/", # TODO Why is this `/` added here?
                 f"STATIC={int(static)}"

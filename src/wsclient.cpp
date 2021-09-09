@@ -58,7 +58,7 @@ void genie::wsClient::sendJSON(JsonBuilder *builder) {
   g_free(str);
 }
 
-void genie::wsClient::sendCommand(gchar *data) {
+void genie::wsClient::sendCommand(const char *data) {
   if (!checkIsConnected()) {
     return;
   }
@@ -85,7 +85,7 @@ void genie::wsClient::sendCommand(gchar *data) {
   return;
 }
 
-void genie::wsClient::sendThingtalk(gchar *data) {
+void genie::wsClient::sendThingtalk(const char *data) {
   if (!checkIsConnected()) {
     return;
   }

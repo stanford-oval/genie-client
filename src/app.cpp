@@ -50,6 +50,7 @@ int genie::App::exec() {
   main_loop = g_main_loop_new(NULL, FALSE);
 
   g_unix_signal_add(SIGINT, sig_handler, main_loop);
+  g_unix_signal_add(SIGTERM, sig_handler, main_loop);
 
   m_config = std::make_unique<Config>();
   m_config->load();
@@ -125,7 +126,7 @@ void genie::App::handle(ActionType type, gpointer payload) {
       g_message("Playing match sound...\n");
       m_audioPlayer->playSound(SOUND_MATCH);
       g_message("Connecting STT...\n");
-      m_stt->connect();
+      m_stt->begin_session();
       g_message("Done handling wake.\n");
       break;
     }
@@ -139,13 +140,9 @@ void genie::App::handle(ActionType type, gpointer payload) {
       g_message("Handling SPEECH_DONE...");
       track_processing_event(PROCESSING_BEGIN);
       track_processing_event(PROCESSING_START_STT);
-      bool ok = m_stt->send_done();
+      m_stt->send_done();
       m_audioPlayer->stop();
-      if (ok) {
-        m_audioPlayer->playSound(SOUND_MATCH);
-      } else {
-        m_audioPlayer->playSound(SOUND_NO_MATCH);
-      }
+      m_audioPlayer->playSound(SOUND_MATCH);
       system("amixer -D hw:audiocodec cset name='hd' 255");
       break;
     }
