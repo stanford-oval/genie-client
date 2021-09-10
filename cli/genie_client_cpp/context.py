@@ -41,6 +41,7 @@ class Context:
             value = sh.get(
                 "git",
                 "config",
+                "--local",
                 cls.git_config_name(key_path),
                 format="strip",
             )
@@ -64,6 +65,7 @@ class Context:
             sh.run(
                 "git",
                 "config",
+                "--local",
                 cls.git_config_name(key_path),
                 cls.encode(value),
             )
@@ -86,6 +88,22 @@ class Context:
                     )
             return cls.LIST_SEP.join(value)
         raise TypeError(f"can't encode type {type(value)}: {repr(value)}")
+
+    @classmethod
+    def list(cls):
+        config_names = sh.get(
+            "git",
+            "config",
+            "--local",
+            "--list",
+        ).splitlines()
+
+        return sorted({
+            parts[1]
+            for parts
+            in (name.split(".") for name in config_names)
+            if parts[0] == cls.GIT_CONFIG_PREFIX and len(parts) > 2
+        })
 
     @classmethod
     def get_current_name(cls):

@@ -10,7 +10,7 @@ _onlySharedDeps = [ 'gstreamer-1.0', 'alsa' ]
 _alwaysSharedDeps = [ 'gio-2.0' ]
 
 _linkArgs = []
-_incDirs = []
+_incDirs = include_directories('../deps/tinyfsm/include')
 _deps = []
 
 _deps += cpp.find_library('dl')
@@ -85,5 +85,6 @@ executable(
   link_args : _linkArgs,
   cpp_args : ['-DG_LOG_USE_STRUCTURED=1'],
   install : true,
-  dependencies : _deps
+  dependencies : _deps,
+  include_directories : _incDirs,
 )

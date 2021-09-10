@@ -1,0 +1,3 @@
+[submodule "deps/tinyfsm"]
+	path = deps/tinyfsm
+	url = https://github.com/digint/tinyfsm.git

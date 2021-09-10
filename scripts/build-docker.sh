@@ -43,12 +43,12 @@ fi
 
 # copy the artifacts to the output directory
 if [ ${BLOB} -eq 1 ]; then
-	docker run --rm -v $(pwd)/build:/out --security-opt label=disable -e ARCH=${ARCH} genie-builder:${ARCH} /src/scripts/blob.sh
+	docker run --rm -v $(pwd)/out:/out --security-opt label=disable -e ARCH=${ARCH} genie-builder:${ARCH} /src/scripts/blob.sh
 	exit ${?}
 fi
 
 if [ ${LIGHT} -eq 1 ]; then
-	docker run --rm -v $(pwd)/build:/out --security-opt label=disable -e ARCH=${ARCH} genie-builder:${ARCH} /src/scripts/binonly.sh
+	docker run --rm -v $(pwd)/out:/out --security-opt label=disable -e ARCH=${ARCH} genie-builder:${ARCH} /src/scripts/binonly.sh
 	exit ${?}
 fi
 

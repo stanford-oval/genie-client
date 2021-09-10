@@ -18,7 +18,7 @@ COMMANDS_TO_KILL = (
     re.compile(r"^/tmp/spotifyd\s"),
 )
 
-BUILD_PATHS = CFG.genie_client_cpp.paths.build
+OUT_PATHS = CFG.genie_client_cpp.paths.out
 SCRIPT_PATHS = CFG.genie_client_cpp.paths.scripts
 DEPLOY_PATHS = CFG.genie_client_cpp.xiaodu.paths
 
@@ -73,25 +73,25 @@ def deploy_all(target: str, log=LOG):
     remote = Remote.create(target)
 
     remote.run("mkdir", "-p", CFG.genie_client_cpp.xiaodu.paths.install)
-    remote.push(BUILD_PATHS.lib, DEPLOY_PATHS.lib)
-    remote.push(BUILD_PATHS.assets, DEPLOY_PATHS.assets)
+    remote.push(OUT_PATHS.lib, DEPLOY_PATHS.lib)
+    remote.push(OUT_PATHS.assets, DEPLOY_PATHS.assets)
     remote.push(SCRIPT_PATHS.launch, DEPLOY_PATHS.launch)
     remote.push(SCRIPT_PATHS.asoundrc, DEPLOY_PATHS.asoundrc)
-    remote.push(BUILD_PATHS.config, DEPLOY_PATHS.config)
-    remote.push(BUILD_PATHS.exe, DEPLOY_PATHS.exe)
+    remote.push(OUT_PATHS.config, DEPLOY_PATHS.config)
+    remote.push(OUT_PATHS.exe, DEPLOY_PATHS.exe)
 
 
 @LOG.inject
 def deploy_exe(target: str, log=LOG):
     log.info("Deploying executable...")
     kill.run(target)
-    Remote.create(target).push(BUILD_PATHS.exe, DEPLOY_PATHS.exe)
+    Remote.create(target).push(OUT_PATHS.exe, DEPLOY_PATHS.exe)
 
 
 @LOG.inject
 def deploy_config(target: str, log=LOG):
     log.info("Deploying config file...")
-    Remote.create(target).push(BUILD_PATHS.config, DEPLOY_PATHS.config)
+    Remote.create(target).push(OUT_PATHS.config, DEPLOY_PATHS.config)
 
 
 @Context.inject_current
