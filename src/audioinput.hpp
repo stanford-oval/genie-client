@@ -36,10 +36,12 @@ namespace genie {
 
 class AudioInput {
 public:
-  static const int32_t BUFFER_MAX_FRAMES = 32;
+  static const size_t BYTES_PER_SAMPLE = sizeof(int16_t);
+  static const size_t BUFFER_MAX_FRAMES = 32;
   // static const int32_t VAD_FRAME_LENGTH = 480;
   static const int VAD_IS_SILENT = 0;
   static const int VAD_NOT_SILENT = 1;
+  static const size_t PCM_OUTPUT_SCALAR = 32;
 
   enum class State {
     WAITING,
@@ -65,10 +67,20 @@ private:
   pv_status_t (*pv_porcupine_process_func)(pv_porcupine_t *, const int16_t *,
                                            int32_t *);
   const char *(*pv_status_to_string_func)(pv_status_t);
-
+  
+  /**
+   * The size in _samples_ of audio buffers that need to hold one _frame_.
+   * 
+   * It is the max of the Picovoice and VAD frame sizes.
+   */
+  size_t frame_buffer_size__samples;
+  
   int16_t *pcm;
-  int16_t *pcmOutput;
-  int16_t *pcmFilter;
+  int16_t *pcm_output;
+  size_t pcm_output_size__samples;
+  int16_t *pcm_output_frame;
+  
+  int16_t *pcm_filter;
   int32_t pv_frame_length;
   int32_t sample_rate;
   GQueue *frame_buffer;

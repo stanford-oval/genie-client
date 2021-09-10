@@ -16,14 +16,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define G_LOG_DOMAIN "genie-audioinput"
+
 #include <alsa/asoundlib.h>
 #include <dlfcn.h>
 #include <glib.h>
 #include <signal.h>
 #include <stdio.h>
 
-#include "audioinput.hpp"
 #include "audiofifo.hpp"
+#include "audioinput.hpp"
 #include "pv_porcupine.h"
 
 #define DEBUG_DUMP_STREAMS
@@ -207,26 +209,33 @@ int genie::AudioInput::init() {
 
   pv_frame_length = pv_porcupine_frame_length_func();
 
-  pcm = (int16_t *)malloc(
-      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
-      sizeof(int16_t));
+  frame_buffer_size__samples =
+      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length);
+
+  pcm = (int16_t *)malloc(frame_buffer_size__samples * BYTES_PER_SAMPLE);
   if (!pcm) {
     g_error("failed to allocate memory for audio buffer\n");
     return -2;
   }
 
-  pcmOutput = (int16_t *)malloc(
-      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
-      sizeof(int16_t));
-  if (!pcmOutput) {
-    g_error("failed to allocate memory for audio buffer\n");
+  pcm_output_size__samples = frame_buffer_size__samples * PCM_OUTPUT_SCALAR;
+  pcm_output = (int16_t *)malloc(pcm_output_size__samples * BYTES_PER_SAMPLE);
+  if (!pcm_output) {
+    g_error("failed to allocate memory for pcm_output audio buffer\n");
     return -2;
   }
 
-  pcmFilter = (int16_t *)malloc(
+  pcm_output_frame =
+      (int16_t *)malloc(frame_buffer_size__samples * BYTES_PER_SAMPLE);
+  if (!pcm_output_frame) {
+    g_error("failed to allocate memory for pcm_output_frame audio buffer\n");
+    return -2;
+  }
+
+  pcm_filter = (int16_t *)malloc(
       std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
       sizeof(int16_t));
-  if (!pcmFilter) {
+  if (!pcm_filter) {
     g_error("failed to allocate memory for audio buffer\n");
     return -2;
   }
@@ -265,11 +274,12 @@ int genie::AudioInput::init() {
             app->m_config->vad_min_woke_ms, min_woke_frame_count);
 
   echo_state = speex_echo_state_init_mc(
-      pv_frame_length,
-      ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH, 500), 1, 1);
+      pv_frame_length, ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH, 500), 1, 1);
   speex_echo_ctl(echo_state, SPEEX_ECHO_SET_SAMPLING_RATE, &(sample_rate));
 
-  PaUtil_AdvanceRingBufferReadIndex(&app->m_audioFIFO.get()->ring_buffer, PaUtil_GetRingBufferReadAvailable(&app->m_audioFIFO.get()->ring_buffer));
+  PaUtil_AdvanceRingBufferReadIndex(
+      &app->m_audio_fifo.get()->ring_buffer,
+      PaUtil_GetRingBufferReadAvailable(&app->m_audio_fifo.get()->ring_buffer));
 
 #ifdef DEBUG_DUMP_STREAMS
   fp_input = fopen("/tmp/input.raw", "wb+");
@@ -277,6 +287,7 @@ int genie::AudioInput::init() {
   fp_filter = fopen("/tmp/filter.raw", "wb+");
 #endif
 
+  running = true;
   GError *thread_error = NULL;
   g_thread_try_new("audioInputThread", (GThreadFunc)loop, this, &thread_error);
   if (thread_error) {
@@ -285,7 +296,6 @@ int genie::AudioInput::init() {
     g_error_free(thread_error);
     return false;
   }
-  running = true;
 
   return 0;
 }
@@ -306,44 +316,65 @@ int32_t genie::AudioInput::ms_to_frames(int32_t frame_length, int32_t ms) {
 }
 
 genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
-  const int read_frames = snd_pcm_readi(alsa_handle, pcm, frame_length);
+  const int read_size__samples = snd_pcm_readi(alsa_handle, pcm, frame_length);
 
-  if (read_frames < 0) {
-    g_critical("'snd_pcm_readi' failed with '%s'\n", snd_strerror(read_frames));
+  if (read_size__samples < 0) {
+    g_critical("'snd_pcm_readi' failed with '%s'\n",
+               snd_strerror(read_size__samples));
     return NULL;
   }
 
-  if (read_frames != frame_length) {
-    g_message("read %d frames instead of %d\n", read_frames, frame_length);
+  if (read_size__samples != frame_length) {
+    g_message("read %d frames instead of %d\n", read_size__samples,
+              frame_length);
     return NULL;
   }
 
   AudioFrame *frame = new AudioFrame(frame_length);
 
-#ifdef DEBUG_DUMP_STREAMS
-  fwrite(pcm, sizeof(int16_t), frame_length, fp_input);
-#endif
-  if (app->m_audioFIFO->isReading()) {
-    int timeout = 128;
-    while (PaUtil_GetRingBufferReadAvailable(
-               &app->m_audioFIFO.get()->ring_buffer) < frame_length &&
-           timeout > 0) {
-      usleep(1);
-      timeout--;
-    }
-    PaUtil_ReadRingBuffer(&app->m_audioFIFO.get()->ring_buffer, pcmOutput,
-                          frame_length);
-    speex_echo_cancellation(echo_state, (const spx_int16_t *)pcm,
-                            (const int16_t *)pcmOutput,
-                            (spx_int16_t *)pcmFilter);
-    memcpy(frame->samples, pcmFilter, frame_length * sizeof(int16_t));
-#ifdef DEBUG_DUMP_STREAMS
-    fwrite(pcmOutput, sizeof(int16_t), frame_length, fp_output);
-    fwrite(pcmFilter, sizeof(int16_t), frame_length, fp_filter);
-#endif
-  } else {
-    memcpy(frame->samples, pcm, frame_length * sizeof(int16_t));
+  // See how many samples are available in the playback ring
+  ring_buffer_size_t playback_size__samples =
+      PaUtil_GetRingBufferReadAvailable(&app->m_audio_fifo.get()->ring_buffer);
+  
+  // Annoying, seemingly, `ring_buffer_size_t` is signed. No clue what to do 
+  // with it if it's negative...
+  if (playback_size__samples < 0) {
+    g_error("Negative amount of samples (%d) available in ring buffer",
+            playback_size__samples);
+    return NULL;
   }
+
+  // Check that we can fit the number of available samples in the `pcm_output`
+  // buffer... it's a crash if we can't!
+  if ((size_t)playback_size__samples > pcm_output_size__samples) {
+    g_critical("Available playback size (%d samples) larger than PCM output "
+            "buffer size (%d samples)\n",
+            playback_size__samples, pcm_output_size__samples);
+    return NULL;
+  }
+
+  // Read ALL the samples in the ring buffer -- get 'em outta there!
+  PaUtil_ReadRingBuffer(&app->m_audio_fifo.get()->ring_buffer, pcm_output,
+                        playback_size__samples);
+
+  // Cut a frame
+  memset(pcm_output_frame, 0, frame_buffer_size__samples * BYTES_PER_SAMPLE);
+  memcpy(pcm_output_frame, pcm_output,
+         std::min((size_t)playback_size__samples, frame_buffer_size__samples) *
+             BYTES_PER_SAMPLE);
+
+  speex_echo_cancellation(echo_state, (const spx_int16_t *)pcm,
+                          (const spx_int16_t *)pcm_output_frame,
+                          (spx_int16_t *)pcm_filter);
+
+  memcpy(frame->samples, pcm_filter, frame_length * BYTES_PER_SAMPLE);
+
+#ifdef DEBUG_DUMP_STREAMS
+  fwrite(pcm, BYTES_PER_SAMPLE, frame_length, fp_input);
+  fwrite(pcm_output_frame, BYTES_PER_SAMPLE, frame_length, fp_output);
+  fwrite(pcm_filter, BYTES_PER_SAMPLE, frame_length, fp_filter);
+#endif
+
   return frame;
 }
 
@@ -353,18 +384,18 @@ void genie::AudioInput::transition(State to_state) {
   state_vad_frame_count = 0;
 
   switch (to_state) {
-  case State::WAITING:
-    g_message("[AudioInput] -> State::WAITING\n");
-    state = State::WAITING;
-    break;
-  case State::WOKE:
-    g_message("[AudioInput] -> State::WOKE\n");
-    state = State::WOKE;
-    break;
-  case State::LISTENING:
-    g_message("[AudioInput] -> State::LISTENING\n");
-    state = State::LISTENING;
-    break;
+    case State::WAITING:
+      g_message("[AudioInput] -> State::WAITING\n");
+      state = State::WAITING;
+      break;
+    case State::WOKE:
+      g_message("[AudioInput] -> State::WOKE\n");
+      state = State::WOKE;
+      break;
+    case State::LISTENING:
+      g_message("[AudioInput] -> State::LISTENING\n");
+      state = State::LISTENING;
+      break;
   }
 }
 
@@ -393,7 +424,7 @@ void genie::AudioInput::loop_waiting() {
   if (status != PV_STATUS_SUCCESS) {
     // Picovoice error!
     g_critical("'pv_porcupine_process' failed with '%s'\n",
-            pv_status_to_string_func(status));
+               pv_status_to_string_func(status));
     return;
   }
 
@@ -477,15 +508,15 @@ void *genie::AudioInput::loop(gpointer data) {
 
   while (obj->running) {
     switch (obj->state) {
-    case State::WAITING:
-      obj->loop_waiting();
-      break;
-    case State::WOKE:
-      obj->loop_woke();
-      break;
-    case State::LISTENING:
-      obj->loop_listening();
-      break;
+      case State::WAITING:
+        obj->loop_waiting();
+        break;
+      case State::WOKE:
+        obj->loop_woke();
+        break;
+      case State::LISTENING:
+        obj->loop_listening();
+        break;
     }
   }
 

@@ -20,29 +20,40 @@
 #define _AUDIOFIFO_H
 
 #include "app.hpp"
-#include <glib.h>
 #include "pa_ringbuffer.h"
+#include <atomic>
+#include <glib.h>
 
 namespace genie {
 
 class AudioFIFO {
 public:
+  static const size_t BYTES_PER_SAMPLE = sizeof(int16_t);
+  static const size_t FRAME_LENGTH__SAMPLES = 512;
+  static const size_t FRAME_LENGTH__BYTES =
+      FRAME_LENGTH__SAMPLES * BYTES_PER_SAMPLE;
+  static const size_t BUFFER_SIZE__FRAMES = 32;
+  static const size_t BUFFER_SIZE__SAMPLES =
+      FRAME_LENGTH__SAMPLES * BUFFER_SIZE__FRAMES;
+  static const size_t SAMPLE__NS = 62500;
+  static const size_t SLEEP__US = 8000;
+
   AudioFIFO(App *appInstance);
   ~AudioFIFO();
   int init();
-  bool isReading();
   PaUtilRingBuffer ring_buffer;
 
 protected:
   static void *loop(gpointer data);
 
 private:
-  bool running;
-  bool reading;
+  std::atomic_bool running;
   int fd;
-  int32_t frame_length;
   int16_t *pcm;
+  int16_t *zeros;
   App *app;
+  
+  void write_to_ring(int16_t *samples, ring_buffer_size_t sample_count);
 };
 
 } // namespace genie

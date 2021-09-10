@@ -113,7 +113,7 @@ public:
   GMainLoop *main_loop;
   std::unique_ptr<Config> m_config;
   std::unique_ptr<AudioInput> m_audioInput;
-  std::unique_ptr<AudioFIFO> m_audioFIFO;
+  std::unique_ptr<AudioFIFO> m_audio_fifo;
   std::unique_ptr<AudioPlayer> m_audioPlayer;
   std::unique_ptr<EVInput> m_evInput;
   std::unique_ptr<Leds> m_leds;

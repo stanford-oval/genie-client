@@ -52,7 +52,15 @@ def add_to(subparsers):
         "--config-only",
         action=BooleanOptionalAction,
         default=False,
-        help="Only push `config.ini` to the target",
+        help="Only push `out/config.ini` to the target",
+    )
+
+    parser.add_argument(
+        "-a",
+        "--asoundrc-only",
+        action=BooleanOptionalAction,
+        default=False,
+        help="Only push `scripts/asoundrc` to the target",
     )
 
     parser.add_argument(
@@ -101,6 +109,10 @@ def deploy_config(target: str, log=LOG):
     log.info("Deploying config file...")
     Remote.create(target).push(OUT_PATHS.config, DEPLOY_PATHS.config)
 
+@LOG.inject
+def deploy_asoundrc(target: str, log=LOG):
+    log.info("Deploying asoundrc file...")
+    Remote.create(target).push(SCRIPT_PATHS.asoundrc, DEPLOY_PATHS.asoundrc)
 
 @Context.inject_current
 def run(
@@ -108,15 +120,18 @@ def run(
     build: bool = False,
     exe_only: bool = False,
     config_only: bool = False,
+    asoundrc_only: bool = False,
     plain: bool = False,
 ):
     if build:
         build_cmd.run(exe_only=exe_only, plain=plain)
 
-    if exe_only or config_only:
+    if exe_only or config_only or asoundrc_only:
         if exe_only:
             deploy_exe(target)
         if config_only:
             deploy_config(target)
+        if asoundrc_only:
+            deploy_asoundrc(target)
     else:
         deploy_all(target)

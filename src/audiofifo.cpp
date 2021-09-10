@@ -16,11 +16,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <glib.h>
+#define G_LOG_DOMAIN "genie-audiofifo"
+
+#include <chrono>
+#include <fcntl.h>
 #include <glib-unix.h>
+#include <glib.h>
 #include <glib/gstdio.h>
 #include <string.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -28,7 +31,7 @@
 
 genie::AudioFIFO::AudioFIFO(App *appInstance) {
   app = appInstance;
-  running = reading = false;
+  running = false;
 }
 
 genie::AudioFIFO::~AudioFIFO() {
@@ -37,6 +40,7 @@ genie::AudioFIFO::~AudioFIFO() {
     close(fd);
   }
   free(ring_buffer.buffer);
+  free(pcm);
 }
 
 int genie::AudioFIFO::init() {
@@ -47,13 +51,12 @@ int genie::AudioFIFO::init() {
 
   fd = open(app->m_config->audioOutputFIFO, O_RDONLY | O_NONBLOCK);
   if (fd < 0) {
-    g_printerr("failed to open %s, error %d\n", app->m_config->audioOutputFIFO, fd);
+    g_printerr("failed to open %s, error %d\n", app->m_config->audioOutputFIFO,
+               fd);
     return false;
   }
 
-  frame_length = 512;
-
-  int r = fcntl(fd, F_SETPIPE_SZ, frame_length);
+  int r = fcntl(fd, F_SETPIPE_SZ, FRAME_LENGTH__BYTES * 32);
   if (r < 0) {
     g_printerr("set pipe size failed, errno = %d\n", errno);
     close(fd);
@@ -68,16 +71,24 @@ int genie::AudioFIFO::init() {
   }
   g_message("pipe size: %" G_GINT64_FORMAT "\n", pipe_size);
 
-  pcm = (int16_t *)malloc(frame_length * sizeof(int16_t));
+  pcm = (int16_t *)malloc(FRAME_LENGTH__BYTES);
   if (!pcm) {
-    g_printerr("failed to allocate memory for audio buffer, errno = %d\n", errno);
+    g_printerr("failed to allocate memory for audio buffer, errno = %d\n",
+               errno);
     close(fd);
     return false;
   }
 
-  int32_t buffer_size = frame_length * 32;
-  int32_t sample_size = sizeof(int16_t);
-  void *buffer = calloc(buffer_size, sample_size);
+  zeros = (int16_t *)malloc(FRAME_LENGTH__BYTES);
+  if (!pcm) {
+    g_printerr("failed to allocate memory for audio buffer, errno = %d\n",
+               errno);
+    close(fd);
+    return false;
+  }
+  memset(zeros, 0, FRAME_LENGTH__BYTES);
+
+  void *buffer = calloc(BUFFER_SIZE__SAMPLES, BYTES_PER_SAMPLE);
   if (buffer == NULL) {
     g_printerr("failed to allocate memory for ring buffer, errno = %d\n",
                errno);
@@ -86,7 +97,7 @@ int genie::AudioFIFO::init() {
   }
 
   ring_buffer_size_t r1 = PaUtil_InitializeRingBuffer(
-      &ring_buffer, sample_size, buffer_size, buffer);
+      &ring_buffer, BYTES_PER_SAMPLE, BUFFER_SIZE__SAMPLES, buffer);
   if (r1 == -1) {
     g_printerr("failed to initialize ring buffer\n");
     close(fd);
@@ -108,34 +119,81 @@ int genie::AudioFIFO::init() {
   return true;
 }
 
+void genie::AudioFIFO::write_to_ring(int16_t *samples,
+                                     ring_buffer_size_t size__samples) {
+  ring_buffer_size_t write_size__samples =
+      PaUtil_WriteRingBuffer(&ring_buffer, samples, size__samples);
+
+  if (write_size__samples < size__samples) {
+    g_warning(
+        "ring buffer full -- lost %ld samples. Given %ld samples, wrote %ld "
+        "samples\n",
+        size__samples - write_size__samples, size__samples,
+        write_size__samples);
+  }
+}
+
 void *genie::AudioFIFO::loop(gpointer data) {
   AudioFIFO *obj = reinterpret_cast<AudioFIFO *>(data);
 
-  int32_t sample_size = sizeof(int16_t);
+  auto last_read_time = std::chrono::steady_clock::now();
+
   while (obj->running) {
-    int result = read(obj->fd, obj->pcm, obj->frame_length);
-    if (result < 0) {
+    // Read a frame from the pipe into `pcm`.
+    //
+    // `FRAME_LENGTH__SAMPLES` is in units of _samples_, and `read()` takes a
+    // number of _bytes_, so we need to multiple by `BYTES_PER_SAMPLE`.
+    //
+    ssize_t read_size__bytes = read(obj->fd, obj->pcm, FRAME_LENGTH__BYTES);
+
+    auto this_read_time = std::chrono::steady_clock::now();
+    size_t elapsed__ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             this_read_time - last_read_time)
+                             .count();
+
+    size_t elapsed__samples = elapsed__ns / SAMPLE__NS;
+    size_t read_size__samples = 0;
+
+    // Did we encounter an error reading?
+    if (read_size__bytes < 0) {
       if (errno != EAGAIN) {
-        g_warning("read() returned %d, errno = %d\n", result, errno);
+        g_warning("read() returned %d, errno = %d\n", read_size__bytes, errno);
       }
     }
-    if (result > 0) {
-      // g_debug("readAudioFIFO %d bytes\n", result);
-      ring_buffer_size_t wresult = PaUtil_WriteRingBuffer(
-          &obj->ring_buffer, obj->pcm, result / sample_size);
-      if (wresult < (result / sample_size)) {
-        g_warning("readAudioFIFO lost %ld frames\n",
-                  (result / sample_size) - wresult);
+
+    // Did we read any bytes?
+    if (read_size__bytes > 0) {
+      // Check that we read a whole number of samples
+      if (read_size__bytes % BYTES_PER_SAMPLE != 0) {
+        g_warning("read_size__bytes=%d not divisible by BYTES_PER_SAMPLE=%d\n",
+                  read_size__bytes, BYTES_PER_SAMPLE);
       }
-      obj->reading = true;
-    } else if (result == 0) {
-      obj->reading = false;
+
+      // See how many _samples_ we read
+      read_size__samples = read_size__bytes / BYTES_PER_SAMPLE;
+
+      // Check that we didn't read more samples than how many we _think_ have
+      // elapsed. If so, bump up elapsed to the read amount.
+      if (read_size__samples > elapsed__samples) {
+        g_critical(
+            "Read more samples (%d) than apparent elapsed samples (%d),"
+            "elapsed time %dns\n",
+            read_size__samples, elapsed__samples, elapsed__ns);
+        elapsed__samples = read_size__samples;
+      }
     }
+
+    size_t leading_zeros__samples = elapsed__samples - read_size__samples;
+
+    obj->write_to_ring(obj->zeros, leading_zeros__samples);
+
+    if (read_size__samples > 0) {
+      obj->write_to_ring(obj->pcm, read_size__samples);
+    }
+
+    last_read_time = this_read_time;
+    usleep(SLEEP__US);
   }
 
   return NULL;
-}
-
-bool genie::AudioFIFO::isReading() {
-  return reading;
 }

@@ -26,9 +26,21 @@ pcm.g_hd {
 }
 
 
-pcm.g_alert {
+pcm.g_alarm {
   type plug
-  slave.pcm "playroute"
+  slave {
+    pcm {
+      type softvol
+      slave.pcm "playroute"
+      control {
+        name "alarm"
+        card 0
+      }
+    }
+    channels 2
+    format S16_LE
+    rate 48000
+  }
 }
 
 pcm.playroute {

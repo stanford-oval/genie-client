@@ -10,6 +10,7 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
 
     with client.configure("paths") as paths:
         paths.repo = Path(__file__).resolve().parents[2]
+        paths.tmp = paths.repo / "tmp"
 
         with paths.configure("cli") as cli:
             cli.root = paths.repo / "cli"

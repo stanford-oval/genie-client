@@ -53,6 +53,10 @@ class Remote(ABC):
     def push(self, src: Union[str, Path], dest: Union[str, Path]):
         pass
 
+    @abstractmethod
+    def pull(self, src: Union[str, Path], dest: Union[str, Path]):
+        pass
+
     def read(self, path: Union[str, Path]):
         return self.get("cat", str(path))
 
@@ -107,8 +111,11 @@ class ADBRemote(Remote):
 
         sh.run("adb", "shell", *args, log=log, **opts)
 
-    def push(self, src: Path, dest: Path):
+    def push(self, src: Union[str, Path], dest: Union[str, Path]):
         sh.run("adb", "push", src, dest)
+
+    def pull(self, src: Union[str, Path], dest: Union[str, Path]):
+        sh.run("adb", "pull", src, dest)
 
 
 class SSHRemote(Remote):
@@ -155,7 +162,7 @@ class SSHRemote(Remote):
 
     def push(self, src: Union[str, Path], dest: Union[str, Path]):
         if isinstance(src, str):
-            src = Path(str)
+            src = Path(src)
         if isinstance(dest, str):
             dest = Path(dest)
 
@@ -166,5 +173,21 @@ class SSHRemote(Remote):
             {"r": src.is_dir()},
             src,
             f"{self._target}:{dest}",
+            stdout=DEVNULL,
+        )
+
+    def pull(self, src: Union[str, Path], dest: Union[str, Path]):
+        if isinstance(src, str):
+            src = Path(src)
+        if isinstance(dest, str):
+            dest = Path(dest)
+
+        LOG.info("Pulling...", src=src, dest=dest)
+
+        sh.run(
+            "scp",
+            {"r": src.is_dir()},
+            f"{self._target}:{src}",
+            dest,
             stdout=DEVNULL,
         )

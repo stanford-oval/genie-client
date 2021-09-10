@@ -57,8 +57,8 @@ int genie::App::exec() {
 
   g_setenv("GST_REGISTRY_UPDATE", "no", true);
 
-  m_audioFIFO = std::make_unique<AudioFIFO>(this);
-  m_audioFIFO->init();
+  m_audio_fifo = std::make_unique<AudioFIFO>(this);
+  m_audio_fifo->init();
 
   m_audioPlayer = std::make_unique<AudioPlayer>(this);
 
