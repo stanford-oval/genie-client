@@ -21,8 +21,8 @@
 #include <glib.h>
 #include <string.h>
 
-#include <memory>
 #include "autoptrs.hpp"
+#include <memory>
 
 genie::Config::Config() {}
 
@@ -54,7 +54,8 @@ gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
 }
 
 void genie::Config::load() {
-  std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>> auto_key_file(g_key_file_new());
+  std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
+      auto_key_file(g_key_file_new());
   GKeyFile *key_file = auto_key_file.get();
   GError *error = NULL;
 
@@ -230,5 +231,6 @@ void genie::Config::load() {
   audio_output_device =
       get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
 
-  dns_controller_enabled = g_key_file_get_boolean(key_file, "system", "dns", nullptr);
+  dns_controller_enabled =
+      g_key_file_get_boolean(key_file, "system", "dns", nullptr);
 }
