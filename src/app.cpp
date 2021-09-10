@@ -70,7 +70,7 @@ int genie::App::exec() {
   m_spotifyd = std::make_unique<Spotifyd>(this);
   m_spotifyd->init();
 
-  m_wsClient = std::make_unique<wsClient>(this);
+  m_wsClient = std::make_unique<ConversationClient>(this);
   m_wsClient->init();
 
   m_evInput = std::make_unique<EVInput>(this);

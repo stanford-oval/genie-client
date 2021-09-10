@@ -28,7 +28,7 @@
 #include "spotifyd.hpp"
 #include "wsclient.hpp"
 
-bool genie::wsClient::is_connected() {
+bool genie::ConversationClient::is_connected() {
   if (!m_connection) {
     g_message("GENIE websocket connection is NULL\n");
     return false;
@@ -44,12 +44,12 @@ bool genie::wsClient::is_connected() {
   return true;
 }
 
-void genie::wsClient::queue_json(auto_gobject_ptr<JsonBuilder> builder) {
+void genie::ConversationClient::queue_json(auto_gobject_ptr<JsonBuilder> builder) {
   m_outgoing_queue.push_back(builder);
   maybe_flush_queue();
 }
 
-void genie::wsClient::send_json_now(JsonBuilder *builder) {
+void genie::ConversationClient::send_json_now(JsonBuilder *builder) {
   JsonGenerator *gen = json_generator_new();
   JsonNode *root = json_builder_get_root(builder);
   json_generator_set_root(gen, root);
@@ -63,7 +63,7 @@ void genie::wsClient::send_json_now(JsonBuilder *builder) {
   g_free(str);
 }
 
-void genie::wsClient::maybe_flush_queue() {
+void genie::ConversationClient::maybe_flush_queue() {
   if (!is_connected())
     return;
 
@@ -72,7 +72,7 @@ void genie::wsClient::maybe_flush_queue() {
   m_outgoing_queue.clear();
 }
 
-void genie::wsClient::send_command(const char *data) {
+void genie::ConversationClient::send_command(const char *data) {
   auto_gobject_ptr<JsonBuilder> builder(json_builder_new(), adopt_mode::owned);
 
   json_builder_begin_object(builder.get());
@@ -94,7 +94,7 @@ void genie::wsClient::send_command(const char *data) {
   return;
 }
 
-void genie::wsClient::send_thingtalk(const char *data) {
+void genie::ConversationClient::send_thingtalk(const char *data) {
   auto_gobject_ptr<JsonBuilder> builder(json_builder_new(), adopt_mode::owned);
 
   json_builder_begin_object(builder.get());
@@ -110,7 +110,7 @@ void genie::wsClient::send_thingtalk(const char *data) {
   queue_json(builder);
 }
 
-void genie::wsClient::handleConversationID(JsonReader *reader) {
+void genie::ConversationClient::handleConversationID(JsonReader *reader) {
   json_reader_read_member(reader, "id");
   const gchar *text = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
@@ -122,7 +122,7 @@ void genie::wsClient::handleConversationID(JsonReader *reader) {
   g_message("Set conversation id: %s\n", conversationId);
 }
 
-void genie::wsClient::handleText(gint64 id, JsonReader *reader) {
+void genie::ConversationClient::handleText(gint64 id, JsonReader *reader) {
   if (id <= lastSaidTextID) {
     g_message("Skipping message ID=%" G_GINT64_FORMAT
               ", already said ID=%" G_GINT64_FORMAT "\n",
@@ -144,7 +144,7 @@ void genie::wsClient::handleText(gint64 id, JsonReader *reader) {
   lastSaidTextID = id;
 }
 
-void genie::wsClient::handleSound(gint64 id, JsonReader *reader) {
+void genie::ConversationClient::handleSound(gint64 id, JsonReader *reader) {
   json_reader_read_member(reader, "name");
   const gchar *name = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
@@ -164,7 +164,7 @@ void genie::wsClient::handleSound(gint64 id, JsonReader *reader) {
   }
 }
 
-void genie::wsClient::handleAudio(gint64 id, JsonReader *reader) {
+void genie::ConversationClient::handleAudio(gint64 id, JsonReader *reader) {
   json_reader_read_member(reader, "url");
   const gchar *url = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
@@ -173,7 +173,7 @@ void genie::wsClient::handleAudio(gint64 id, JsonReader *reader) {
   app->m_audioPlayer->playURI(url, AudioDestination::MUSIC);
 }
 
-void genie::wsClient::handleError(JsonReader *reader) {
+void genie::ConversationClient::handleError(JsonReader *reader) {
   json_reader_read_member(reader, "error");
   const gchar *error = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
@@ -181,7 +181,7 @@ void genie::wsClient::handleError(JsonReader *reader) {
   g_warning("Handling type=error error=%s\n", error);
 }
 
-void genie::wsClient::handleAskSpecial(JsonReader *reader) {
+void genie::ConversationClient::handleAskSpecial(JsonReader *reader) {
   // Agent state -- asking a follow up or not
   json_reader_read_member(reader, "ask");
   const gchar *ask = json_reader_get_string_value(reader);
@@ -189,7 +189,7 @@ void genie::wsClient::handleAskSpecial(JsonReader *reader) {
   g_debug("TODO Ignoring type=askSpecial ask=%s\n", ask);
 }
 
-void genie::wsClient::handlePing(JsonReader *reader) {
+void genie::ConversationClient::handlePing(JsonReader *reader) {
   if (!is_connected()) {
     return;
   }
@@ -206,7 +206,7 @@ void genie::wsClient::handlePing(JsonReader *reader) {
   queue_json(builder);
 }
 
-void genie::wsClient::handleNewDevice(JsonReader *reader) {
+void genie::ConversationClient::handleNewDevice(JsonReader *reader) {
   json_reader_read_member(reader, "state");
 
   json_reader_read_member(reader, "kind");
@@ -241,14 +241,14 @@ out:
   json_reader_end_member(reader);
 }
 
-void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint data_type,
+void genie::ConversationClient::on_message(SoupWebsocketConnection *conn, gint data_type,
                                  GBytes *message, gpointer data) {
   if (data_type != SOUP_WEBSOCKET_DATA_TEXT) {
     g_warning("Invalid message data type: %d\n", data_type);
     return;
   }
 
-  wsClient *obj = static_cast<wsClient *>(data);
+  ConversationClient *obj = static_cast<ConversationClient *>(data);
   gsize sz;
   const gchar *ptr;
 
@@ -309,8 +309,8 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint data_type,
   g_object_unref(parser);
 }
 
-void genie::wsClient::on_close(SoupWebsocketConnection *conn, gpointer data) {
-  wsClient *obj = static_cast<wsClient *>(data);
+void genie::ConversationClient::on_close(SoupWebsocketConnection *conn, gpointer data) {
+  ConversationClient *obj = static_cast<ConversationClient *>(data);
   // soup_websocket_connection_close(conn, SOUP_WEBSOCKET_CLOSE_NORMAL, NULL);
 
   const char *close_data = soup_websocket_connection_get_close_data(conn);
@@ -321,9 +321,9 @@ void genie::wsClient::on_close(SoupWebsocketConnection *conn, gpointer data) {
   obj->connect();
 }
 
-void genie::wsClient::on_connection(SoupSession *session, GAsyncResult *res,
+void genie::ConversationClient::on_connection(SoupSession *session, GAsyncResult *res,
                                     gpointer data) {
-  wsClient *self = static_cast<wsClient *>(data);
+  ConversationClient *self = static_cast<ConversationClient *>(data);
   GError *error = NULL;
 
   self->m_connection = auto_gobject_ptr<SoupWebsocketConnection>(soup_session_websocket_connect_finish(session, res, &error), adopt_mode::owned);
@@ -336,14 +336,14 @@ void genie::wsClient::on_connection(SoupSession *session, GAsyncResult *res,
 
   soup_websocket_connection_set_max_incoming_payload_size(self->m_connection.get(), 512000);
 
-  g_signal_connect(self->m_connection.get(), "message", G_CALLBACK(genie::wsClient::on_message),
+  g_signal_connect(self->m_connection.get(), "message", G_CALLBACK(genie::ConversationClient::on_message),
                    data);
-  g_signal_connect(self->m_connection.get(), "closed", G_CALLBACK(genie::wsClient::on_close), data);
+  g_signal_connect(self->m_connection.get(), "closed", G_CALLBACK(genie::ConversationClient::on_close), data);
 
   self->maybe_flush_queue();
 }
 
-genie::wsClient::wsClient(App *appInstance) {
+genie::ConversationClient::ConversationClient(App *appInstance) {
   app = appInstance;
   conversationId = NULL;
   accessToken = g_strdup(app->m_config->genieAccessToken);
@@ -353,14 +353,14 @@ genie::wsClient::wsClient(App *appInstance) {
   lastSaidTextID = -1;
 }
 
-genie::wsClient::~wsClient() {}
+genie::ConversationClient::~ConversationClient() {}
 
-int genie::wsClient::init() {
+int genie::ConversationClient::init() {
   connect();
   return true;
 }
 
-void genie::wsClient::connect() {
+void genie::ConversationClient::connect() {
   SoupSession *session;
   SoupMessage *msg;
 
@@ -392,7 +392,7 @@ void genie::wsClient::connect() {
 
   soup_session_websocket_connect_async(
       session, msg, NULL, NULL, NULL,
-      (GAsyncReadyCallback)genie::wsClient::on_connection, this);
+      (GAsyncReadyCallback)genie::ConversationClient::on_connection, this);
 
   return;
 }

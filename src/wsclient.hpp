@@ -28,10 +28,10 @@
 
 namespace genie {
 
-class wsClient {
+class ConversationClient {
 public:
-  wsClient(App *appInstance);
-  ~wsClient();
+  ConversationClient(App *appInstance);
+  ~ConversationClient();
 
   int init();
   void send_command(const char *data);
