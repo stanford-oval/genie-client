@@ -28,55 +28,64 @@
 #include "spotifyd.hpp"
 #include "wsclient.hpp"
 
-gboolean genie::wsClient::checkIsConnected() {
-  if (wconn == NULL) {
-    g_warning("GENIE websocket connection is NULL\n");
+bool genie::wsClient::is_connected() {
+  if (!m_connection) {
+    g_message("GENIE websocket connection is NULL\n");
     return false;
   }
 
-  SoupWebsocketState wconnState = soup_websocket_connection_get_state(wconn);
+  SoupWebsocketState wconnState = soup_websocket_connection_get_state(m_connection.get());
 
   if (wconnState != SOUP_WEBSOCKET_STATE_OPEN) {
-    g_warning("WS connection not open (state %d)\n", wconnState);
+    g_message("WS connection not open (state %d)\n", wconnState);
     return false;
   }
 
   return true;
 }
 
-void genie::wsClient::sendJSON(JsonBuilder *builder) {
+void genie::wsClient::queue_json(auto_gobject_ptr<JsonBuilder> builder) {
+  m_outgoing_queue.push_back(builder);
+  maybe_flush_queue();
+}
+
+void genie::wsClient::send_json_now(JsonBuilder *builder) {
   JsonGenerator *gen = json_generator_new();
   JsonNode *root = json_builder_get_root(builder);
   json_generator_set_root(gen, root);
   gchar *str = json_generator_to_data(gen, NULL);
 
   PROF_PRINT("[SERVER WS] sending: %s\n", str);
-  soup_websocket_connection_send_text(wconn, str);
+  soup_websocket_connection_send_text(m_connection.get(), str);
 
   json_node_free(root);
   g_object_unref(gen);
   g_free(str);
 }
 
-void genie::wsClient::sendCommand(const char *data) {
-  if (!checkIsConnected()) {
+void genie::wsClient::maybe_flush_queue() {
+  if (!is_connected())
     return;
-  }
 
-  JsonBuilder *builder = json_builder_new();
+  for (const auto& msg : m_outgoing_queue)
+    send_json_now(msg.get());
+  m_outgoing_queue.clear();
+}
 
-  json_builder_begin_object(builder);
+void genie::wsClient::send_command(const char *data) {
+  auto_gobject_ptr<JsonBuilder> builder(json_builder_new(), adopt_mode::owned);
 
-  json_builder_set_member_name(builder, "type");
-  json_builder_add_string_value(builder, "command");
+  json_builder_begin_object(builder.get());
 
-  json_builder_set_member_name(builder, "text");
-  json_builder_add_string_value(builder, data);
+  json_builder_set_member_name(builder.get(), "type");
+  json_builder_add_string_value(builder.get(), "command");
 
-  json_builder_end_object(builder);
+  json_builder_set_member_name(builder.get(), "text");
+  json_builder_add_string_value(builder.get(), data);
 
-  sendJSON(builder);
-  g_object_unref(builder);
+  json_builder_end_object(builder.get());
+
+  queue_json(builder);
 
   gettimeofday(&tStart, NULL);
   app->track_processing_event(PROCESSING_START_GENIE);
@@ -85,31 +94,20 @@ void genie::wsClient::sendCommand(const char *data) {
   return;
 }
 
-void genie::wsClient::sendThingtalk(const char *data) {
-  if (!checkIsConnected()) {
-    return;
-  }
+void genie::wsClient::send_thingtalk(const char *data) {
+  auto_gobject_ptr<JsonBuilder> builder(json_builder_new(), adopt_mode::owned);
 
-  JsonBuilder *builder = json_builder_new();
+  json_builder_begin_object(builder.get());
 
-  json_builder_begin_object(builder);
+  json_builder_set_member_name(builder.get(), "type");
+  json_builder_add_string_value(builder.get(), "tt");
 
-  json_builder_set_member_name(builder, "type");
-  json_builder_add_string_value(builder, "tt");
+  json_builder_set_member_name(builder.get(), "code");
+  json_builder_add_string_value(builder.get(), data);
 
-  json_builder_set_member_name(builder, "code");
-  json_builder_add_string_value(builder, data);
+  json_builder_end_object(builder.get());
 
-  json_builder_set_member_name(builder, "id");
-  seq++;
-  json_builder_add_int_value(builder, seq);
-
-  json_builder_end_object(builder);
-
-  sendJSON(builder);
-  g_object_unref(builder);
-
-  return;
+  queue_json(builder);
 }
 
 void genie::wsClient::handleConversationID(JsonReader *reader) {
@@ -192,21 +190,20 @@ void genie::wsClient::handleAskSpecial(JsonReader *reader) {
 }
 
 void genie::wsClient::handlePing(JsonReader *reader) {
-  if (!checkIsConnected()) {
+  if (!is_connected()) {
     return;
   }
 
-  JsonBuilder *builder = json_builder_new();
+  auto_gobject_ptr<JsonBuilder> builder(json_builder_new(), adopt_mode::owned);
 
-  json_builder_begin_object(builder);
+  json_builder_begin_object(builder.get());
 
-  json_builder_set_member_name(builder, "type");
-  json_builder_add_string_value(builder, "pong");
+  json_builder_set_member_name(builder.get(), "type");
+  json_builder_add_string_value(builder.get(), "pong");
 
-  json_builder_end_object(builder);
+  json_builder_end_object(builder.get());
 
-  sendJSON(builder);
-  g_object_unref(builder);
+  queue_json(builder);
 }
 
 void genie::wsClient::handleNewDevice(JsonReader *reader) {
@@ -251,7 +248,7 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint data_type,
     return;
   }
 
-  wsClient *obj = reinterpret_cast<wsClient *>(data);
+  wsClient *obj = static_cast<wsClient *>(data);
   gsize sz;
   const gchar *ptr;
 
@@ -313,7 +310,7 @@ void genie::wsClient::on_message(SoupWebsocketConnection *conn, gint data_type,
 }
 
 void genie::wsClient::on_close(SoupWebsocketConnection *conn, gpointer data) {
-  wsClient *obj = reinterpret_cast<wsClient *>(data);
+  wsClient *obj = static_cast<wsClient *>(data);
   // soup_websocket_connection_close(conn, SOUP_WEBSOCKET_CLOSE_NORMAL, NULL);
 
   const char *close_data = soup_websocket_connection_get_close_data(conn);
@@ -326,31 +323,24 @@ void genie::wsClient::on_close(SoupWebsocketConnection *conn, gpointer data) {
 
 void genie::wsClient::on_connection(SoupSession *session, GAsyncResult *res,
                                     gpointer data) {
-  wsClient *obj = reinterpret_cast<wsClient *>(data);
-
-  SoupWebsocketConnection *conn;
+  wsClient *self = static_cast<wsClient *>(data);
   GError *error = NULL;
 
-  conn = soup_session_websocket_connect_finish(session, res, &error);
+  self->m_connection = auto_gobject_ptr<SoupWebsocketConnection>(soup_session_websocket_connect_finish(session, res, &error), adopt_mode::owned);
   if (error) {
-    g_print("Error: %s\n", error->message);
+    g_warning("Failed to open websocket connection to Genie: %s\n", error->message);
     g_error_free(error);
     return;
   }
   g_debug("Connected successfully to Genie conversation websocket");
 
-  soup_websocket_connection_set_max_incoming_payload_size(conn, 512000);
-  obj->setConnection(conn);
+  soup_websocket_connection_set_max_incoming_payload_size(self->m_connection.get(), 512000);
 
-  g_signal_connect(conn, "message", G_CALLBACK(genie::wsClient::on_message),
+  g_signal_connect(self->m_connection.get(), "message", G_CALLBACK(genie::wsClient::on_message),
                    data);
-  g_signal_connect(conn, "closed", G_CALLBACK(genie::wsClient::on_close), data);
-}
+  g_signal_connect(self->m_connection.get(), "closed", G_CALLBACK(genie::wsClient::on_close), data);
 
-void genie::wsClient::setConnection(SoupWebsocketConnection *conn) {
-  if (!conn)
-    return;
-  wconn = conn;
+  self->maybe_flush_queue();
 }
 
 genie::wsClient::wsClient(App *appInstance) {
