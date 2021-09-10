@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _DNS_CONTROLLER_H
-#define _DNS_CONTROLLER_H
+#pragma once
 
 #include <glib.h>
 #include <gio/gio.h>
@@ -42,5 +41,3 @@ public:
 };
 
 }
-
-#endif

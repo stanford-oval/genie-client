@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _SPOTIFYD_H
-#define _SPOTIFYD_H
+#pragma once
 
 #include "app.hpp"
 #include <string>
@@ -47,5 +46,3 @@ private:
 };
 
 } // namespace genie
-
-#endif

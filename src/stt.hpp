@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _STT_H
-#define _STT_H
+#pragma once
 
 #include <glib.h>
 #include <libsoup/soup.h>
@@ -109,5 +108,3 @@ private:
 };
 
 } // namespace genie
-
-#endif

@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _CONFIG_H
-#define _CONFIG_H
+#pragma once
 
 #include <glib.h>
 
@@ -65,5 +64,3 @@ private:
 };
 
 } // namespace genie
-
-#endif

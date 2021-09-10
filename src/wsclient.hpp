@@ -16,13 +16,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _WSCLIENT_H
-#define _WSCLIENT_H
+#pragma once
 
 #include "app.hpp"
+#include <deque>
 #include <json-glib/json-glib.h>
 #include <libsoup/soup.h>
-#include <deque>
 
 #include "autoptrs.hpp"
 
@@ -77,5 +76,3 @@ private:
 };
 
 } // namespace genie
-
-#endif

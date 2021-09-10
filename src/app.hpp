@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _APP_H
-#define _APP_H
+#pragma once
 
 #include "config.h"
 #include "config.hpp"
@@ -146,5 +145,3 @@ typedef struct {
 } Action;
 
 } // namespace genie
-
-#endif

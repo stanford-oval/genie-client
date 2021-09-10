@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _AUDIOPLAYER_H
-#define _AUDIOPLAYER_H
+#pragma once
 
 #include "app.hpp"
 #include "autoptrs.hpp"
@@ -90,5 +89,3 @@ private:
 };
 
 } // namespace genie
-
-#endif

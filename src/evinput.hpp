@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _EVINPUT_H
-#define _EVINPUT_H
+#pragma once
 
 #include "app.hpp"
 
@@ -51,5 +50,3 @@ private:
 };
 
 } // namespace genie
-
-#endif

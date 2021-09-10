@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _AUDIOFIFO_H
-#define _AUDIOFIFO_H
+#pragma once
 
 #include "app.hpp"
 #include <glib.h>
@@ -46,5 +45,3 @@ private:
 };
 
 } // namespace genie
-
-#endif
