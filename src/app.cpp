@@ -86,6 +86,7 @@ int genie::App::exec() {
 
   m_leds = std::make_unique<Leds>(this);
   m_leds->init();
+  m_leds->set_active(false);
 
   if (m_config->dns_controller_enabled)
     m_dns_controller = std::make_unique<DNSController>();
@@ -135,6 +136,8 @@ void genie::App::handle(ActionType type, gpointer payload) {
       m_audioPlayer->playSound(SOUND_MATCH);
       g_message("Connecting STT...\n");
       m_stt->begin_session();
+      g_message("Activating LED");
+      m_leds->set_active(true);
       g_message("Done handling wake.\n");
       break;
     }
@@ -152,6 +155,8 @@ void genie::App::handle(ActionType type, gpointer payload) {
       m_audioPlayer->stop();
       m_audioPlayer->playSound(SOUND_MATCH);
       system("amixer -D hw:audiocodec cset name='hd' 255");
+      g_message("Deactivating LED");
+      m_leds->set_active(false);
       break;
     }
 
@@ -161,6 +166,8 @@ void genie::App::handle(ActionType type, gpointer payload) {
       m_audioPlayer->playSound(SOUND_NO_MATCH);
       m_stt->send_done();
       system("amixer -D hw:audiocodec cset name='hd' 255");
+      g_message("Deactivating LED");
+      m_leds->set_active(false);
       break;
     }
 

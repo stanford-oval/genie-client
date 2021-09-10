@@ -27,7 +27,7 @@ public:
   Leds(App *appInstance);
   ~Leds();
   int init();
-  int setEffect(int mode);
+  void set_active(bool active);
 
 private:
   App *app;

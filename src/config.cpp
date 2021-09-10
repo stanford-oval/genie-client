@@ -38,6 +38,7 @@ genie::Config::~Config() {
   g_free(audioOutputDeviceAlerts);
   g_free(audioVoice);
   g_free(audio_output_device);
+  g_free(leds_path);
 }
 
 gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
@@ -231,4 +232,6 @@ void genie::Config::load() {
       get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
 
   dns_controller_enabled = g_key_file_get_boolean(key_file, "system", "dns", nullptr);
+
+  leds_path = g_key_file_get_string(key_file, "system", "leds", nullptr);
 }

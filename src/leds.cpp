@@ -20,7 +20,7 @@
 #include <fcntl.h>
 #include <glib-unix.h>
 #include <glib.h>
-#include <glib/gstdio.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -31,24 +31,14 @@ genie::Leds::~Leds() {}
 
 int genie::Leds::init() { return true; }
 
-int genie::Leds::setEffect(int mode) {
-  if (mode < 0 || mode > 7)
-    return false;
+void genie::Leds::set_active(bool active) {
+  if (!app->m_config->leds_path)
+    return;
 
-  char buffer[8];
-  memset(buffer, 0, sizeof(buffer));
-  snprintf(buffer, sizeof(buffer) - 1, "%d", mode);
-
-  int fd = g_open("...", O_WRONLY);
+  int fd = open(app->m_config->leds_path, O_WRONLY);
   if (fd > 0) {
-    write(fd, buffer, sizeof(buffer));
+    write(fd, active ? "1" : "0", 1);
   }
 
-  GError *error = NULL;
-  g_close(fd, &error);
-  if (error) {
-    g_error_free(error);
-  }
-
-  return true;
+  close(fd);
 }
