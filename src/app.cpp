@@ -40,7 +40,15 @@ double time_diff_ms(struct timeval x, struct timeval y) {
   return time_diff(x, y) / 1000;
 }
 
-genie::App::App() { isProcessing = FALSE; }
+genie::App::App() {
+  isProcessing = FALSE;
+
+  // initialize a shared SoupSession to be used by all outgoing connections
+  m_soup_session = auto_gobject_ptr<SoupSession>(soup_session_new(), adopt_mode::owned);
+  // enable the wss support
+  const gchar *wss_aliases[] = {"wss", NULL};
+  g_object_set(m_soup_session.get(), SOUP_SESSION_HTTPS_ALIASES, wss_aliases, NULL);
+}
 
 genie::App::~App() { g_main_loop_unref(main_loop); }
 

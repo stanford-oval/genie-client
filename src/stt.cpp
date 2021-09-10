@@ -40,15 +40,7 @@ static std::string get_ws_url(genie::App *app) {
 }
 
 genie::STT::STT(App *app)
-    : m_app(app), m_url(get_ws_url(app)),
-      m_soup_session(soup_session_new(), adopt_mode::owned) {
-  if (g_str_has_prefix(m_url.c_str(), "wss")) {
-    // enable the wss support
-    gchar *wss_aliases[] = {(gchar *)"wss", NULL};
-    g_object_set(m_soup_session.get(), SOUP_SESSION_HTTPS_ALIASES, wss_aliases,
-                 NULL);
-  }
-}
+    : m_app(app), m_url(get_ws_url(app)) {}
 
 void genie::STT::complete_success(STTSession *session, const char *text) {
   if (session != m_current_session.get())
@@ -141,7 +133,7 @@ genie::STTSession::STTSession(STT *controller, const char *url)
                                     adopt_mode::owned);
 
   soup_session_websocket_connect_async(
-      controller->m_soup_session.get(), msg.get(), NULL, NULL, NULL,
+      controller->m_app->get_soup_session(), msg.get(), NULL, NULL, NULL,
       (GAsyncReadyCallback)genie::STTSession::on_connection, this);
 
   m_state = State::CONNECTING;

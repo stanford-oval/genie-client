@@ -361,15 +361,7 @@ int genie::ConversationClient::init() {
 }
 
 void genie::ConversationClient::connect() {
-  SoupSession *session;
   SoupMessage *msg;
-
-  session = soup_session_new();
-  if (g_str_has_prefix(url, "wss")) {
-    // enable the wss support
-    gchar *wss_aliases[] = {(gchar *)"wss", NULL};
-    g_object_set(session, SOUP_SESSION_HTTPS_ALIASES, wss_aliases, NULL);
-  }
 
   SoupURI *uri = soup_uri_new(url);
   if (app->m_config->conversationId) {
@@ -391,7 +383,7 @@ void genie::ConversationClient::connect() {
   }
 
   soup_session_websocket_connect_async(
-      session, msg, NULL, NULL, NULL,
+      app->get_soup_session(), msg, NULL, NULL, NULL,
       (GAsyncReadyCallback)genie::ConversationClient::on_connection, this);
 
   return;

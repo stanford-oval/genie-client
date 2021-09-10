@@ -99,7 +99,6 @@ private:
 
   App * const m_app;
   const std::string m_url;
-  auto_gobject_ptr<SoupSession> m_soup_session;
   std::unique_ptr<STTSession> m_current_session;
 
   struct timeval tConnect;

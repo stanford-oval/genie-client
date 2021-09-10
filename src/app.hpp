@@ -21,8 +21,11 @@
 #include "config.h"
 #include "config.hpp"
 #include <glib.h>
+#include <libsoup/soup.h>
 #include <memory>
 #include <sys/time.h>
+
+#include "autoptrs.hpp"
 
 #define PROF_PRINT(...)                                                        \
   do {                                                                         \
@@ -109,6 +112,10 @@ public:
   void track_processing_event(ProcesingEvent_t eventType);
   guint dispatch(ActionType type, gpointer payload);
 
+  SoupSession* get_soup_session() {
+    return m_soup_session.get();
+  }
+
   GMainLoop *main_loop;
   std::unique_ptr<Config> m_config;
   std::unique_ptr<AudioInput> m_audioInput;
@@ -125,6 +132,8 @@ protected:
   void handle(ActionType type, gpointer payload);
 
 private:
+  auto_gobject_ptr<SoupSession> m_soup_session;
+
   gboolean isProcessing;
   struct timeval tStartProcessing;
   struct timeval tStartSTT;
