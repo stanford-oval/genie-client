@@ -36,6 +36,9 @@ FILE *fp_output;
 FILE *fp_filter;
 #endif
 
+// Lifecycle
+// ===========================================================================
+
 genie::AudioInput::AudioInput(App *appInstance) {
   app = appInstance;
   vad_instance = WebRtcVad_Create();
@@ -67,6 +70,9 @@ genie::AudioInput::~AudioInput() {
   fclose(fp_filter);
 #endif
 }
+
+// Setup
+// ===========================================================================
 
 int genie::AudioInput::init() {
   gchar *input_audio_device = app->m_config->audioInputDevice;
@@ -184,7 +190,14 @@ int genie::AudioInput::init() {
     return -2;
   }
 
-  sample_rate = pv_sample_rate_func();
+  int32_t sample_rate_i = pv_sample_rate_func();
+
+  if (sample_rate_i <= 0) {
+    g_error("Picovoice returned a bad frame rate: %d", sample_rate_i);
+    return -2;
+  }
+
+  sample_rate = (size_t)sample_rate_i;
 
   error_code =
       snd_pcm_hw_params_set_rate(alsa_handle, hardware_params, sample_rate, 0);
@@ -215,14 +228,19 @@ int genie::AudioInput::init() {
     return -2;
   }
 
-  pv_frame_length = pv_porcupine_frame_length_func();
+  int32_t pv_frame_length_i = pv_porcupine_frame_length_func();
+  if (pv_frame_length_i <= 0) {
+    g_error("Picovoice returned a bad frame length: %d", pv_frame_length_i);
+    return -2;
+  }
+  pv_frame_length = (size_t)pv_frame_length_i;
 
   frame_buffer_size__samples =
-      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length);
+      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, (int)pv_frame_length);
 
   pcm = (int16_t *)malloc(frame_buffer_size__samples * BYTES_PER_SAMPLE);
   if (!pcm) {
-    g_error("failed to allocate memory for audio buffer\n");
+    g_error("failed to allocate memory for pcm audio buffer\n");
     return -2;
   }
 
@@ -233,11 +251,9 @@ int genie::AudioInput::init() {
     return -2;
   }
 
-  pcm_filter = (int16_t *)malloc(
-      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
-      sizeof(int16_t));
+  pcm_filter = (int16_t *)malloc(frame_buffer_size__samples * BYTES_PER_SAMPLE);
   if (!pcm_filter) {
-    g_error("failed to allocate memory for audio buffer\n");
+    g_error("failed to allocate memory for pcm_filter audio buffer\n");
     return -2;
   }
 
@@ -301,6 +317,9 @@ int genie::AudioInput::init() {
   return 0;
 }
 
+// Utilities
+// ===========================================================================
+
 /**
  * @brief Convert `ms` milliseconds to number of frames at a given
  * `frame_length` (in samples).
@@ -311,23 +330,28 @@ int genie::AudioInput::init() {
  * @param ms
  * @return int32_t
  */
-int32_t genie::AudioInput::ms_to_frames(int32_t frame_length, int32_t ms) {
+int32_t genie::AudioInput::ms_to_frames(size_t frame_length, int32_t ms) {
   //     floor <-  (samples/sec * (     seconds     )) / (samples/frame)
   return (int32_t)((sample_rate * ((double)ms / 1000)) / frame_length);
 }
 
+// Audio Frame Creation
+// ===========================================================================
+
 void genie::AudioInput::fill_pcm_playback(genie::AudioFrame *input_frame) {
   // Variable to track what time-stamp we've filled the PCM playback buffer to.
-  // 
+  //
   // Since we haven't filled it at all yet this will be the end of the input
   // frame, which we estimate by when it was captured by us.
   auto filled_to_timestamp = input_frame->captured_at;
-  
+
   int samples_to_fill = input_frame->length;
-  
-  for (int i = playback_frames_length - 1; i <= 0; i--) {
+
+  for (int i = playback_frames_length - 1; i >= 0; i--) {
     AudioFrame *pb_frame = playback_frames[i];
-    
+    g_message("Recon from frame of %d samples, index %d\n", pb_frame->length,
+              i);
+
     // We only need to dive into the playback frame if we have samples left to
     // fill
     if (samples_to_fill > 0) {
@@ -335,20 +359,19 @@ void genie::AudioInput::fill_pcm_playback(genie::AudioFrame *input_frame) {
 
       // Zero-Fill
       // =====================================================================
-      // 
+      //
       // Fill empty samples into the PCM playback buffer for the period:
-      // 
+      //
       // -    FROM the end of the playback frame (which we estimate by when it
-      //      was captured by us) 
+      //      was captured by us)
       // -    TO the timestamp we have already back-filled to
-      // 
+      //
       int gap_duration__ns =
           std::chrono::duration_cast<std::chrono::nanoseconds>(
               filled_to_timestamp - pb_frame->captured_at)
               .count();
       if (gap_duration__ns > 0) {
-        int gap_samples =
-            gap_duration__ns / SAMPLE_DURATION.count();
+        int gap_samples = gap_duration__ns / SAMPLE_DURATION.count();
         if (gap_samples > 0) {
           if (gap_samples > samples_to_fill) {
             // The gap is longer than the amount of remaining samples we need to
@@ -357,7 +380,7 @@ void genie::AudioInput::fill_pcm_playback(genie::AudioFrame *input_frame) {
           }
           memset(
               // Examples:
-              // 
+              //
               //   start   +   samples to fill   - gap size = write index
               //     0     + 1                   - 1        = 0 (first sample)
               //     0     + 512                 - 1        = 511 (last sample)
@@ -368,7 +391,7 @@ void genie::AudioInput::fill_pcm_playback(genie::AudioFrame *input_frame) {
           samples_to_fill -= gap_samples;
         }
       }
-      
+
       // Playback Frame Copy
       // =====================================================================
 
@@ -384,8 +407,11 @@ void genie::AudioInput::fill_pcm_playback(genie::AudioFrame *input_frame) {
       }
       // Copy `size` samples from playback frame to PCM playback buffer
       memcpy(pcm_playback + samples_to_fill - samples_to_copy,
-             pb_frame->samples + offset,
-             samples_to_copy * BYTES_PER_SAMPLE);
+             pb_frame->samples + offset, samples_to_copy * BYTES_PER_SAMPLE);
+
+      g_message("Coppied %d samples of %d from playback frame %ld\n",
+                samples_to_copy, pb_frame->length,
+                pb_frame->captured_at.time_since_epoch().count());
       // Deduct `size` samples that we just coppied from the `samples` number
       // we still need
       samples_to_fill -= samples_to_copy;
@@ -396,30 +422,51 @@ void genie::AudioInput::fill_pcm_playback(genie::AudioFrame *input_frame) {
 
     // Deallocate Playback Frame
     // =======================================================================
-    // 
+    //
     // We're done with it.
-    // 
+    //
     delete pb_frame;
   }
-  
+
   // We're through with all the playback frames, see if we still need to fill
   // more samples into the PCM playback buffer
   if (samples_to_fill > 0) {
     // We didn't find enough playback samples; zero fill the rest
     memset(pcm_playback, 0, samples_to_fill * BYTES_PER_SAMPLE);
   }
+} // fill_pcm_playback()
+
+/**
+ * @brief A test function that simply zero-fills `pcm_playback` and frees any
+ * playback audio frames read from the ring buffer.
+ */
+void genie::AudioInput::null_pcm_playback(AudioFrame *input_frame) {
+  memset(pcm_playback, 0, input_frame->length * BYTES_PER_SAMPLE);
+
+  for (size_t i = 0; i < playback_frames_length; i++) {
+    delete playback_frames[i];
+  }
+
+  playback_frames_length = 0;
 }
 
 /**
- * Read a frame of `frame_length` samples from the `alsa_handle`. Blocks until
- * that many samples are available (or a read error occurs).
+ * @brief Read a frame of `frame_length` samples from the `alsa_handle`. Blocks
+ * until that many samples are available (or a read error occurs).
  *
  * The caller is responsible for deleting the AudioFrame when done with it.
  */
-genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
-  const int read_size__samples = snd_pcm_readi(alsa_handle, pcm, frame_length);
+genie::AudioFrame *genie::AudioInput::read_frame(size_t frame_length__samples) {
+  // Block until we read a frame of samples from the input Alsa handle (or an
+  // error occurs)
+  const snd_pcm_sframes_t read_size__samples =
+      snd_pcm_readi(alsa_handle, pcm, frame_length__samples);
+
+  // Our best estimate for an end timestamp of the samples we just read
   std::chrono::time_point<std::chrono::steady_clock> captured_at =
       std::chrono::steady_clock::now();
+
+  // Check for read errors
 
   if (read_size__samples < 0) {
     g_critical("'snd_pcm_readi' failed with '%s'\n",
@@ -427,9 +474,9 @@ genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
     return NULL;
   }
 
-  if (read_size__samples != frame_length) {
+  if (read_size__samples != (int)frame_length__samples) {
     g_message("read %d frames instead of %d\n", read_size__samples,
-              frame_length);
+              frame_length__samples);
     return NULL;
   }
 
@@ -446,7 +493,7 @@ genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
     return NULL;
   }
 
-  if ((size_t)playback_available__frames > PLAYBACK_MAX_FRAMES) {
+  if (playback_available__frames > (int)PLAYBACK_MAX_FRAMES) {
     g_error(
         "Too many frame objects in the playback ring! Found %d, max is %d\n",
         playback_available__frames, PLAYBACK_MAX_FRAMES);
@@ -458,23 +505,28 @@ genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
       PaUtil_ReadRingBuffer(&app->m_audio_fifo.get()->ring_buffer,
                             playback_frames, playback_available__frames);
 
-  AudioFrame *input_frame = new AudioFrame(frame_length, captured_at);
+  AudioFrame *input_frame = new AudioFrame(frame_length__samples, captured_at);
   fill_pcm_playback(input_frame);
+  // null_pcm_playback(input_frame);
 
   speex_echo_cancellation(echo_state, (const spx_int16_t *)pcm,
                           (const spx_int16_t *)pcm_playback,
                           (spx_int16_t *)pcm_filter);
 
-  memcpy(input_frame->samples, pcm_filter, frame_length * BYTES_PER_SAMPLE);
+  memcpy(input_frame->samples, pcm_filter,
+         frame_length__samples * BYTES_PER_SAMPLE);
 
 #ifdef DEBUG_DUMP_STREAMS
-  fwrite(pcm, BYTES_PER_SAMPLE, frame_length, fp_input);
-  fwrite(pcm_playback, BYTES_PER_SAMPLE, frame_length, fp_output);
-  fwrite(pcm_filter, BYTES_PER_SAMPLE, frame_length, fp_filter);
+  fwrite(pcm, BYTES_PER_SAMPLE, frame_length__samples, fp_input);
+  fwrite(pcm_playback, BYTES_PER_SAMPLE, frame_length__samples, fp_output);
+  fwrite(pcm_filter, BYTES_PER_SAMPLE, frame_length__samples, fp_filter);
 #endif
 
   return input_frame;
 }
+
+// State
+// ===========================================================================
 
 void genie::AudioInput::transition(State to_state) {
   // Reset state variables
@@ -496,6 +548,9 @@ void genie::AudioInput::transition(State to_state) {
       break;
   }
 }
+
+// Looping
+// ===========================================================================
 
 void genie::AudioInput::loop_waiting() {
   AudioFrame *new_frame = read_frame(pv_frame_length);

@@ -36,10 +36,13 @@ namespace genie {
 
 class AudioInput {
 public:
+// ===========================================================================
+
   static const size_t BYTES_PER_SAMPLE = sizeof(int16_t);
   static const size_t BUFFER_MAX_FRAMES = 32;
   static const size_t PLAYBACK_MAX_FRAMES = 1024;
-  // static const int32_t VAD_FRAME_LENGTH = 480;
+  // WTF  This doesn't work..?!?
+  // static const size_t VAD_FRAME_LENGTH = 480;
   static const int VAD_IS_SILENT = 0;
   static const int VAD_NOT_SILENT = 1;
 
@@ -55,12 +58,16 @@ public:
   void close();
 
 protected:
+// ===========================================================================
+
   static void *loop(gpointer data);
 
 private:
+// ===========================================================================
+
   bool running;
   snd_pcm_t *alsa_handle = NULL;
-
+  
   void *porcupine_library;
   pv_porcupine_t *porcupine;
   void (*pv_porcupine_delete_func)(pv_porcupine_t *);
@@ -82,8 +89,8 @@ private:
   AudioFrame **playback_frames;
   size_t playback_frames_length;
   
-  int32_t pv_frame_length;
-  int32_t sample_rate;
+  size_t pv_frame_length;
+  size_t sample_rate;
   GQueue *frame_buffer;
 
   SpeexEchoState *echo_state;
@@ -104,14 +111,17 @@ private:
   int32_t state_woke_frame_count;
   int32_t state_vad_frame_count;
 
-  AudioFrame *read_frame(int32_t frame_length);
+  AudioFrame *read_frame(size_t frame_length);
   void fill_pcm_playback(AudioFrame *input_frame);
+  void null_pcm_playback(AudioFrame *input_frame);
 
-  int32_t ms_to_frames(int32_t frame_length, int32_t ms);
+  int32_t ms_to_frames(size_t frame_length, int32_t ms);
+  
+  void transition(State to_state);
+  
   void loop_waiting();
   void loop_woke();
   void loop_listening();
-  void transition(State to_state);
 };
 
 } // namespace genie
