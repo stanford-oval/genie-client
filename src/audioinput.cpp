@@ -317,20 +317,103 @@ int32_t genie::AudioInput::ms_to_frames(int32_t frame_length, int32_t ms) {
 }
 
 void genie::AudioInput::fill_pcm_playback(genie::AudioFrame *input_frame) {
-  // auto start_at = input_frame->started_at();
-  memset(pcm_playback, 0, input_frame->length * BYTES_PER_SAMPLE);
-  for (size_t i = 0; i < playback_frames_length; i++) {
-    // g_message("POP AudioFrame length: %d samples\n",
-    //           playback_frames[i]->length);
-    delete playback_frames[i];
+  // Variable to track what time-stamp we've filled the PCM playback buffer to.
+  // 
+  // Since we haven't filled it at all yet this will be the end of the input
+  // frame, which we estimate by when it was captured by us.
+  auto filled_to_timestamp = input_frame->captured_at;
+  
+  int samples_to_fill = input_frame->length;
+  
+  for (int i = playback_frames_length - 1; i <= 0; i--) {
+    AudioFrame *pb_frame = playback_frames[i];
+    
+    // We only need to dive into the playback frame if we have samples left to
+    // fill
+    if (samples_to_fill > 0) {
+      // We have `samples` number of samples left to fill in `pcm_playback`
+
+      // Zero-Fill
+      // =====================================================================
+      // 
+      // Fill empty samples into the PCM playback buffer for the period:
+      // 
+      // -    FROM the end of the playback frame (which we estimate by when it
+      //      was captured by us) 
+      // -    TO the timestamp we have already back-filled to
+      // 
+      int gap_duration__ns =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(
+              filled_to_timestamp - pb_frame->captured_at)
+              .count();
+      if (gap_duration__ns > 0) {
+        int gap_samples =
+            gap_duration__ns / SAMPLE_DURATION.count();
+        if (gap_samples > 0) {
+          if (gap_samples > samples_to_fill) {
+            // The gap is longer than the amount of remaining samples we need to
+            // to fill, so cap it at the amount we need
+            gap_samples = samples_to_fill;
+          }
+          memset(
+              // Examples:
+              // 
+              //   start   +   samples to fill   - gap size = write index
+              //     0     + 1                   - 1        = 0 (first sample)
+              //     0     + 512                 - 1        = 511 (last sample)
+              //     0     + 10                  - 2        = 8 ([8, 9])
+              //     0     + 10                  - 4        = 6 ([6, 7, 8, 9])
+              pcm_playback + samples_to_fill - gap_samples, 0,
+              gap_samples * BYTES_PER_SAMPLE);
+          samples_to_fill -= gap_samples;
+        }
+      }
+      
+      // Playback Frame Copy
+      // =====================================================================
+
+      int offset = 0;
+      int samples_to_copy = pb_frame->length;
+      if ((int)pb_frame->length > samples_to_fill) {
+        // We only need the last part of the frame
+        //
+        // Example: Say the frame is length=2 and we want samples=1, then we
+        // need to offset by the difference: length - samples = 2 - 1 = 1
+        offset = pb_frame->length - samples_to_fill;
+        samples_to_copy = samples_to_fill;
+      }
+      // Copy `size` samples from playback frame to PCM playback buffer
+      memcpy(pcm_playback + samples_to_fill - samples_to_copy,
+             pb_frame->samples + offset,
+             samples_to_copy * BYTES_PER_SAMPLE);
+      // Deduct `size` samples that we just coppied from the `samples` number
+      // we still need
+      samples_to_fill -= samples_to_copy;
+      // Set the reference time to the "start" of the playback frame we just
+      // consumed
+      filled_to_timestamp = pb_frame->started_at();
+    } // if (samples > 0)
+
+    // Deallocate Playback Frame
+    // =======================================================================
+    // 
+    // We're done with it.
+    // 
+    delete pb_frame;
   }
-  playback_frames_length = 0;
+  
+  // We're through with all the playback frames, see if we still need to fill
+  // more samples into the PCM playback buffer
+  if (samples_to_fill > 0) {
+    // We didn't find enough playback samples; zero fill the rest
+    memset(pcm_playback, 0, samples_to_fill * BYTES_PER_SAMPLE);
+  }
 }
 
 /**
  * Read a frame of `frame_length` samples from the `alsa_handle`. Blocks until
  * that many samples are available (or a read error occurs).
- * 
+ *
  * The caller is responsible for deleting the AudioFrame when done with it.
  */
 genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {

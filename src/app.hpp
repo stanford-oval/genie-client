@@ -81,8 +81,9 @@ enum class ActionType {
   DEVICE_KEY,
 };
 
+extern const std::chrono::nanoseconds SAMPLE_DURATION;
+
 struct AudioFrame {
-  static const constexpr std::chrono::nanoseconds SAMPLE_DURATION{62500};
   int16_t *samples;
   size_t length;
   std::chrono::time_point<std::chrono::steady_clock> captured_at;

@@ -40,6 +40,13 @@ double time_diff_ms(struct timeval x, struct timeval y) {
   return time_diff(x, y) / 1000;
 }
 
+const size_t SAMPLE_RATE = 16000;
+
+const std::chrono::nanoseconds genie::SAMPLE_DURATION{
+  // 62500
+  1000000 / SAMPLE_RATE
+};
+
 genie::App::App() { isProcessing = FALSE; }
 
 genie::App::~App() { g_main_loop_unref(main_loop); }
