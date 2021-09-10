@@ -38,10 +38,10 @@ class AudioInput {
 public:
   static const size_t BYTES_PER_SAMPLE = sizeof(int16_t);
   static const size_t BUFFER_MAX_FRAMES = 32;
+  static const size_t PLAYBACK_MAX_FRAMES = 1024;
   // static const int32_t VAD_FRAME_LENGTH = 480;
   static const int VAD_IS_SILENT = 0;
   static const int VAD_NOT_SILENT = 1;
-  static const size_t PCM_OUTPUT_SCALAR = 32;
 
   enum class State {
     WAITING,
@@ -76,11 +76,12 @@ private:
   size_t frame_buffer_size__samples;
   
   int16_t *pcm;
-  int16_t *pcm_output;
-  size_t pcm_output_size__samples;
-  int16_t *pcm_output_frame;
-  
+  int16_t *pcm_playback;
   int16_t *pcm_filter;
+  
+  AudioFrame **playback_frames;
+  size_t playback_frames_length;
+  
   int32_t pv_frame_length;
   int32_t sample_rate;
   GQueue *frame_buffer;
@@ -104,6 +105,7 @@ private:
   int32_t state_vad_frame_count;
 
   AudioFrame *read_frame(int32_t frame_length);
+  void fill_pcm_playback(AudioFrame *input_frame);
 
   int32_t ms_to_frames(int32_t frame_length, int32_t ms);
   void loop_waiting();

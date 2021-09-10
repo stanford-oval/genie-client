@@ -40,10 +40,18 @@ genie::AudioInput::AudioInput(App *appInstance) {
   app = appInstance;
   vad_instance = WebRtcVad_Create();
   frame_buffer = g_queue_new();
+  playback_frames = new AudioFrame *[PLAYBACK_MAX_FRAMES];
+  playback_frames_length = 0;
 }
 
 genie::AudioInput::~AudioInput() {
   running = false;
+  if (playback_frames_length > 0) {
+    for (size_t i = 0; i < playback_frames_length; i++) {
+      delete playback_frames[i];
+    }
+  }
+  delete playback_frames;
   WebRtcVad_Free(vad_instance);
   while (!g_queue_is_empty(frame_buffer)) {
     g_free(g_queue_pop_head(frame_buffer));
@@ -218,17 +226,10 @@ int genie::AudioInput::init() {
     return -2;
   }
 
-  pcm_output_size__samples = frame_buffer_size__samples * PCM_OUTPUT_SCALAR;
-  pcm_output = (int16_t *)malloc(pcm_output_size__samples * BYTES_PER_SAMPLE);
-  if (!pcm_output) {
-    g_error("failed to allocate memory for pcm_output audio buffer\n");
-    return -2;
-  }
-
-  pcm_output_frame =
+  pcm_playback =
       (int16_t *)malloc(frame_buffer_size__samples * BYTES_PER_SAMPLE);
-  if (!pcm_output_frame) {
-    g_error("failed to allocate memory for pcm_output_frame audio buffer\n");
+  if (!pcm_playback) {
+    g_error("failed to allocate memory for pcm_playback audio buffer\n");
     return -2;
   }
 
@@ -315,8 +316,27 @@ int32_t genie::AudioInput::ms_to_frames(int32_t frame_length, int32_t ms) {
   return (int32_t)((sample_rate * ((double)ms / 1000)) / frame_length);
 }
 
+void genie::AudioInput::fill_pcm_playback(genie::AudioFrame *input_frame) {
+  // auto start_at = input_frame->started_at();
+  memset(pcm_playback, 0, input_frame->length * BYTES_PER_SAMPLE);
+  for (size_t i = 0; i < playback_frames_length; i++) {
+    // g_message("POP AudioFrame length: %d samples\n",
+    //           playback_frames[i]->length);
+    delete playback_frames[i];
+  }
+  playback_frames_length = 0;
+}
+
+/**
+ * Read a frame of `frame_length` samples from the `alsa_handle`. Blocks until
+ * that many samples are available (or a read error occurs).
+ * 
+ * The caller is responsible for deleting the AudioFrame when done with it.
+ */
 genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
   const int read_size__samples = snd_pcm_readi(alsa_handle, pcm, frame_length);
+  std::chrono::time_point<std::chrono::steady_clock> captured_at =
+      std::chrono::steady_clock::now();
 
   if (read_size__samples < 0) {
     g_critical("'snd_pcm_readi' failed with '%s'\n",
@@ -330,52 +350,47 @@ genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
     return NULL;
   }
 
-  AudioFrame *frame = new AudioFrame(frame_length);
-
-  // See how many samples are available in the playback ring
-  ring_buffer_size_t playback_size__samples =
+  // See how many AudioFrame (of variable, non-zero length) are available in the
+  // playback ring
+  ring_buffer_size_t playback_available__frames =
       PaUtil_GetRingBufferReadAvailable(&app->m_audio_fifo.get()->ring_buffer);
-  
-  // Annoying, seemingly, `ring_buffer_size_t` is signed. No clue what to do 
+
+  // Annoying, seemingly, `ring_buffer_size_t` is signed. No clue what to do
   // with it if it's negative...
-  if (playback_size__samples < 0) {
-    g_error("Negative amount of samples (%d) available in ring buffer",
-            playback_size__samples);
+  if (playback_available__frames < 0) {
+    g_error("Negative amount of frames (%d) available in ring buffer\n",
+            playback_available__frames);
     return NULL;
   }
 
-  // Check that we can fit the number of available samples in the `pcm_output`
-  // buffer... it's a crash if we can't!
-  if ((size_t)playback_size__samples > pcm_output_size__samples) {
-    g_critical("Available playback size (%d samples) larger than PCM output "
-            "buffer size (%d samples)\n",
-            playback_size__samples, pcm_output_size__samples);
+  if ((size_t)playback_available__frames > PLAYBACK_MAX_FRAMES) {
+    g_error(
+        "Too many frame objects in the playback ring! Found %d, max is %d\n",
+        playback_available__frames, PLAYBACK_MAX_FRAMES);
     return NULL;
   }
 
-  // Read ALL the samples in the ring buffer -- get 'em outta there!
-  PaUtil_ReadRingBuffer(&app->m_audio_fifo.get()->ring_buffer, pcm_output,
-                        playback_size__samples);
+  // Read ALL the frames in the ring buffer -- get 'em outta there!
+  playback_frames_length =
+      PaUtil_ReadRingBuffer(&app->m_audio_fifo.get()->ring_buffer,
+                            playback_frames, playback_available__frames);
 
-  // Cut a frame
-  memset(pcm_output_frame, 0, frame_buffer_size__samples * BYTES_PER_SAMPLE);
-  memcpy(pcm_output_frame, pcm_output,
-         std::min((size_t)playback_size__samples, frame_buffer_size__samples) *
-             BYTES_PER_SAMPLE);
+  AudioFrame *input_frame = new AudioFrame(frame_length, captured_at);
+  fill_pcm_playback(input_frame);
 
   speex_echo_cancellation(echo_state, (const spx_int16_t *)pcm,
-                          (const spx_int16_t *)pcm_output_frame,
+                          (const spx_int16_t *)pcm_playback,
                           (spx_int16_t *)pcm_filter);
 
-  memcpy(frame->samples, pcm_filter, frame_length * BYTES_PER_SAMPLE);
+  memcpy(input_frame->samples, pcm_filter, frame_length * BYTES_PER_SAMPLE);
 
 #ifdef DEBUG_DUMP_STREAMS
   fwrite(pcm, BYTES_PER_SAMPLE, frame_length, fp_input);
-  fwrite(pcm_output_frame, BYTES_PER_SAMPLE, frame_length, fp_output);
+  fwrite(pcm_playback, BYTES_PER_SAMPLE, frame_length, fp_output);
   fwrite(pcm_filter, BYTES_PER_SAMPLE, frame_length, fp_filter);
 #endif
 
-  return frame;
+  return input_frame;
 }
 
 void genie::AudioInput::transition(State to_state) {

@@ -56,7 +56,7 @@ int genie::AudioFIFO::init() {
     return false;
   }
 
-  int r = fcntl(fd, F_SETPIPE_SZ, FRAME_LENGTH__BYTES * 32);
+  int r = fcntl(fd, F_SETPIPE_SZ, MAX_FRAME_LENGTH__BYTES);
   if (r < 0) {
     g_printerr("set pipe size failed, errno = %d\n", errno);
     close(fd);
@@ -71,7 +71,7 @@ int genie::AudioFIFO::init() {
   }
   g_message("pipe size: %" G_GINT64_FORMAT "\n", pipe_size);
 
-  pcm = (int16_t *)malloc(FRAME_LENGTH__BYTES);
+  pcm = (int16_t *)malloc(MAX_FRAME_LENGTH__BYTES);
   if (!pcm) {
     g_printerr("failed to allocate memory for audio buffer, errno = %d\n",
                errno);
@@ -79,16 +79,7 @@ int genie::AudioFIFO::init() {
     return false;
   }
 
-  zeros = (int16_t *)malloc(FRAME_LENGTH__BYTES);
-  if (!pcm) {
-    g_printerr("failed to allocate memory for audio buffer, errno = %d\n",
-               errno);
-    close(fd);
-    return false;
-  }
-  memset(zeros, 0, FRAME_LENGTH__BYTES);
-
-  void *buffer = calloc(BUFFER_SIZE__SAMPLES, BYTES_PER_SAMPLE);
+  void *buffer = calloc(BUFFER_SIZE__FRAMES, sizeof(AudioFrame *));
   if (buffer == NULL) {
     g_printerr("failed to allocate memory for ring buffer, errno = %d\n",
                errno);
@@ -97,7 +88,7 @@ int genie::AudioFIFO::init() {
   }
 
   ring_buffer_size_t r1 = PaUtil_InitializeRingBuffer(
-      &ring_buffer, BYTES_PER_SAMPLE, BUFFER_SIZE__SAMPLES, buffer);
+      &ring_buffer, sizeof(AudioFrame *), BUFFER_SIZE__FRAMES, buffer);
   if (r1 == -1) {
     g_printerr("failed to initialize ring buffer\n");
     close(fd);
@@ -119,24 +110,20 @@ int genie::AudioFIFO::init() {
   return true;
 }
 
-void genie::AudioFIFO::write_to_ring(int16_t *samples,
-                                     ring_buffer_size_t size__samples) {
-  ring_buffer_size_t write_size__samples =
-      PaUtil_WriteRingBuffer(&ring_buffer, samples, size__samples);
+void genie::AudioFIFO::write_to_ring(AudioFrame *frame) {
+  ring_buffer_size_t write_size =
+      PaUtil_WriteRingBuffer(&ring_buffer, &frame, 1);
 
-  if (write_size__samples < size__samples) {
-    g_warning(
-        "ring buffer full -- lost %ld samples. Given %ld samples, wrote %ld "
-        "samples\n",
-        size__samples - write_size__samples, size__samples,
-        write_size__samples);
+  if (write_size < 1) {
+    g_warning("ring buffer full -- lost playback audio frame\n");
+    delete frame;
+  } else {
+    // g_message("PUSH AudioFrame length: %d samples\n", frame->length);
   }
 }
 
 void *genie::AudioFIFO::loop(gpointer data) {
-  AudioFIFO *obj = reinterpret_cast<AudioFIFO *>(data);
-
-  auto last_read_time = std::chrono::steady_clock::now();
+  AudioFIFO *obj = static_cast<AudioFIFO *>(data);
 
   while (obj->running) {
     // Read a frame from the pipe into `pcm`.
@@ -144,54 +131,31 @@ void *genie::AudioFIFO::loop(gpointer data) {
     // `FRAME_LENGTH__SAMPLES` is in units of _samples_, and `read()` takes a
     // number of _bytes_, so we need to multiple by `BYTES_PER_SAMPLE`.
     //
-    ssize_t read_size__bytes = read(obj->fd, obj->pcm, FRAME_LENGTH__BYTES);
-
-    auto this_read_time = std::chrono::steady_clock::now();
-    size_t elapsed__ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                             this_read_time - last_read_time)
-                             .count();
-
-    size_t elapsed__samples = elapsed__ns / SAMPLE__NS;
-    size_t read_size__samples = 0;
+    ssize_t read_size__bytes = read(obj->fd, obj->pcm, MAX_FRAME_LENGTH__BYTES);
+    std::chrono::time_point<std::chrono::steady_clock> captured_at =
+      std::chrono::steady_clock::now();
 
     // Did we encounter an error reading?
     if (read_size__bytes < 0) {
       if (errno != EAGAIN) {
         g_warning("read() returned %d, errno = %d\n", read_size__bytes, errno);
       }
-    }
-
-    // Did we read any bytes?
-    if (read_size__bytes > 0) {
+    } else if (read_size__bytes > 0) {
       // Check that we read a whole number of samples
       if (read_size__bytes % BYTES_PER_SAMPLE != 0) {
-        g_warning("read_size__bytes=%d not divisible by BYTES_PER_SAMPLE=%d\n",
+        g_error("read_size__bytes=%d not divisible by BYTES_PER_SAMPLE=%d\n",
                   read_size__bytes, BYTES_PER_SAMPLE);
       }
 
       // See how many _samples_ we read
-      read_size__samples = read_size__bytes / BYTES_PER_SAMPLE;
-
-      // Check that we didn't read more samples than how many we _think_ have
-      // elapsed. If so, bump up elapsed to the read amount.
-      if (read_size__samples > elapsed__samples) {
-        g_critical(
-            "Read more samples (%d) than apparent elapsed samples (%d),"
-            "elapsed time %dns\n",
-            read_size__samples, elapsed__samples, elapsed__ns);
-        elapsed__samples = read_size__samples;
-      }
+      size_t read_size__samples = read_size__bytes / BYTES_PER_SAMPLE;
+      
+      AudioFrame *frame = new AudioFrame(read_size__samples, captured_at);
+      memcpy(frame->samples, obj->pcm, read_size__samples * BYTES_PER_SAMPLE);
+      
+      obj->write_to_ring(frame);
     }
-
-    size_t leading_zeros__samples = elapsed__samples - read_size__samples;
-
-    obj->write_to_ring(obj->zeros, leading_zeros__samples);
-
-    if (read_size__samples > 0) {
-      obj->write_to_ring(obj->pcm, read_size__samples);
-    }
-
-    last_read_time = this_read_time;
+    
     usleep(SLEEP__US);
   }
 

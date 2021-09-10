@@ -29,12 +29,10 @@ namespace genie {
 class AudioFIFO {
 public:
   static const size_t BYTES_PER_SAMPLE = sizeof(int16_t);
-  static const size_t FRAME_LENGTH__SAMPLES = 512;
-  static const size_t FRAME_LENGTH__BYTES =
-      FRAME_LENGTH__SAMPLES * BYTES_PER_SAMPLE;
-  static const size_t BUFFER_SIZE__FRAMES = 32;
-  static const size_t BUFFER_SIZE__SAMPLES =
-      FRAME_LENGTH__SAMPLES * BUFFER_SIZE__FRAMES;
+  static const size_t MAX_FRAME_LENGTH__SAMPLES = 512;
+  static const size_t MAX_FRAME_LENGTH__BYTES =
+      MAX_FRAME_LENGTH__SAMPLES * BYTES_PER_SAMPLE;
+  static const size_t BUFFER_SIZE__FRAMES = 1024;
   static const size_t SAMPLE__NS = 62500;
   static const size_t SLEEP__US = 8000;
 
@@ -50,10 +48,9 @@ private:
   std::atomic_bool running;
   int fd;
   int16_t *pcm;
-  int16_t *zeros;
   App *app;
   
-  void write_to_ring(int16_t *samples, ring_buffer_size_t sample_count);
+  void write_to_ring(AudioFrame* frame);
 };
 
 } // namespace genie

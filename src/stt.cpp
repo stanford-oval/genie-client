@@ -340,7 +340,7 @@ void genie::STTSession::send_done() {
   }
 
   // make an empty frame to indicate the end of speech
-  AudioFrame *empty = new AudioFrame(0);
+  AudioFrame *empty = new AudioFrame(0, std::chrono::steady_clock::now());
   send_frame(empty);
   m_done = true;
 }

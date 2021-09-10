@@ -21,6 +21,7 @@
 
 #include "config.h"
 #include "config.hpp"
+#include <chrono>
 #include <glib.h>
 #include <memory>
 #include <sys/time.h>
@@ -81,20 +82,29 @@ enum class ActionType {
 };
 
 struct AudioFrame {
+  static const constexpr std::chrono::nanoseconds SAMPLE_DURATION{62500};
   int16_t *samples;
   size_t length;
+  std::chrono::time_point<std::chrono::steady_clock> captured_at;
 
-  AudioFrame(size_t len) : samples(new int16_t[len]), length(len) {}
-  ~AudioFrame() {
-    delete[] samples;
-  }
+  AudioFrame(size_t len, std::chrono::time_point<std::chrono::steady_clock> at)
+      : samples(new int16_t[len]), length(len), captured_at(at) {}
+  ~AudioFrame() { delete[] samples; }
 
-  AudioFrame(const AudioFrame&) = delete;
-  AudioFrame& operator=(const AudioFrame&) = delete;
+  AudioFrame(const AudioFrame &) = delete;
+  AudioFrame &operator=(const AudioFrame &) = delete;
 
-  AudioFrame(AudioFrame&& other) : samples(other.samples), length(other.length) {
+  AudioFrame(AudioFrame &&other)
+      : samples(other.samples), length(other.length),
+        captured_at(other.captured_at) {
     other.samples = nullptr;
     other.length = 0;
+  }
+
+  std::chrono::nanoseconds duration() { return SAMPLE_DURATION * length; }
+
+  std::chrono::time_point<std::chrono::steady_clock> started_at() {
+    return captured_at - duration();
   }
 };
 
