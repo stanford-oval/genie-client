@@ -15,6 +15,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#define G_LOG_DOMAIN "genie-config"
 
 #include "config.hpp"
 #include <glib-unix.h>
@@ -24,9 +25,11 @@
 #include "autoptrs.hpp"
 #include <memory>
 
-genie::Config::Config() {}
+namespace genie {
 
-genie::Config::~Config() {
+Config::Config() {}
+
+Config::~Config() {
   g_free(genieURL);
   g_free(genieAccessToken);
   g_free(conversationId);
@@ -40,8 +43,8 @@ genie::Config::~Config() {
   g_free(audio_output_device);
 }
 
-gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
-                                 const char *key, const char *default_value) {
+gchar *Config::get_string(GKeyFile *key_file, const char *section,
+                          const char *key, const char *default_value) {
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
@@ -53,7 +56,20 @@ gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
   return value;
 }
 
-void genie::Config::load() {
+bool Config::get_boolean(GKeyFile *key_file, const char *section,
+                         const char *key, const bool default_value) {
+  GError *error = NULL;
+  gboolean value = g_key_file_get_boolean(key_file, section, key, &error);
+  if (error != NULL) {
+    g_warning("Failed to load [%s] %s, using default %s", section, key,
+              default_value ? "true" : "false");
+    g_error_free(error);
+    return default_value;
+  }
+  return !!value;
+}
+
+void Config::load() {
   std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
       auto_key_file(g_key_file_new());
   GKeyFile *key_file = auto_key_file.get();
@@ -207,7 +223,7 @@ void genie::Config::load() {
               VAD_MAX_MS, vad_done_speaking_ms, DEFAULT_VAD_DONE_SPEAKING_MS);
     vad_done_speaking_ms = DEFAULT_VAD_DONE_SPEAKING_MS;
   }
-
+  
   error = NULL;
   vad_min_woke_ms =
       g_key_file_get_integer(key_file, "vad", "min_woke_ms", &error);
@@ -231,6 +247,10 @@ void genie::Config::load() {
   audio_output_device =
       get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
 
+  aec_enabled = get_boolean(key_file, "aec", "enabled", DEFAULT_AEC_ENABLED);
+
   dns_controller_enabled =
       g_key_file_get_boolean(key_file, "system", "dns", nullptr);
 }
+
+} // namespace genie

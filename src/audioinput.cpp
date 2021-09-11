@@ -32,7 +32,7 @@
 
 #ifdef DEBUG_DUMP_STREAMS
 FILE *fp_input;
-FILE *fp_output;
+FILE *fp_playback;
 FILE *fp_filter;
 #endif
 
@@ -49,10 +49,8 @@ genie::AudioInput::AudioInput(App *appInstance) {
 
 genie::AudioInput::~AudioInput() {
   running = false;
-  if (playback_frames_length > 0) {
-    for (size_t i = 0; i < playback_frames_length; i++) {
-      delete playback_frames[i];
-    }
+  for (size_t i = 0; i < playback_frames_length; i++) {
+    delete playback_frames[i];
   }
   delete playback_frames;
   WebRtcVad_Free(vad_instance);
@@ -66,7 +64,7 @@ genie::AudioInput::~AudioInput() {
   dlclose(porcupine_library);
 #ifdef DEBUG_DUMP_STREAMS
   fclose(fp_input);
-  fclose(fp_output);
+  fclose(fp_playback);
   fclose(fp_filter);
 #endif
 }
@@ -289,26 +287,40 @@ int genie::AudioInput::init() {
                                       app->m_config->vad_min_woke_ms);
   g_message("Calculated min woke frames: %d ms -> %d frames",
             app->m_config->vad_min_woke_ms, min_woke_frame_count);
+  
+  // Acoustic Echo Cancelation (AEC)
+  // ===========================================================================
+  
+  if (app->m_config->aec_enabled) {
+    g_message("Acoustic Echo Cancellation (AEC) enabled, initializing...");
+    
+    echo_state = speex_echo_state_init_mc(
+        pv_frame_length, ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH, 500), 1, 1);
+    speex_echo_ctl(echo_state, SPEEX_ECHO_SET_SAMPLING_RATE, &(sample_rate));
 
-  echo_state = speex_echo_state_init_mc(
-      pv_frame_length, ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH, 500), 1, 1);
-  speex_echo_ctl(echo_state, SPEEX_ECHO_SET_SAMPLING_RATE, &(sample_rate));
-
-  PaUtil_AdvanceRingBufferReadIndex(
-      &app->m_audio_fifo.get()->ring_buffer,
-      PaUtil_GetRingBufferReadAvailable(&app->m_audio_fifo.get()->ring_buffer));
+    PaUtil_AdvanceRingBufferReadIndex(
+        &app->m_audio_fifo.get()->ring_buffer,
+        PaUtil_GetRingBufferReadAvailable(
+            &app->m_audio_fifo.get()->ring_buffer));
 
 #ifdef DEBUG_DUMP_STREAMS
-  fp_input = fopen("/tmp/input.raw", "wb+");
-  fp_output = fopen("/tmp/playback.raw", "wb+");
-  fp_filter = fopen("/tmp/filter.raw", "wb+");
+    fp_input = fopen("/tmp/input.raw", "wb+");
+    fp_playback = fopen("/tmp/playback.raw", "wb+");
+    fp_filter = fopen("/tmp/filter.raw", "wb+");
 #endif
 
+  } else {
+    g_message("Acoustic Echo Cancellation (AEC) disabled.");
+  }
+  
+  // Thread Spawn
+  // =========================================================================
+  
   running = true;
   GError *thread_error = NULL;
   g_thread_try_new("audioInputThread", (GThreadFunc)loop, this, &thread_error);
   if (thread_error) {
-    g_print("audioInputThread Error: g_thread_try_new() %s\n",
+    g_error("audioInputThread Error: g_thread_try_new() %s",
             thread_error->message);
     g_error_free(thread_error);
     return false;
@@ -338,6 +350,115 @@ int32_t genie::AudioInput::ms_to_frames(size_t frame_length, int32_t ms) {
 // Audio Frame Creation
 // ===========================================================================
 
+/**
+ * @brief Read a frame of `frame_length` samples from the `alsa_handle`. Blocks
+ * until that many samples are available (or a read error occurs).
+ *
+ * The caller is responsible for deleting the AudioFrame when done with it.
+ *
+ * @param frame_length__samples Number of samples to read into the frame.
+ *
+ * @return The new audio frame, or `NULL` on error.
+ */
+genie::AudioFrame *genie::AudioInput::read_frame(size_t frame_length__samples) {
+  // Block until we read a frame of samples from the input Alsa handle (or an
+  // error occurs)
+  const snd_pcm_sframes_t read_size__samples =
+      snd_pcm_readi(alsa_handle, pcm, frame_length__samples);
+
+  // Our best estimate for an end timestamp of the samples we just read
+  std::chrono::time_point<std::chrono::steady_clock> captured_at =
+      std::chrono::steady_clock::now();
+
+  // Check for read errors
+
+  if (read_size__samples < 0) {
+    g_critical("'snd_pcm_readi' failed with '%s'\n",
+               snd_strerror(read_size__samples));
+    return NULL;
+  }
+
+  if (read_size__samples != (int)frame_length__samples) {
+    g_message("read %d frames instead of %d\n", read_size__samples,
+              frame_length__samples);
+    return NULL;
+  }
+
+  AudioFrame *input_frame = new AudioFrame(frame_length__samples, captured_at);
+
+  // If AEC is enabled hand off to that method to finish up
+  if (app->m_config->aec_enabled) {
+    return aec_process(input_frame);
+  }
+
+  // Otherwise simply copy `pcm` into the frame and return it
+  memcpy(input_frame->samples, pcm, frame_length__samples * BYTES_PER_SAMPLE);
+  return input_frame;
+}
+
+// Acoustic Echo Cancelation (AEC)
+// ---------------------------------------------------------------------------
+
+/**
+ * @brief Apply Acoustic Echo Cancelation (AEC) to the read frame sitting in
+ * the `pcm` buffer and copy the results to `input_frame`, completing it's
+ * creation.
+ *
+ * @param input_frame The newly-created frame, with no `samples`.
+ *
+ * @return The completed frame, or `NULL` on failure.
+ */
+genie::AudioFrame *genie::AudioInput::aec_process(AudioFrame *input_frame) {
+  // See how many AudioFrame (of variable, non-zero length) are available in the
+  // playback ring
+  ring_buffer_size_t playback_available__frames =
+      PaUtil_GetRingBufferReadAvailable(&app->m_audio_fifo.get()->ring_buffer);
+
+  // Annoying, seemingly, `ring_buffer_size_t` is signed. No clue what to do
+  // with it if it's negative...
+  if (playback_available__frames < 0) {
+    g_error("Negative amount of frames (%d) available in ring buffer\n",
+            playback_available__frames);
+    return NULL;
+  }
+
+  if (playback_available__frames > (int)PLAYBACK_MAX_FRAMES) {
+    g_error(
+        "Too many frame objects in the playback ring! Found %d, max is %d\n",
+        playback_available__frames, PLAYBACK_MAX_FRAMES);
+    return NULL;
+  }
+
+  // Read ALL the frames in the ring buffer -- get 'em outta there!
+  playback_frames_length =
+      PaUtil_ReadRingBuffer(&app->m_audio_fifo.get()->ring_buffer,
+                            playback_frames, playback_available__frames);
+
+  fill_pcm_playback(input_frame);
+
+  speex_echo_cancellation(echo_state, (const spx_int16_t *)pcm,
+                          (const spx_int16_t *)pcm_playback,
+                          (spx_int16_t *)pcm_filter);
+
+  memcpy(input_frame->samples, pcm_filter,
+         input_frame->length * BYTES_PER_SAMPLE);
+
+#ifdef DEBUG_DUMP_STREAMS
+  fwrite(pcm, BYTES_PER_SAMPLE, input_frame->length, fp_input);
+  fwrite(pcm_playback, BYTES_PER_SAMPLE, input_frame->length, fp_playback);
+  fwrite(pcm_filter, BYTES_PER_SAMPLE, input_frame->length, fp_filter);
+#endif
+
+  return input_frame;
+}
+
+/**
+ * @brief Fill `pcm_playback` buffer from playback audio frames captured by
+ * the `genie::AudioFIFO` instance.
+ *
+ * @param input_frame Pointer to the audio frame being created. Importantly
+ * includes the frame length (in _samples_) and capture timestamp.
+ */
 void genie::AudioInput::fill_pcm_playback(genie::AudioFrame *input_frame) {
   // Variable to track what time-stamp we've filled the PCM playback buffer to.
   //
@@ -435,95 +556,6 @@ void genie::AudioInput::fill_pcm_playback(genie::AudioFrame *input_frame) {
     memset(pcm_playback, 0, samples_to_fill * BYTES_PER_SAMPLE);
   }
 } // fill_pcm_playback()
-
-/**
- * @brief A test function that simply zero-fills `pcm_playback` and frees any
- * playback audio frames read from the ring buffer.
- */
-void genie::AudioInput::null_pcm_playback(AudioFrame *input_frame) {
-  memset(pcm_playback, 0, input_frame->length * BYTES_PER_SAMPLE);
-
-  for (size_t i = 0; i < playback_frames_length; i++) {
-    delete playback_frames[i];
-  }
-
-  playback_frames_length = 0;
-}
-
-/**
- * @brief Read a frame of `frame_length` samples from the `alsa_handle`. Blocks
- * until that many samples are available (or a read error occurs).
- *
- * The caller is responsible for deleting the AudioFrame when done with it.
- */
-genie::AudioFrame *genie::AudioInput::read_frame(size_t frame_length__samples) {
-  // Block until we read a frame of samples from the input Alsa handle (or an
-  // error occurs)
-  const snd_pcm_sframes_t read_size__samples =
-      snd_pcm_readi(alsa_handle, pcm, frame_length__samples);
-
-  // Our best estimate for an end timestamp of the samples we just read
-  std::chrono::time_point<std::chrono::steady_clock> captured_at =
-      std::chrono::steady_clock::now();
-
-  // Check for read errors
-
-  if (read_size__samples < 0) {
-    g_critical("'snd_pcm_readi' failed with '%s'\n",
-               snd_strerror(read_size__samples));
-    return NULL;
-  }
-
-  if (read_size__samples != (int)frame_length__samples) {
-    g_message("read %d frames instead of %d\n", read_size__samples,
-              frame_length__samples);
-    return NULL;
-  }
-
-  // See how many AudioFrame (of variable, non-zero length) are available in the
-  // playback ring
-  ring_buffer_size_t playback_available__frames =
-      PaUtil_GetRingBufferReadAvailable(&app->m_audio_fifo.get()->ring_buffer);
-
-  // Annoying, seemingly, `ring_buffer_size_t` is signed. No clue what to do
-  // with it if it's negative...
-  if (playback_available__frames < 0) {
-    g_error("Negative amount of frames (%d) available in ring buffer\n",
-            playback_available__frames);
-    return NULL;
-  }
-
-  if (playback_available__frames > (int)PLAYBACK_MAX_FRAMES) {
-    g_error(
-        "Too many frame objects in the playback ring! Found %d, max is %d\n",
-        playback_available__frames, PLAYBACK_MAX_FRAMES);
-    return NULL;
-  }
-
-  // Read ALL the frames in the ring buffer -- get 'em outta there!
-  playback_frames_length =
-      PaUtil_ReadRingBuffer(&app->m_audio_fifo.get()->ring_buffer,
-                            playback_frames, playback_available__frames);
-
-  AudioFrame *input_frame = new AudioFrame(frame_length__samples, captured_at);
-  fill_pcm_playback(input_frame);
-  // null_pcm_playback(input_frame);
-
-  speex_echo_cancellation(echo_state, (const spx_int16_t *)pcm,
-                          (const spx_int16_t *)pcm_playback,
-                          (spx_int16_t *)pcm_filter);
-
-  memcpy(input_frame->samples, pcm_filter,
-         frame_length__samples * BYTES_PER_SAMPLE);
-
-#ifdef DEBUG_DUMP_STREAMS
-  fwrite(pcm, BYTES_PER_SAMPLE, frame_length__samples, fp_input);
-  fwrite(pcm_playback, BYTES_PER_SAMPLE, frame_length__samples, fp_output);
-  fwrite(pcm_filter, BYTES_PER_SAMPLE, frame_length__samples, fp_filter);
-#endif
-
-  return input_frame;
-}
 
 // State
 // ===========================================================================

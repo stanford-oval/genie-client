@@ -31,6 +31,7 @@ public:
   static const gint DEFAULT_VAD_DONE_SPEAKING_MS = 500;
   static const gint DEFAULT_MIN_WOKE_MS = 1000;
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
+  static const bool DEFAULT_AEC_ENABLED = false;
 
   Config();
   ~Config();
@@ -50,6 +51,7 @@ public:
   gint vad_start_speaking_ms;
   gint vad_done_speaking_ms;
   gint vad_min_woke_ms;
+  bool aec_enabled;
 
   /**
    * @brief The general/main audio output device; used to control volume.
@@ -62,6 +64,8 @@ protected:
 private:
   gchar *get_string(GKeyFile *key_file, const char *section, const char *key,
                     const gchar *default_value);
+  bool get_boolean(GKeyFile *key_file, const char *section, const char *key,
+                   const bool default_value);
 };
 
 } // namespace genie

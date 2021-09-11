@@ -63,9 +63,11 @@ int genie::App::exec() {
   m_config->load();
 
   g_setenv("GST_REGISTRY_UPDATE", "no", true);
-
-  m_audio_fifo = std::make_unique<AudioFIFO>(this);
-  m_audio_fifo->init();
+  
+  if (m_config->aec_enabled) {
+    m_audio_fifo = std::make_unique<AudioFIFO>(this);
+    m_audio_fifo->init();
+  }
 
   m_audioPlayer = std::make_unique<AudioPlayer>(this);
 

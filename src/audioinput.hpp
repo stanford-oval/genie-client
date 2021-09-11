@@ -64,7 +64,10 @@ protected:
 
 private:
 // ===========================================================================
-
+  
+  // Private Instance Variables
+  // -------------------------------------------------------------------------
+  
   bool running;
   snd_pcm_t *alsa_handle = NULL;
   
@@ -76,11 +79,13 @@ private:
   const char *(*pv_status_to_string_func)(pv_status_t);
   
   /**
-   * The size in _samples_ of audio buffers that need to hold one _frame_.
+   * The size in _samples_ of audio buffers (`pcm`, `pcm_playback`, 
+   * `pcm_filter`) that need to hold one _frame_.
    * 
    * It is the max of the Picovoice and VAD frame sizes.
    */
   size_t frame_buffer_size__samples;
+  
   
   int16_t *pcm;
   int16_t *pcm_playback;
@@ -106,19 +111,27 @@ private:
   // where we terminate input after the `vad_done_frame_count`
   int32_t min_woke_frame_count;
 
-  // Loop state variables
+  // Loop state
   State state = State::WAITING;
   int32_t state_woke_frame_count;
   int32_t state_vad_frame_count;
+  
+  // Private Instance Methods
+  // -------------------------------------------------------------------------
 
-  AudioFrame *read_frame(size_t frame_length);
-  void fill_pcm_playback(AudioFrame *input_frame);
-  void null_pcm_playback(AudioFrame *input_frame);
-
+  // Utilities
   int32_t ms_to_frames(size_t frame_length, int32_t ms);
   
+  // Frame creation
+  AudioFrame *read_frame(size_t frame_length);
+  AudioFrame *aec_process(AudioFrame *input_frame);
+  void fill_pcm_playback(AudioFrame *input_frame);
+
+  
+  // State
   void transition(State to_state);
   
+  // Looping
   void loop_waiting();
   void loop_woke();
   void loop_listening();
