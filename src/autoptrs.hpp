@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _AUTOPTRS_HPP
-#define _AUTOPTRS_HPP
+#pragma once
 
 #include <glib-object.h>
 #include <gst/gst.h>
@@ -132,5 +131,3 @@ struct fn_deleter {
 };
 
 } // namespace genie
-
-#endif

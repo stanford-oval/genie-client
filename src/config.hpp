@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _CONFIG_H
-#define _CONFIG_H
+#pragma once
 
 #include <glib.h>
 
@@ -47,6 +46,7 @@ public:
   gchar *audioOutputDeviceAlerts;
   gchar *audioOutputFIFO;
   gchar *audioVoice;
+  gchar *leds_path;
   gint vad_start_speaking_ms;
   gint vad_done_speaking_ms;
   gint vad_min_woke_ms;
@@ -65,5 +65,3 @@ private:
 };
 
 } // namespace genie
-
-#endif

@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _LEDS_H
-#define _LEDS_H
+#pragma once
 
 #include "app.hpp"
 
@@ -28,12 +27,10 @@ public:
   Leds(App *appInstance);
   ~Leds();
   int init();
-  int setEffect(int mode);
+  void set_active(bool active);
 
 private:
   App *app;
 };
 
 } // namespace genie
-
-#endif

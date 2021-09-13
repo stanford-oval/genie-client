@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _STT_H
-#define _STT_H
+#pragma once
 
 #include <glib.h>
 #include <libsoup/soup.h>
@@ -100,7 +99,6 @@ private:
 
   App * const m_app;
   const std::string m_url;
-  auto_gobject_ptr<SoupSession> m_soup_session;
   std::unique_ptr<STTSession> m_current_session;
 
   struct timeval tConnect;
@@ -109,5 +107,3 @@ private:
 };
 
 } // namespace genie
-
-#endif

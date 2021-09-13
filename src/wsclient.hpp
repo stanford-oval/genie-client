@@ -16,30 +16,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _WSCLIENT_H
-#define _WSCLIENT_H
+#pragma once
 
 #include "app.hpp"
+#include <deque>
 #include <json-glib/json-glib.h>
 #include <libsoup/soup.h>
 
+#include "autoptrs.hpp"
+
 namespace genie {
 
-class wsClient {
+class ConversationClient {
 public:
-  wsClient(App *appInstance);
-  ~wsClient();
+  ConversationClient(App *appInstance);
+  ~ConversationClient();
+
   int init();
-  void sendCommand(const char *data);
-  void sendThingtalk(const char *data);
-  gboolean checkIsConnected();
+  void send_command(const char *data);
+  void send_thingtalk(const char *data);
 
 protected:
   void connect();
 
 private:
-  void setConnection(SoupWebsocketConnection *conn);
-  void sendJSON(JsonBuilder *builder);
+  bool is_connected();
+  void queue_json(auto_gobject_ptr<JsonBuilder> builder);
+  void maybe_flush_queue();
+  void send_json_now(JsonBuilder *builder);
 
   // Socket event handlers
   static void on_connection(SoupSession *session, GAsyncResult *res,
@@ -58,13 +62,13 @@ private:
   void handleAskSpecial(JsonReader *reader);
   void handleNewDevice(JsonReader *reader);
 
-private:
   App *app;
   gchar *conversationId;
   gchar *url;
-  SoupWebsocketConnection *wconn;
-  gchar *accessToken;
+  const gchar *accessToken;
   int seq;
+  auto_gobject_ptr<SoupWebsocketConnection> m_connection;
+  std::deque<auto_gobject_ptr<JsonBuilder>> m_outgoing_queue;
 
   struct timeval tStart;
   gboolean tInit;
@@ -72,5 +76,3 @@ private:
 };
 
 } // namespace genie
-
-#endif

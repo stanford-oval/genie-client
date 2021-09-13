@@ -40,7 +40,15 @@ double time_diff_ms(struct timeval x, struct timeval y) {
   return time_diff(x, y) / 1000;
 }
 
-genie::App::App() { isProcessing = FALSE; }
+genie::App::App() {
+  isProcessing = FALSE;
+
+  // initialize a shared SoupSession to be used by all outgoing connections
+  m_soup_session = auto_gobject_ptr<SoupSession>(soup_session_new(), adopt_mode::owned);
+  // enable the wss support
+  const gchar *wss_aliases[] = {"wss", NULL};
+  g_object_set(m_soup_session.get(), SOUP_SESSION_HTTPS_ALIASES, wss_aliases, NULL);
+}
 
 genie::App::~App() { g_main_loop_unref(main_loop); }
 
@@ -70,7 +78,7 @@ int genie::App::exec() {
   m_spotifyd = std::make_unique<Spotifyd>(this);
   m_spotifyd->init();
 
-  m_wsClient = std::make_unique<wsClient>(this);
+  m_wsClient = std::make_unique<ConversationClient>(this);
   m_wsClient->init();
 
   m_evInput = std::make_unique<EVInput>(this);
@@ -78,6 +86,7 @@ int genie::App::exec() {
 
   m_leds = std::make_unique<Leds>(this);
   m_leds->init();
+  m_leds->set_active(false);
 
   if (m_config->dns_controller_enabled)
     m_dns_controller = std::make_unique<DNSController>();
@@ -127,6 +136,8 @@ void genie::App::handle(ActionType type, gpointer payload) {
       m_audioPlayer->playSound(SOUND_MATCH);
       g_message("Connecting STT...\n");
       m_stt->begin_session();
+      g_message("Activating LED");
+      m_leds->set_active(true);
       g_message("Done handling wake.\n");
       break;
     }
@@ -144,6 +155,8 @@ void genie::App::handle(ActionType type, gpointer payload) {
       m_audioPlayer->stop();
       m_audioPlayer->playSound(SOUND_MATCH);
       system("amixer -D hw:audiocodec cset name='hd' 255");
+      g_message("Deactivating LED");
+      m_leds->set_active(false);
       break;
     }
 
@@ -153,6 +166,8 @@ void genie::App::handle(ActionType type, gpointer payload) {
       m_audioPlayer->playSound(SOUND_NO_MATCH);
       m_stt->send_done();
       system("amixer -D hw:audiocodec cset name='hd' 255");
+      g_message("Deactivating LED");
+      m_leds->set_active(false);
       break;
     }
 

@@ -16,14 +16,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef _APP_H
-#define _APP_H
+#pragma once
 
 #include "config.h"
 #include "config.hpp"
 #include <glib.h>
+#include <libsoup/soup.h>
 #include <memory>
 #include <sys/time.h>
+
+#include "autoptrs.hpp"
 
 #define PROF_PRINT(...)                                                        \
   do {                                                                         \
@@ -57,7 +59,7 @@ class Leds;
 class Spotifyd;
 class STT;
 class TTS;
-class wsClient;
+class ConversationClient;
 class DNSController;
 
 enum ProcesingEvent_t {
@@ -110,6 +112,10 @@ public:
   void track_processing_event(ProcesingEvent_t eventType);
   guint dispatch(ActionType type, gpointer payload);
 
+  SoupSession* get_soup_session() {
+    return m_soup_session.get();
+  }
+
   GMainLoop *main_loop;
   std::unique_ptr<Config> m_config;
   std::unique_ptr<AudioInput> m_audioInput;
@@ -119,13 +125,15 @@ public:
   std::unique_ptr<Leds> m_leds;
   std::unique_ptr<Spotifyd> m_spotifyd;
   std::unique_ptr<STT> m_stt;
-  std::unique_ptr<wsClient> m_wsClient;
+  std::unique_ptr<ConversationClient> m_wsClient;
   std::unique_ptr<DNSController> m_dns_controller;
 
 protected:
   void handle(ActionType type, gpointer payload);
 
 private:
+  auto_gobject_ptr<SoupSession> m_soup_session;
+
   gboolean isProcessing;
   struct timeval tStartProcessing;
   struct timeval tStartSTT;
@@ -146,5 +154,3 @@ typedef struct {
 } Action;
 
 } // namespace genie
-
-#endif
