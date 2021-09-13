@@ -24,7 +24,7 @@
 #include "app.hpp"
 #include "audioinput.hpp"
 #include "audioplayer.hpp"
-#include "wsclient.hpp"
+#include "conversation_client.hpp"
 #include "autoptrs.hpp"
 
 namespace genie {

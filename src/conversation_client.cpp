@@ -26,7 +26,7 @@
 
 #include "audioplayer.hpp"
 #include "spotifyd.hpp"
-#include "wsclient.hpp"
+#include "conversation_client.hpp"
 
 bool genie::ConversationClient::is_connected() {
   if (!m_connection) {

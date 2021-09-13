@@ -28,7 +28,7 @@
 #include "leds.hpp"
 #include "spotifyd.hpp"
 #include "stt.hpp"
-#include "wsclient.hpp"
+#include "conversation_client.hpp"
 #include "dns_controller.hpp"
 
 double time_diff(struct timeval x, struct timeval y) {

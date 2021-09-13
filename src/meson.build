@@ -74,7 +74,7 @@ executable(
   'config.cpp',
   'evinput.cpp',
   'leds.cpp',
-  'wsclient.cpp',
+  'conversation_client.cpp',
   'audioinput.cpp',
   'audiofifo.cpp',
   'pa_ringbuffer.c',
