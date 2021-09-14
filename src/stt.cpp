@@ -87,6 +87,10 @@ void genie::STT::send_done() {
   m_current_session->send_done();
 }
 
+void genie::STT::abort() {
+  send_done();
+}
+
 void genie::STT::send_frame(AudioFrame *frame) {
   if (!m_current_session) {
     g_warning("Sending audio frame without an active speech to text request");

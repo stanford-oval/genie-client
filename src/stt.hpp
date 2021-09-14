@@ -73,6 +73,7 @@ public:
 
   void send_frame(AudioFrame *frame);
   void send_done();
+  void abort();
 };
 
 class STT {
