@@ -1,6 +1,6 @@
-#define G_LOG_DOMAIN "genie::state::events"
-
 #include "app.hpp"
+
+#define G_LOG_DOMAIN "genie::state::events"
 
 namespace genie {
 namespace state {
@@ -14,20 +14,20 @@ InputFrame::~InputFrame() {
   //      STT instance, where it may be queued for later transmission.
 }
 
-TextMessage::TextMessage(gchar *text) : text(g_strdup(text)) {}
+TextMessage::TextMessage(const gchar *text) : text(g_strdup(text)) {}
 TextMessage::~TextMessage() { g_free(text); }
 
-AudioMessage::AudioMessage(gchar *url) : url(g_strdup(url)) {}
+AudioMessage::AudioMessage(const gchar *url) : url(g_strdup(url)) {}
 AudioMessage::~AudioMessage() { g_free(url); }
 
 SoundMessage::SoundMessage(Sound_t id) : id(id) {}
 
-AskSpecialMessage::AskSpecialMessage(gchar *ask) : ask(g_strdup(ask)) {}
+AskSpecialMessage::AskSpecialMessage(const gchar *ask) : ask(g_strdup(ask)) {}
 AskSpecialMessage::~AskSpecialMessage() { g_free(ask); }
 
-SpotifyCredentials::SpotifyCredentials(gchar *access_token, gchar *username)
-    : access_token(g_strdup(access_token)),
-      username(g_strdup(username)) {}
+SpotifyCredentials::SpotifyCredentials(const gchar *access_token,
+                                       const gchar *username)
+    : access_token(g_strdup(access_token)), username(g_strdup(username)) {}
 
 SpotifyCredentials::~SpotifyCredentials() {
   g_free(access_token);

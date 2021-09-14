@@ -1,6 +1,6 @@
-#define G_LOG_DOMAIN "genie::state::Sleeping"
-
 #include "app.hpp"
+
+#define G_LOG_DOMAIN "genie::state::Sleeping"
 
 namespace genie {
 namespace state {

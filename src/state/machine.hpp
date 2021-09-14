@@ -33,7 +33,7 @@ public:
   }
 
   template <typename E> guint dispatch(E *event) {
-    g_message("DISPATCH EVENT %s", typeid(E).name());
+    // g_message("DISPATCH EVENT %s", typeid(E).name());
     GMainLoopEvent *loop_event = new GMainLoopEvent();
     loop_event->machine = this;
     loop_event->event = event;
@@ -41,7 +41,7 @@ public:
   }
 
   template <typename E> static gboolean handle(gpointer user_data) {
-    g_message("HANDLE EVENT %s", typeid(E).name());
+    // g_message("HANDLE EVENT %s", typeid(E).name());
     GMainLoopEvent *loop_event = static_cast<GMainLoopEvent *>(user_data);
     E *event = static_cast<E *>(loop_event->event);
     loop_event->machine->current_state->react(event);
@@ -50,7 +50,7 @@ public:
   }
 
   template <typename S> void transit() {
-    g_message("TRANSIT to %s", typeid(S).name());
+    g_message("TRANSIT to %s", S::NAME);
     this->current_state->exit();
     delete this->current_state;
     this->current_state = new S(this);

@@ -8,6 +8,8 @@ namespace state {
 
 class Listening : public State {
 public:
+  static const constexpr char *NAME = "Listening";
+  
   Listening(Machine *machine);
   
   void enter() override;

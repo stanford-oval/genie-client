@@ -7,6 +7,8 @@ namespace state {
 
 class Sleeping : public State {
 public:
+  static const constexpr char *NAME = "Sleeping";
+  
   Sleeping(Machine *machine);
 
   void enter() override;

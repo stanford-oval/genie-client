@@ -1,7 +1,7 @@
-#define G_LOG_DOMAIN "genie::state::Listening"
-
 #include "app.hpp"
 #include "stt.hpp"
+
+#define G_LOG_DOMAIN "genie::state::Listening"
 
 namespace genie {
 namespace state {

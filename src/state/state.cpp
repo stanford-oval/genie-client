@@ -1,8 +1,8 @@
-#define G_LOG_DOMAIN "genie::state::State"
-
 #include "app.hpp"
-#include "spotifyd.hpp"
 #include "audioplayer.hpp"
+#include "spotifyd.hpp"
+
+#define G_LOG_DOMAIN "genie::state::State"
 
 namespace genie {
 namespace state {
@@ -45,13 +45,11 @@ void State::react(events::TextMessage *text_message) {
 void State::react(events::AudioMessage *audio_message) {
   g_message("Received AudioMessage, playing URL: %s\n", audio_message->url);
   app->m_audioPlayer->stop();
-  app->m_audioPlayer->playURI(audio_message->url,
-                                      AudioDestination::MUSIC);
+  app->m_audioPlayer->playURI(audio_message->url, AudioDestination::MUSIC);
 }
 
 void State::react(events::SoundMessage *sound_message) {
-  g_message("Received SoundMessage, playing sound ID: %d\n",
-            sound_message->id);
+  g_message("Received SoundMessage, playing sound ID: %d\n", sound_message->id);
   app->m_audioPlayer->stop();
   app->m_audioPlayer->playSound(sound_message->id);
 }
@@ -67,7 +65,7 @@ void State::react(events::AskSpecialMessage *ask_special_message) {
 
 void State::react(events::SpotifyCredentials *spotify_credentials) {
   app->m_spotifyd->set_credentials(spotify_credentials->username,
-                                         spotify_credentials->access_token);
+                                   spotify_credentials->access_token);
 }
 
 void State::react(events::AdjustVolume *adjust_volume) {

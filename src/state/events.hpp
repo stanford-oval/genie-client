@@ -14,14 +14,13 @@ struct AudioFrame {
   size_t length;
 
   AudioFrame(size_t len) : samples(new int16_t[len]), length(len) {}
-  ~AudioFrame() {
-    delete[] samples;
-  }
+  ~AudioFrame() { delete[] samples; }
 
-  AudioFrame(const AudioFrame&) = delete;
-  AudioFrame& operator=(const AudioFrame&) = delete;
+  AudioFrame(const AudioFrame &) = delete;
+  AudioFrame &operator=(const AudioFrame &) = delete;
 
-  AudioFrame(AudioFrame&& other) : samples(other.samples), length(other.length) {
+  AudioFrame(AudioFrame &&other)
+      : samples(other.samples), length(other.length) {
     other.samples = nullptr;
     other.length = 0;
   }
@@ -36,7 +35,7 @@ struct Wake : Event {};
 
 struct InputFrame : Event {
   AudioFrame *frame;
-  
+
   InputFrame(AudioFrame *frame);
   ~InputFrame();
 };
@@ -52,27 +51,27 @@ struct InputTimeout : Event {};
 struct TextMessage : Event {
   gchar *text;
 
-  TextMessage(gchar *text);
+  TextMessage(const gchar *text);
   ~TextMessage();
 };
 
 struct AudioMessage : Event {
   gchar *url;
 
-  AudioMessage(gchar *url);
+  AudioMessage(const gchar *url);
   ~AudioMessage();
 };
 
 struct SoundMessage : Event {
   Sound_t id;
-  
+
   SoundMessage(Sound_t id);
 };
 
 struct AskSpecialMessage : Event {
   gchar *ask;
 
-  AskSpecialMessage(gchar *ask);
+  AskSpecialMessage(const gchar *ask);
   ~AskSpecialMessage();
 };
 
@@ -80,7 +79,7 @@ struct SpotifyCredentials : Event {
   gchar *access_token;
   gchar *username;
 
-  SpotifyCredentials(gchar *access_token, gchar *username);
+  SpotifyCredentials(const gchar *access_token, const gchar *username);
   ~SpotifyCredentials();
 };
 
@@ -88,7 +87,7 @@ struct SpotifyCredentials : Event {
 
 struct AdjustVolume : Event {
   long delta;
-  
+
   AdjustVolume(long delta);
 };
 
