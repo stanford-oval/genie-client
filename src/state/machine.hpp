@@ -64,6 +64,7 @@ public:
     E *event = static_cast<E *>(loop_event->event);
     loop_event->machine->current_state->react(event);
     delete event;
+    delete loop_event;
     return false;
   }
 
