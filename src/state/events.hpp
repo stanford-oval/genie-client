@@ -79,7 +79,7 @@ struct SpotifyCredentials : Event {
   gchar *access_token;
   gchar *username;
 
-  SpotifyCredentials(const gchar *access_token, const gchar *username);
+  SpotifyCredentials(const gchar *username, const gchar *access_token);
   ~SpotifyCredentials();
 };
 

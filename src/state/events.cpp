@@ -25,9 +25,9 @@ SoundMessage::SoundMessage(Sound_t id) : id(id) {}
 AskSpecialMessage::AskSpecialMessage(const gchar *ask) : ask(g_strdup(ask)) {}
 AskSpecialMessage::~AskSpecialMessage() { g_free(ask); }
 
-SpotifyCredentials::SpotifyCredentials(const gchar *access_token,
-                                       const gchar *username)
-    : access_token(g_strdup(access_token)), username(g_strdup(username)) {}
+SpotifyCredentials::SpotifyCredentials(const gchar *username,
+                                       const gchar *access_token)
+    : username(g_strdup(username)), access_token(g_strdup(access_token)) {}
 
 SpotifyCredentials::~SpotifyCredentials() {
   g_free(access_token);

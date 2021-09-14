@@ -44,14 +44,12 @@ void State::react(events::TextMessage *text_message) {
 
 void State::react(events::AudioMessage *audio_message) {
   g_message("Received AudioMessage, playing URL: %s\n", audio_message->url);
-  app->m_audioPlayer->stop();
   app->m_audioPlayer->playURI(audio_message->url, AudioDestination::MUSIC);
 }
 
 void State::react(events::SoundMessage *sound_message) {
   g_message("Received SoundMessage, playing sound ID: %d\n", sound_message->id);
-  app->m_audioPlayer->stop();
-  app->m_audioPlayer->playSound(sound_message->id);
+  app->m_audioPlayer->playSound(sound_message->id, AudioDestination::MUSIC);
 }
 
 void State::react(events::AskSpecialMessage *ask_special_message) {
