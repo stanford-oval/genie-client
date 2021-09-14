@@ -35,7 +35,7 @@ void Listening::react(events::InputDone *) {
   machine->transit<Sleeping>();
 }
 
-void Listening::react(events::InputNotDetected *) override {
+void Listening::react(events::InputNotDetected *) {
   g_message("Handling InputNotDetected...\n");
   app->m_stt->abort();
   app->m_audioPlayer->stop();
@@ -43,7 +43,7 @@ void Listening::react(events::InputNotDetected *) override {
   machine->transit<Sleeping>();
 }
 
-void Listening::react(events::InputTimeout *) override {
+void Listening::react(events::InputTimeout *) {
   g_message("Handling InputTimeout...\n");
   app->m_stt->abort();
   app->m_audioPlayer->stop();

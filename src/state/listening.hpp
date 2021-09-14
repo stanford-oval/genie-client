@@ -10,13 +10,13 @@ class Listening : public State {
 public:
   Listening(Machine *machine);
   
-  void enter();
+  void enter() override;
 
-  void react(events::Wake *);
-  void react(events::InputFrame *input_frame);
-  void react(events::InputDone *);
-  void react(events::InputNotDetected *);
-  void react(events::InputTimeout *);
+  void react(events::Wake *) override;
+  void react(events::InputFrame *input_frame) override;
+  void react(events::InputDone *) override;
+  void react(events::InputNotDetected *) override;
+  void react(events::InputTimeout *) override;
 };
 
 } // namespace state

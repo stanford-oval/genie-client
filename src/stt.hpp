@@ -73,7 +73,6 @@ public:
 
   void send_frame(AudioFrame *frame);
   void send_done();
-  void abort();
 };
 
 class STT {
@@ -85,6 +84,7 @@ public:
   void begin_session();
   void send_frame(AudioFrame *frame);
   void send_done();
+  void abort();
 
 private:
   enum class Event {

@@ -9,7 +9,7 @@ class Sleeping : public State {
 public:
   Sleeping(Machine *machine);
 
-  void enter();
+  void enter() override;
 };
 
 } // namespace state
