@@ -47,7 +47,9 @@ struct AudioFrame {
 namespace state {
 namespace events {
 
-struct Event {};
+struct Event {
+  virtual ~Event() = default;
+};
 
 struct Wake : Event {};
 
