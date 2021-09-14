@@ -63,6 +63,14 @@ def add_to(subparsers):
         help="Build before deploying",
     )
 
+    parser.add_argument(
+        "-p",
+        "--plain",
+        action=BooleanOptionalAction,
+        default=False,
+        help="Pass `--progress plain` to `docker build` (real Docker only!)",
+    )
+
 
 @LOG.inject
 def deploy_all(target: str, log=LOG):
@@ -95,9 +103,15 @@ def deploy_config(target: str, log=LOG):
 
 
 @Context.inject_current
-def run(target: str, build: bool, exe_only: bool, config_only: bool):
+def run(
+    target: str,
+    build: bool,
+    exe_only: bool,
+    config_only: bool,
+    plain: bool
+):
     if build:
-        build_cmd.run(exe_only=exe_only)
+        build_cmd.run(exe_only=exe_only, plain=plain)
 
     if exe_only or config_only:
         if exe_only:
