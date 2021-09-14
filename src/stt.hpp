@@ -26,6 +26,7 @@
 #include "audioplayer.hpp"
 #include "conversation_client.hpp"
 #include "autoptrs.hpp"
+#include <queue>
 
 namespace genie {
 
@@ -45,7 +46,7 @@ private:
   STT* const m_controller;
 
   State m_state;
-  GQueue* m_queue;
+  std::queue<AudioFrame> queue;
   auto_gobject_ptr<SoupWebsocketConnection> m_connection;
   bool m_done;
 
@@ -66,12 +67,12 @@ public:
   }
 
   void flush_queue();
-  void dispatch_frame(AudioFrame *frame);
+  void dispatch_frame(AudioFrame frame);
   gboolean is_connection_open() {
     return m_state == State::STREAMING;
   }
 
-  void send_frame(AudioFrame *frame);
+  void send_frame(AudioFrame frame);
   void send_done();
 };
 
@@ -82,7 +83,7 @@ public:
   STT(App *appInstance);
 
   void begin_session();
-  void send_frame(AudioFrame *frame);
+  void send_frame(AudioFrame frame);
   void send_done();
   void abort();
 

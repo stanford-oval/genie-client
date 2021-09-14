@@ -56,9 +56,9 @@ struct Event {
 struct Wake : Event {};
 
 struct InputFrame : Event {
-  AudioFrame *frame;
+  AudioFrame frame;
 
-  InputFrame(AudioFrame *frame) : frame(frame) {}
+  InputFrame(AudioFrame frame) : frame(std::move(frame)) {}
 };
 
 struct InputDone : Event {};

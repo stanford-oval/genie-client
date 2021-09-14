@@ -104,10 +104,9 @@ int genie::Spotifyd::spawn() {
   }
 
   std::vector<const gchar *> argv{
-      filePath,           "--no-daemon",   "--device-name",
-      deviceName,         "--device-type", "speaker",
-      "--backend",        backend,         "--username",
-      username.c_str(), "--token",       access_token.c_str(),
+      filePath,        "--no-daemon",    "--device-name", deviceName,
+      "--device-type", "speaker",        "--backend",     backend,
+      "--username",    username.c_str(), "--token",       access_token.c_str(),
   };
   if (strcmp(backend, "alsa") == 0 && app->m_config->audioOutputDeviceMusic) {
     argv.push_back("--device");

@@ -25,6 +25,7 @@
 #include <alsa/asoundlib.h>
 #include <glib.h>
 #include <webrtc/webrtc_vad.h>
+#include <queue>
 
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>
@@ -70,7 +71,7 @@ private:
   int16_t *pcmFilter;
   int32_t pv_frame_length;
   int32_t sample_rate;
-  GQueue *frame_buffer;
+  std::queue<AudioFrame> frame_buffer;
 
   SpeexEchoState *echo_state;
   SpeexPreprocessState *pp_state;
@@ -90,7 +91,7 @@ private:
   int32_t state_woke_frame_count;
   int32_t state_vad_frame_count;
 
-  AudioFrame *read_frame(int32_t frame_length);
+  AudioFrame read_frame(int32_t frame_length);
 
   int32_t ms_to_frames(int32_t frame_length, int32_t ms);
   void loop_waiting();

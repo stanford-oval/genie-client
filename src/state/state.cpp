@@ -38,7 +38,6 @@ void State::react(events::Wake *) {
 
 void State::react(events::InputFrame *input_frame) {
   g_warning("FIXME received InputFrame when not in Listen state, discarding.");
-  delete input_frame->frame;
 }
 
 void State::react(events::InputDone *) {

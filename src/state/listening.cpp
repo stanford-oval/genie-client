@@ -43,7 +43,7 @@ void Listening::react(events::Wake *) {
 }
 
 void Listening::react(events::InputFrame *input_frame) {
-  app->m_stt->send_frame(input_frame->frame);
+  app->m_stt->send_frame(std::move(input_frame->frame));
 }
 
 void Listening::react(events::InputDone *) {

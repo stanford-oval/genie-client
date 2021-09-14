@@ -40,8 +40,7 @@ static std::string get_ws_url(genie::App *app) {
   return ws_url.str();
 }
 
-genie::STT::STT(App *app)
-    : m_app(app), m_url(get_ws_url(app)) {}
+genie::STT::STT(App *app) : m_app(app), m_url(get_ws_url(app)) {}
 
 void genie::STT::complete_success(STTSession *session, const char *text) {
   if (session != m_current_session.get())
@@ -88,17 +87,15 @@ void genie::STT::send_done() {
   m_current_session->send_done();
 }
 
-void genie::STT::abort() {
-  send_done();
-}
+void genie::STT::abort() { send_done(); }
 
-void genie::STT::send_frame(AudioFrame *frame) {
+void genie::STT::send_frame(AudioFrame frame) {
   if (!m_current_session) {
     g_warning("Sending audio frame without an active speech to text request");
     return;
   }
 
-  m_current_session->send_frame(frame);
+  m_current_session->send_frame(std::move(frame));
 }
 
 void genie::STT::record_timing_event(STTSession *session,
@@ -130,8 +127,7 @@ void genie::STT::record_timing_event(STTSession *session,
 }
 
 genie::STTSession::STTSession(STT *controller, const char *url)
-    : m_controller(controller), m_state(State::INITIAL), m_queue(g_queue_new()),
-      m_done(false) {
+    : m_controller(controller), m_state(State::INITIAL), m_done(false) {
   g_debug("SST connecting...\n");
 
   auto_gobject_ptr<SoupMessage> msg(soup_message_new(SOUP_METHOD_GET, url),
@@ -151,12 +147,6 @@ genie::STTSession::~STTSession() {
     soup_websocket_connection_close(m_connection.get(),
                                     SOUP_WEBSOCKET_CLOSE_NORMAL, NULL);
   }
-
-  while (!g_queue_is_empty(m_queue)) {
-    AudioFrame *queued_frame = (AudioFrame *)g_queue_pop_head(m_queue);
-    delete queued_frame;
-  }
-  g_queue_free(m_queue);
 }
 
 void genie::STTSession::on_connection(SoupSession *session, GAsyncResult *res,
@@ -270,7 +260,7 @@ void genie::STTSession::on_message(SoupWebsocketConnection *conn, gint type,
     g_print("STT status %d\n", status);
 
     json_reader_read_member(reader, "code");
-    const char* code = json_reader_get_string_value(reader);
+    const char *code = json_reader_get_string_value(reader);
     json_reader_end_member(reader);
 
     self->m_controller->complete_error(self, status, code);
@@ -299,9 +289,9 @@ void genie::STTSession::on_close(SoupWebsocketConnection *conn, gpointer data) {
 }
 
 void genie::STTSession::flush_queue() {
-  while (!g_queue_is_empty(m_queue)) {
-    AudioFrame *queued_frame = (AudioFrame *)g_queue_pop_head(m_queue);
-    dispatch_frame(queued_frame);
+  while (!queue.empty()) {
+    dispatch_frame(std::move(queue.front()));
+    queue.pop();
   }
 }
 
@@ -311,7 +301,7 @@ void genie::STTSession::flush_queue() {
  *
  * @param frame Audio frame to send.
  */
-void genie::STTSession::send_frame(AudioFrame *frame) {
+void genie::STTSession::send_frame(AudioFrame frame) {
   if (m_done) {
     g_critical("Sending frame after done event");
     return;
@@ -322,11 +312,11 @@ void genie::STTSession::send_frame(AudioFrame *frame) {
     // followed by the frame we just received.
     flush_queue();
 
-    dispatch_frame(frame);
+    dispatch_frame(std::move(frame));
   } else {
     // The connection is not open yet, queue the frame to be sent when it does
     // open.
-    g_queue_push_tail(m_queue, frame);
+    queue.push(std::move(frame));
   }
 }
 
@@ -337,16 +327,15 @@ void genie::STTSession::send_done() {
   }
 
   // make an empty frame to indicate the end of speech
-  AudioFrame *empty = new AudioFrame(0);
-  send_frame(empty);
+  AudioFrame empty(0);
+  send_frame(std::move(empty));
   m_done = true;
 }
 
-void genie::STTSession::dispatch_frame(AudioFrame *frame) {
-  soup_websocket_connection_send_binary(m_connection.get(), frame->samples,
-                                        frame->length * sizeof(int16_t));
-  if (frame->length == 0) {
+void genie::STTSession::dispatch_frame(AudioFrame frame) {
+  soup_websocket_connection_send_binary(m_connection.get(), frame.samples,
+                                        frame.length * sizeof(int16_t));
+  if (frame.length == 0) {
     m_controller->record_timing_event(this, STT::Event::LAST_FRAME);
   }
-  delete frame;
 }
