@@ -19,6 +19,7 @@
 #include "app.hpp"
 #include "stt.hpp"
 
+#undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::Listening"
 
 namespace genie {

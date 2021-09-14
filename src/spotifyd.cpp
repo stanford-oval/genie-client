@@ -31,8 +31,7 @@
 
 #define SPOTIFYD_VERSION "v0.3.3"
 
-genie::Spotifyd::Spotifyd(App *appInstance) {
-  app = appInstance;
+genie::Spotifyd::Spotifyd(App *app) : app(app) {
   cacheDir = "/tmp";
   child_pid = -1;
 
@@ -74,7 +73,7 @@ int genie::Spotifyd::init() {
   }
   g_free(filePath);
 
-  if (!m_username.empty() && !m_access_token.empty())
+  if (!username.empty() && !access_token.empty())
     return spawn();
   return true;
 }
@@ -108,7 +107,7 @@ int genie::Spotifyd::spawn() {
       filePath,           "--no-daemon",   "--device-name",
       deviceName,         "--device-type", "speaker",
       "--backend",        backend,         "--username",
-      m_username.c_str(), "--token",       m_access_token.c_str(),
+      username.c_str(), "--token",       access_token.c_str(),
   };
   if (strcmp(backend, "alsa") == 0 && app->m_config->audioOutputDeviceMusic) {
     argv.push_back("--device");
@@ -138,18 +137,18 @@ int genie::Spotifyd::spawn() {
   return true;
 }
 
-gboolean genie::Spotifyd::set_credentials(const gchar *username,
-                                          const gchar *token) {
-  if (!token)
+bool genie::Spotifyd::set_credentials(const std::string &username,
+                                      const std::string &access_token) {
+  if (access_token.empty())
     return false;
 
-  if (m_username == username && m_access_token == token)
+  if (this->username == username && this->access_token == access_token)
     return true;
 
-  m_username = username;
-  m_access_token = token;
-  g_debug("setting spotify username %s access token %s", m_username.c_str(),
-          m_access_token.c_str());
+  this->username = username;
+  this->access_token = access_token;
+  g_debug("setting spotify username %s access token %s", this->username.c_str(),
+          this->access_token.c_str());
   close();
   g_usleep(500);
   return spawn();

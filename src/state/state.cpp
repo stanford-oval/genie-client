@@ -20,6 +20,7 @@
 #include "audioplayer.hpp"
 #include "spotifyd.hpp"
 
+#undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::State"
 
 namespace genie {
@@ -36,33 +37,33 @@ void State::react(events::Wake *) {
 }
 
 void State::react(events::InputFrame *input_frame) {
-  g_warning(
-      "FIXME received InputFrame when not in Listen state, discarding.\n");
+  g_warning("FIXME received InputFrame when not in Listen state, discarding.");
   delete input_frame->frame;
 }
 
 void State::react(events::InputDone *) {
-  g_warning("FIXME received InputDone when not in Listen state, ignoring.\n");
+  g_warning("FIXME received InputDone when not in Listen state, ignoring.");
 }
 
 void State::react(events::InputNotDetected *) {
   g_warning("FIXME received InputNotDetected when not in Listen state, "
-            "ignoring.\n");
+            "ignoring.");
 }
 
 void State::react(events::InputTimeout *) {
-  g_warning(
-      "FIXME received InputTimeout when not in Listen state, ignoring.\n");
+  g_warning("FIXME received InputTimeout when not in Listen state, ignoring.");
 }
 
 void State::react(events::TextMessage *text_message) {
-  g_message("Received TextMessage, saying text: %s\n", text_message->text);
+  g_message("Received TextMessage, saying text: %s\n",
+            text_message->text.c_str());
   app->m_audioPlayer->say(text_message->text);
 }
 
 void State::react(events::AudioMessage *audio_message) {
   g_message("Received AudioMessage, playing URL: %s\n", audio_message->url);
-  app->m_audioPlayer->playURI(audio_message->url, AudioDestination::MUSIC);
+  app->m_audioPlayer->playURI(audio_message->url.c_str(),
+                              AudioDestination::MUSIC);
 }
 
 void State::react(events::SoundMessage *sound_message) {
@@ -71,11 +72,11 @@ void State::react(events::SoundMessage *sound_message) {
 }
 
 void State::react(events::AskSpecialMessage *ask_special_message) {
-  if (ask_special_message->ask) {
-    g_warning("FIXME received AskSpecialMessage with ask=%s, ignoring.",
-              ask_special_message->ask);
+  if (ask_special_message->ask.empty()) {
+    g_message("Received empty AskSpecialMessage, round done.");
   } else {
-    g_message("Received empty AskSpecialMessage, round done.\n");
+    g_warning("FIXME received AskSpecialMessage with ask=%s, ignoring.",
+              ask_special_message->ask.c_str());
   }
 }
 

@@ -16,7 +16,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define G_LOG_DOMAIN "genie-stt"
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "genie::STT"
 
 #include "stt.hpp"
 

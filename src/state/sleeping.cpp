@@ -18,6 +18,7 @@
 
 #include "app.hpp"
 
+#undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::Sleeping"
 
 namespace genie {

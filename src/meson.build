@@ -82,7 +82,6 @@ executable(
   'stt.cpp',
   'spotifyd.cpp',
   'dns_controller.cpp',
-  'state/events.cpp',
   'state/listening.cpp',
   'state/sleeping.cpp',
   'state/state.cpp',

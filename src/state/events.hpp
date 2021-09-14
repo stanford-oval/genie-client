@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <string>
+
 namespace genie {
 
 enum Sound_t {
@@ -56,8 +58,7 @@ struct Wake : Event {};
 struct InputFrame : Event {
   AudioFrame *frame;
 
-  InputFrame(AudioFrame *frame);
-  ~InputFrame();
+  InputFrame(AudioFrame *frame) : frame(frame) {}
 };
 
 struct InputDone : Event {};
@@ -69,38 +70,41 @@ struct InputTimeout : Event {};
 // ### Conversation Events ###
 
 struct TextMessage : Event {
-  gchar *text;
+  std::string text;
 
-  TextMessage(const gchar *text);
-  ~TextMessage();
+  TextMessage(const gchar *text) : text(text) {}
 };
 
 struct AudioMessage : Event {
-  gchar *url;
+  std::string url;
 
-  AudioMessage(const gchar *url);
-  ~AudioMessage();
+  AudioMessage(const gchar *url) : url(url) {}
 };
 
 struct SoundMessage : Event {
   Sound_t id;
 
-  SoundMessage(Sound_t id);
+  SoundMessage(Sound_t id) : id(id) {}
 };
 
 struct AskSpecialMessage : Event {
-  gchar *ask;
-
-  AskSpecialMessage(const gchar *ask);
-  ~AskSpecialMessage();
+  std::string ask;
+  
+  // NOTE   Per the spec, the `ask` field may be `null` in the JSON, which
+  //        results in the `const gchar *` being `nullptr`. Since it's undefined
+  //        behavior to create a `std::string` from a null `char *` we need 
+  //        to check for that condition. In this case, we simply use the empty
+  //        string in place of `null`.
+  AskSpecialMessage(const gchar *ask) : ask(ask == nullptr ? "" : ask) {}
 };
 
 struct SpotifyCredentials : Event {
-  gchar *access_token;
-  gchar *username;
+  std::string access_token;
+  std::string username;
 
-  SpotifyCredentials(const gchar *username, const gchar *access_token);
-  ~SpotifyCredentials();
+  SpotifyCredentials(const gchar *username, const gchar *access_token)
+      : access_token(access_token == nullptr ? "" : access_token),
+        username(username == nullptr ? "" : username) {}
 };
 
 // ### Button Events ###
@@ -108,7 +112,7 @@ struct SpotifyCredentials : Event {
 struct AdjustVolume : Event {
   long delta;
 
-  AdjustVolume(long delta);
+  AdjustVolume(long delta) : delta(delta) {}
 };
 
 } // namespace events

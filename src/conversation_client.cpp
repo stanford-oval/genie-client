@@ -28,6 +28,7 @@
 #include "conversation_client.hpp"
 #include "spotifyd.hpp"
 
+#undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::ConversationClient"
 
 bool genie::ConversationClient::is_connected() {

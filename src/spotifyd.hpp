@@ -25,11 +25,12 @@ namespace genie {
 
 class Spotifyd {
 public:
-  Spotifyd(App *appInstance);
+  Spotifyd(App *app);
   ~Spotifyd();
   int init();
   int close();
-  gboolean set_credentials(const gchar *username, const gchar *token);
+  bool set_credentials(const std::string &username,
+                       const std::string &access_token);
 
 protected:
   int spawn();
@@ -40,8 +41,8 @@ private:
   App *app;
   GPid child_pid;
   const char *cacheDir;
-  std::string m_username;
-  std::string m_access_token;
+  std::string username;
+  std::string access_token;
   std::string arch;
 };
 
