@@ -156,9 +156,9 @@ static const gchar *getAudioOutput(const genie::Config &config,
   }
 }
 
-gboolean genie::AudioPlayer::playURI(const gchar *uri,
-                                     AudioDestination destination) {
-  if (!uri || strlen(uri) < 1)
+bool genie::AudioPlayer::playURI(const std::string &uri,
+                                 AudioDestination destination) {
+  if (uri.empty())
     return false;
 
   auto sink = auto_gst_ptr<GstElement>(
@@ -171,16 +171,16 @@ gboolean genie::AudioPlayer::playURI(const gchar *uri,
   auto pipeline = auto_gst_ptr<GstElement>(
       gst_element_factory_make("playbin", "audio-player"),
       adopt_mode::ref_sink);
-  g_object_set(G_OBJECT(pipeline.get()), "uri", uri, "audio-sink", sink.get(),
-               nullptr);
+  g_object_set(G_OBJECT(pipeline.get()), "uri", uri.c_str(), "audio-sink",
+               sink.get(), nullptr);
 
-  add_queue(pipeline, uri);
+  add_queue(pipeline);
   dispatch_queue();
   return true;
 }
 
-gboolean genie::AudioPlayer::say(const gchar *text) {
-  if (!text || strlen(text) < 1)
+bool genie::AudioPlayer::say(const std::string &text) {
+  if (text.empty())
     return false;
 
   app->track_processing_event(PROCESSING_START_TTS);
@@ -196,7 +196,7 @@ gboolean genie::AudioPlayer::say(const gchar *text) {
 
   if (!pipeline || !source || !decoder || !sink) {
     g_printerr("Gst element could not be created\n");
-    return -1;
+    return false;
   }
 
   gchar *location = g_strdup_printf("%s/en-US/voice/tts", app->m_config->nlURL);
@@ -209,7 +209,7 @@ gboolean genie::AudioPlayer::say(const gchar *text) {
   json_builder_begin_object(builder);
 
   json_builder_set_member_name(builder, "text");
-  json_builder_add_string_value(builder, text);
+  json_builder_add_string_value(builder, text.c_str());
 
   json_builder_set_member_name(builder, "gender");
   json_builder_add_string_value(builder, app->m_config->audioVoice);
@@ -238,7 +238,7 @@ gboolean genie::AudioPlayer::say(const gchar *text) {
 
   gst_element_link_many(source, decoder, sink, NULL);
 
-  add_queue(pipeline, text);
+  add_queue(pipeline);
   dispatch_queue();
 
   return true;
@@ -252,20 +252,18 @@ void genie::AudioPlayer::dispatch_queue() {
     // PROF_PRINT("gst pipeline started\n");
     gettimeofday(&playingTask->tStart, NULL);
 
-    PROF_PRINT("Now playing: %s\n", playingTask->data);
     gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PLAYING);
     playing = true;
   }
 }
 
-gboolean genie::AudioPlayer::add_queue(const auto_gst_ptr<GstElement> &p,
-                                       const gchar *data) {
+gboolean genie::AudioPlayer::add_queue(const auto_gst_ptr<GstElement> &p) {
   auto *bus = gst_pipeline_get_bus(GST_PIPELINE(p.get()));
   auto bus_watch_id =
       gst_bus_add_watch(bus, genie::AudioPlayer::bus_call_queue, this);
   gst_object_unref(bus);
 
-  AudioTask *t = new AudioTask(p, bus_watch_id, data);
+  AudioTask *t = new AudioTask(p, bus_watch_id);
   g_queue_push_tail(playerQueue, t);
   return true;
 }
@@ -374,9 +372,9 @@ int genie::AudioPlayer::adjust_playback_volume(long delta) {
   }
 
   snd_mixer_selem_set_playback_volume_all(elem, updated);
-  
+
   g_message("Updated playback volume to %ld", updated);
-  
+
   snd_mixer_close(handle);
   return 0;
 }

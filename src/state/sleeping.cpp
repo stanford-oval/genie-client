@@ -16,34 +16,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-
 #include "app.hpp"
-#include <string>
+
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "genie::state::Sleeping"
 
 namespace genie {
+namespace state {
 
-class Spotifyd {
-public:
-  Spotifyd(App *app);
-  ~Spotifyd();
-  int init();
-  int close();
-  bool set_credentials(const std::string &username,
-                       const std::string &access_token);
+Sleeping::Sleeping(Machine *machine) : State{machine} {}
 
-protected:
-  int spawn();
-  int download();
-  static void child_watch_cb(GPid pid, gint status, gpointer data);
+void Sleeping::enter() {
+  g_message("ENTER state Sleeping\n");
+  this->app->unduck();
+}
 
-private:
-  App *app;
-  GPid child_pid;
-  const char *cacheDir;
-  std::string username;
-  std::string access_token;
-  std::string arch;
-};
-
+} // namespace state
 } // namespace genie

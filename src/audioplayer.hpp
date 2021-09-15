@@ -27,30 +27,19 @@
 
 namespace genie {
 
-enum Sound_t {
-  SOUND_NO_MATCH = -1,
-  SOUND_MATCH = 0,
-  SOUND_NEWS_INTRO = 1,
-  SOUND_ALARM_CLOCK_ELAPSED = 2,
-};
-
 struct AudioTask {
   auto_gst_ptr<GstElement> pipeline;
   guint bus_watch_id;
-  gchar *data;
 
   struct timeval tStart;
 
-  AudioTask(const auto_gst_ptr<GstElement> &_pipeline, guint _bus_watch_id,
-            const gchar *_data)
-      : pipeline(_pipeline), bus_watch_id(_bus_watch_id),
-        data(g_strdup(_data)) {}
+  AudioTask(const auto_gst_ptr<GstElement> &pipeline, guint bus_watch_id)
+      : pipeline(pipeline), bus_watch_id(bus_watch_id) {}
 
   ~AudioTask() {
     gst_element_set_state(pipeline.get(), GST_STATE_NULL);
     if (bus_watch_id)
       g_source_remove(bus_watch_id);
-    g_free(data);
   }
 };
 
@@ -62,11 +51,11 @@ public:
   ~AudioPlayer();
   gboolean playSound(enum Sound_t id,
                      AudioDestination destination = AudioDestination::ALERT);
-  gboolean playURI(const gchar *uri,
-                   AudioDestination destination = AudioDestination::MUSIC);
+  bool playURI(const std::string &uri,
+               AudioDestination destination = AudioDestination::MUSIC);
   gboolean playLocation(const gchar *location,
                         AudioDestination destination = AudioDestination::MUSIC);
-  gboolean say(const gchar *text);
+  bool say(const std::string &text);
   gboolean clean_queue();
   gboolean stop();
   gboolean resume();
@@ -77,7 +66,7 @@ public:
 
 private:
   void dispatch_queue();
-  gboolean add_queue(const auto_gst_ptr<GstElement> &p, const gchar *data);
+  gboolean add_queue(const auto_gst_ptr<GstElement> &p);
   static gboolean bus_call_queue(GstBus *bus, GstMessage *msg, gpointer data);
   static void on_pad_added(GstElement *element, GstPad *pad, gpointer data);
   gboolean playing;

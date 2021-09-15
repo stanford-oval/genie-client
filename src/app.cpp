@@ -90,6 +90,9 @@ int genie::App::exec() {
 
   if (m_config->dns_controller_enabled)
     m_dns_controller = std::make_unique<DNSController>();
+  
+  m_state_machine = std::make_unique<state::Machine>(this);
+  m_state_machine->init<state::Sleeping>();
 
   g_debug("start main loop\n");
   g_main_loop_run(main_loop);
@@ -104,95 +107,18 @@ gboolean genie::App::sig_handler(gpointer data) {
   return G_SOURCE_REMOVE;
 }
 
+void genie::App::duck() {
+  system("amixer -D hw:audiocodec cset name='hd' 128");
+}
+
+void genie::App::unduck() {
+  system("amixer -D hw:audiocodec cset name='hd' 255");
+}
+
 void genie::App::print_processing_entry(const char *name, double duration_ms,
                                         double total_ms) {
   g_print("%12s: %5.3lf ms (%3d%%)\n", name, duration_ms,
           (int)((duration_ms / total_ms) * 100));
-}
-
-guint genie::App::dispatch(ActionType type, gpointer payload) {
-  Action *action = new Action;
-  action->type = type;
-  action->app = this;
-  action->payload = payload;
-  return g_idle_add(genie::App::on_action, action);
-}
-
-gboolean genie::App::on_action(gpointer data) {
-  Action *action = static_cast<Action *>(data);
-  action->app->handle(action->type, action->payload);
-  delete action;
-  return false;
-}
-
-void genie::App::handle(ActionType type, gpointer payload) {
-  switch (type) {
-    case ActionType::WAKE: {
-      g_message("Handling WAKE...\n");
-      system("amixer -D hw:audiocodec cset name='hd' 128");
-      g_message("Stopping audio player...\n");
-      m_audioPlayer->stop();
-      g_message("Playing match sound...\n");
-      m_audioPlayer->playSound(SOUND_MATCH);
-      g_message("Connecting STT...\n");
-      m_stt->begin_session();
-      g_message("Activating LED");
-      m_leds->set_active(true);
-      g_message("Done handling wake.\n");
-      break;
-    }
-
-    case ActionType::SPEECH_FRAME: {
-      m_stt->send_frame((AudioFrame *)payload);
-      break;
-    }
-
-    case ActionType::SPEECH_DONE: {
-      g_message("Handling SPEECH_DONE...");
-      track_processing_event(PROCESSING_BEGIN);
-      track_processing_event(PROCESSING_START_STT);
-      m_stt->send_done();
-      m_audioPlayer->stop();
-      m_audioPlayer->playSound(SOUND_MATCH);
-      system("amixer -D hw:audiocodec cset name='hd' 255");
-      g_message("Deactivating LED");
-      m_leds->set_active(false);
-      break;
-    }
-
-    case ActionType::SPEECH_NOT_DETECTED: {
-      g_message("Handling SPEECH_NOT_DETECTED...");
-      m_audioPlayer->stop();
-      m_audioPlayer->playSound(SOUND_NO_MATCH);
-      m_stt->send_done();
-      system("amixer -D hw:audiocodec cset name='hd' 255");
-      g_message("Deactivating LED");
-      m_leds->set_active(false);
-      break;
-    }
-
-    case ActionType::SPEECH_TIMEOUT: {
-      g_warning("TODO");
-      break;
-    }
-
-    case ActionType::DEVICE_KEY: {
-      input_event *ev = (input_event *)payload;
-      g_message("Handling DEVICE_KEY, code=%d, value=%d\n", ev->code,
-                ev->value);
-      if (ev->type == 1 && ev->code == KEY_VOLUMEUP && ev->value == 1) {
-        m_audioPlayer->increment_playback_volume();
-      }
-      if (ev->type == 1 && ev->code == KEY_VOLUMEDOWN && ev->value == 1) {
-        m_audioPlayer->decrement_playback_volume();
-      }
-
-      g_free(ev);
-      // long volume = m_audioPlayer->get_volume();
-      // g_message("Volume: %ld", volume);
-      break;
-    }
-  }
 }
 
 /**

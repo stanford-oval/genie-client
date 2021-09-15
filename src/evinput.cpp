@@ -61,10 +61,18 @@ gboolean genie::EVInput::event_dispatch(GSource *g_source, GSourceFunc callback,
               libevdev_event_type_get_name(ev.type), ev.code,
               libevdev_event_code_get_name(ev.type, ev.code), ev.value);
       // Dispatch key events
-      if (ev.type == EV_KEY) {
-        input_event *payload = (input_event *)g_malloc(sizeof(input_event));
-        memcpy(payload, &ev, sizeof(input_event));
-        ev_input->app->dispatch(ActionType::DEVICE_KEY, payload);
+      if (ev.type == EV_KEY && ev.value == 0) {
+        switch (ev.code) {
+          case KEY_VOLUMEUP:
+            ev_input->app->dispatch(new state::events::AdjustVolume(1));
+            break;
+          case KEY_VOLUMEDOWN:
+            ev_input->app->dispatch(new state::events::AdjustVolume(-1));
+            break;
+          default:
+            g_warning("Unhandled button up event, code=%d", ev.code);
+            break;
+        }
       }
     } else {
       g_print("source read failed %s\n", strerror(-rc));

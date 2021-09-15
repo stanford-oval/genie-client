@@ -22,8 +22,8 @@
 #include <signal.h>
 #include <stdio.h>
 
-#include "audioinput.hpp"
 #include "audiofifo.hpp"
+#include "audioinput.hpp"
 #include "pv_porcupine.h"
 
 #define DEBUG_DUMP_STREAMS
@@ -37,16 +37,11 @@ FILE *fp_filter;
 genie::AudioInput::AudioInput(App *appInstance) {
   app = appInstance;
   vad_instance = WebRtcVad_Create();
-  frame_buffer = g_queue_new();
 }
 
 genie::AudioInput::~AudioInput() {
   running = false;
   WebRtcVad_Free(vad_instance);
-  while (!g_queue_is_empty(frame_buffer)) {
-    g_free(g_queue_pop_head(frame_buffer));
-  }
-  g_queue_free(frame_buffer);
   free(pcm);
   snd_pcm_close(alsa_handle);
   pv_porcupine_delete_func(porcupine);
@@ -265,11 +260,12 @@ int genie::AudioInput::init() {
             app->m_config->vad_min_woke_ms, min_woke_frame_count);
 
   echo_state = speex_echo_state_init_mc(
-      pv_frame_length,
-      ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH, 500), 1, 1);
+      pv_frame_length, ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH, 500), 1, 1);
   speex_echo_ctl(echo_state, SPEEX_ECHO_SET_SAMPLING_RATE, &(sample_rate));
 
-  PaUtil_AdvanceRingBufferReadIndex(&app->m_audioFIFO.get()->ring_buffer, PaUtil_GetRingBufferReadAvailable(&app->m_audioFIFO.get()->ring_buffer));
+  PaUtil_AdvanceRingBufferReadIndex(
+      &app->m_audioFIFO.get()->ring_buffer,
+      PaUtil_GetRingBufferReadAvailable(&app->m_audioFIFO.get()->ring_buffer));
 
 #ifdef DEBUG_DUMP_STREAMS
   fp_input = fopen("/tmp/input.raw", "wb+");
@@ -305,45 +301,21 @@ int32_t genie::AudioInput::ms_to_frames(int32_t frame_length, int32_t ms) {
   return (int32_t)((sample_rate * ((double)ms / 1000)) / frame_length);
 }
 
-genie::AudioFrame *genie::AudioInput::read_frame(int32_t frame_length) {
+genie::AudioFrame genie::AudioInput::read_frame(int32_t frame_length) {
   const int read_frames = snd_pcm_readi(alsa_handle, pcm, frame_length);
 
   if (read_frames < 0) {
-    g_critical("'snd_pcm_readi' failed with '%s'\n", snd_strerror(read_frames));
-    return NULL;
+    g_critical("'snd_pcm_readi' failed with '%s'", snd_strerror(read_frames));
+    return AudioFrame(0);
   }
 
   if (read_frames != frame_length) {
-    g_message("read %d frames instead of %d\n", read_frames, frame_length);
-    return NULL;
+    g_message("read %d frames instead of %d", read_frames, frame_length);
+    return AudioFrame(0);
   }
 
-  AudioFrame *frame = new AudioFrame(frame_length);
-
-#ifdef DEBUG_DUMP_STREAMS
-  fwrite(pcm, sizeof(int16_t), frame_length, fp_input);
-#endif
-  if (app->m_audioFIFO->isReading()) {
-    int timeout = 128;
-    while (PaUtil_GetRingBufferReadAvailable(
-               &app->m_audioFIFO.get()->ring_buffer) < frame_length &&
-           timeout > 0) {
-      usleep(1);
-      timeout--;
-    }
-    PaUtil_ReadRingBuffer(&app->m_audioFIFO.get()->ring_buffer, pcmOutput,
-                          frame_length);
-    speex_echo_cancellation(echo_state, (const spx_int16_t *)pcm,
-                            (const int16_t *)pcmOutput,
-                            (spx_int16_t *)pcmFilter);
-    memcpy(frame->samples, pcmFilter, frame_length * sizeof(int16_t));
-#ifdef DEBUG_DUMP_STREAMS
-    fwrite(pcmOutput, sizeof(int16_t), frame_length, fp_output);
-    fwrite(pcmFilter, sizeof(int16_t), frame_length, fp_filter);
-#endif
-  } else {
-    memcpy(frame->samples, pcm, frame_length * sizeof(int16_t));
-  }
+  AudioFrame frame(frame_length);
+  memcpy(frame.samples, pcm, frame_length * sizeof(int16_t));
   return frame;
 }
 
@@ -353,49 +325,47 @@ void genie::AudioInput::transition(State to_state) {
   state_vad_frame_count = 0;
 
   switch (to_state) {
-  case State::WAITING:
-    g_message("[AudioInput] -> State::WAITING\n");
-    state = State::WAITING;
-    break;
-  case State::WOKE:
-    g_message("[AudioInput] -> State::WOKE\n");
-    state = State::WOKE;
-    break;
-  case State::LISTENING:
-    g_message("[AudioInput] -> State::LISTENING\n");
-    state = State::LISTENING;
-    break;
+    case State::WAITING:
+      g_message("[AudioInput] -> State::WAITING");
+      state = State::WAITING;
+      break;
+    case State::WOKE:
+      g_message("[AudioInput] -> State::WOKE");
+      state = State::WOKE;
+      break;
+    case State::LISTENING:
+      g_message("[AudioInput] -> State::LISTENING");
+      state = State::LISTENING;
+      break;
   }
 }
 
 void genie::AudioInput::loop_waiting() {
-  AudioFrame *new_frame = read_frame(pv_frame_length);
+  AudioFrame new_frame = read_frame(pv_frame_length);
 
-  if (!new_frame) {
+  if (new_frame.length == 0) {
     return;
   }
 
   // Drop from the queue if there are too many items
-  while (g_queue_get_length(frame_buffer) > BUFFER_MAX_FRAMES) {
-    AudioFrame *dropped_frame = (AudioFrame *)g_queue_pop_head(frame_buffer);
-    g_free(dropped_frame->samples);
-    g_free(dropped_frame);
+  while (frame_buffer.size() > BUFFER_MAX_FRAMES) {
+    frame_buffer.pop();
   }
-
-  // Add the new frame to the queue
-  g_queue_push_tail(frame_buffer, new_frame);
 
   // Check the new frame for the wake-word
   int32_t keyword_index = -1;
   pv_status_t status =
-      pv_porcupine_process_func(porcupine, new_frame->samples, &keyword_index);
+      pv_porcupine_process_func(porcupine, pcm, &keyword_index);
 
   if (status != PV_STATUS_SUCCESS) {
     // Picovoice error!
     g_critical("'pv_porcupine_process' failed with '%s'\n",
-            pv_status_to_string_func(status));
+               pv_status_to_string_func(status));
     return;
   }
+
+  // Add the new frame to the queue
+  frame_buffer.push(std::move(new_frame));
 
   if (keyword_index == -1) {
     // wake-word not found
@@ -404,26 +374,27 @@ void genie::AudioInput::loop_waiting() {
 
   g_message("Detected keyword!\n");
 
-  app->dispatch(ActionType::WAKE, NULL);
+  app->dispatch(new state::events::Wake());
 
-  g_debug("Sending prior %d frames\n", g_queue_get_length(frame_buffer));
+  g_debug("Sending prior %d frames\n", frame_buffer.size());
 
-  while (!g_queue_is_empty(frame_buffer)) {
-    AudioFrame *queued_frame = (AudioFrame *)g_queue_pop_head(frame_buffer);
-    app->dispatch(ActionType::SPEECH_FRAME, queued_frame);
+  while (!frame_buffer.empty()) {
+    app->dispatch(
+        new state::events::InputFrame(std::move(frame_buffer.front())));
+    frame_buffer.pop();
   }
 
   transition(State::WOKE);
 }
 
 void genie::AudioInput::loop_woke() {
-  AudioFrame *new_frame = read_frame(AUDIO_INPUT_VAD_FRAME_LENGTH);
+  AudioFrame new_frame = read_frame(AUDIO_INPUT_VAD_FRAME_LENGTH);
 
-  if (!new_frame) {
+  if (new_frame.length == 0) {
     return;
   }
 
-  app->dispatch(ActionType::SPEECH_FRAME, new_frame);
+  app->dispatch(new state::events::InputFrame(std::move(new_frame)));
 
   state_woke_frame_count += 1;
 
@@ -432,15 +403,15 @@ void genie::AudioInput::loop_woke() {
     return;
   }
 
-  int silence = WebRtcVad_Process(vad_instance, sample_rate, new_frame->samples,
-                                  new_frame->length);
+  int silence = WebRtcVad_Process(vad_instance, sample_rate, pcm,
+                                  AUDIO_INPUT_VAD_FRAME_LENGTH);
 
   if (silence == VAD_IS_SILENT) {
     state_vad_frame_count += 1;
 
     if (state_vad_frame_count >= vad_start_frame_count) {
       // We have not detected speech over the start frame count
-      app->dispatch(ActionType::SPEECH_NOT_DETECTED, NULL);
+      app->dispatch(new state::events::InputNotDetected());
       transition(State::WAITING);
     }
   } else if (silence == VAD_NOT_SILENT) {
@@ -450,16 +421,16 @@ void genie::AudioInput::loop_woke() {
 }
 
 void genie::AudioInput::loop_listening() {
-  AudioFrame *new_frame = read_frame(AUDIO_INPUT_VAD_FRAME_LENGTH);
+  AudioFrame new_frame = read_frame(AUDIO_INPUT_VAD_FRAME_LENGTH);
 
-  if (!new_frame) {
+  if (new_frame.length == 0) {
     return;
   }
 
-  app->dispatch(ActionType::SPEECH_FRAME, new_frame);
+  app->dispatch(new state::events::InputFrame(std::move(new_frame)));
 
-  int silence = WebRtcVad_Process(vad_instance, sample_rate, new_frame->samples,
-                                  new_frame->length);
+  int silence = WebRtcVad_Process(vad_instance, sample_rate, pcm,
+                                  AUDIO_INPUT_VAD_FRAME_LENGTH);
 
   if (silence == VAD_IS_SILENT) {
     state_vad_frame_count += 1;
@@ -467,7 +438,7 @@ void genie::AudioInput::loop_listening() {
     state_vad_frame_count = 0;
   }
   if (state_vad_frame_count >= vad_done_frame_count) {
-    app->dispatch(ActionType::SPEECH_DONE, NULL);
+    app->dispatch(new state::events::InputDone());
     transition(State::WAITING);
   }
 }
@@ -477,15 +448,15 @@ void *genie::AudioInput::loop(gpointer data) {
 
   while (obj->running) {
     switch (obj->state) {
-    case State::WAITING:
-      obj->loop_waiting();
-      break;
-    case State::WOKE:
-      obj->loop_woke();
-      break;
-    case State::LISTENING:
-      obj->loop_listening();
-      break;
+      case State::WAITING:
+        obj->loop_waiting();
+        break;
+      case State::WOKE:
+        obj->loop_woke();
+        break;
+      case State::LISTENING:
+        obj->loop_listening();
+        break;
     }
   }
 

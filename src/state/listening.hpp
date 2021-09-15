@@ -18,32 +18,26 @@
 
 #pragma once
 
-#include "app.hpp"
-#include <string>
+#include "state/events.hpp"
+#include "state/state.hpp"
 
 namespace genie {
+namespace state {
 
-class Spotifyd {
+class Listening : public State {
 public:
-  Spotifyd(App *app);
-  ~Spotifyd();
-  int init();
-  int close();
-  bool set_credentials(const std::string &username,
-                       const std::string &access_token);
+  static const constexpr char *NAME = "Listening";
+  
+  Listening(Machine *machine);
+  
+  void enter() override;
 
-protected:
-  int spawn();
-  int download();
-  static void child_watch_cb(GPid pid, gint status, gpointer data);
-
-private:
-  App *app;
-  GPid child_pid;
-  const char *cacheDir;
-  std::string username;
-  std::string access_token;
-  std::string arch;
+  void react(events::Wake *) override;
+  void react(events::InputFrame *input_frame) override;
+  void react(events::InputDone *) override;
+  void react(events::InputNotDetected *) override;
+  void react(events::InputTimeout *) override;
 };
 
+} // namespace state
 } // namespace genie

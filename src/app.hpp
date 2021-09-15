@@ -20,6 +20,7 @@
 
 #include "config.h"
 #include "config.hpp"
+#include "state/machine.hpp"
 #include <glib.h>
 #include <libsoup/soup.h>
 #include <memory>
@@ -73,44 +74,28 @@ enum ProcesingEvent_t {
   PROCESSING_FINISH = 7,
 };
 
-enum class ActionType {
-  WAKE,
-  SPEECH_FRAME,
-  SPEECH_NOT_DETECTED,
-  SPEECH_DONE,
-  SPEECH_TIMEOUT,
-  DEVICE_KEY,
-};
-
-struct AudioFrame {
-  int16_t *samples;
-  size_t length;
-
-  AudioFrame(size_t len) : samples(new int16_t[len]), length(len) {}
-  ~AudioFrame() {
-    delete[] samples;
-  }
-
-  AudioFrame(const AudioFrame&) = delete;
-  AudioFrame& operator=(const AudioFrame&) = delete;
-
-  AudioFrame(AudioFrame&& other) : samples(other.samples), length(other.length) {
-    other.samples = nullptr;
-    other.length = 0;
-  }
-};
-
 class App {
 public:
   App();
   ~App();
-  int exec();
-
+  
+  // Public Static Methods
+  // =========================================================================
+  
   static gboolean sig_handler(gpointer data);
-  static gboolean on_action(gpointer data);
-
+  
+  // Public Instance Methods
+  // =========================================================================
+  
+  int exec();
   void track_processing_event(ProcesingEvent_t eventType);
-  guint dispatch(ActionType type, gpointer payload);
+  void duck();
+  void unduck();
+  
+  template <typename E>
+  guint dispatch(E *event) {
+    return m_state_machine->dispatch(event);
+  }
 
   SoupSession* get_soup_session() {
     return m_soup_session.get();
@@ -128,10 +113,9 @@ public:
   std::unique_ptr<ConversationClient> m_wsClient;
   std::unique_ptr<DNSController> m_dns_controller;
 
-protected:
-  void handle(ActionType type, gpointer payload);
-
 private:
+  std::unique_ptr<state::Machine> m_state_machine;
+
   auto_gobject_ptr<SoupSession> m_soup_session;
 
   gboolean isProcessing;
@@ -146,11 +130,5 @@ private:
   void print_processing_entry(const char *name, double duration_ms,
                               double total_ms);
 };
-
-typedef struct {
-  App *app;
-  ActionType type;
-  gpointer payload;
-} Action;
 
 } // namespace genie
