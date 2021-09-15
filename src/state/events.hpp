@@ -109,6 +109,26 @@ struct PlayerStreamEnd : Event {
       : type(type), ref_id(ref_id) {}
 };
 
+// Speech-To-Text (STT) Events
+// ===========================================================================
+
+namespace stt {
+
+struct TextResponse : Event {
+  std::string text;
+
+  TextResponse(const char *text) : text(text) {}
+};
+
+struct ErrorResponse : Event {
+  int code;
+  std::string message;
+
+  ErrorResponse(int code, const char *message) : code(code), message(message) {}
+};
+
+} // namespace stt
+
 } // namespace events
 } // namespace state
 } // namespace genie

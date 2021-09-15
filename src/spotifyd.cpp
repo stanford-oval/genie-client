@@ -108,9 +108,9 @@ int genie::Spotifyd::spawn() {
       "--device-type", "speaker",        "--backend",     backend,
       "--username",    username.c_str(), "--token",       access_token.c_str(),
   };
-  if (strcmp(backend, "alsa") == 0 && app->m_config->audioOutputDeviceMusic) {
+  if (strcmp(backend, "alsa") == 0 && app->config->audioOutputDeviceMusic) {
     argv.push_back("--device");
-    argv.push_back(app->m_config->audioOutputDeviceMusic);
+    argv.push_back(app->config->audioOutputDeviceMusic);
   }
   argv.push_back(nullptr);
 

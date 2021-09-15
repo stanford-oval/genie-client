@@ -19,6 +19,7 @@
 #include "app.hpp"
 #include "audioplayer.hpp"
 #include "spotifyd.hpp"
+#include "conversation_client.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::State"
@@ -27,6 +28,9 @@ namespace genie {
 namespace state {
 
 State::State(Machine *machine) : machine(machine), app(machine->app) {}
+
+// Event Handling Methods
+// ===========================================================================
 
 void State::react(events::Event *event) {}
 
@@ -56,19 +60,19 @@ void State::react(events::InputTimeout *) {
 void State::react(events::TextMessage *text_message) {
   g_message("Received TextMessage, saying text: %s\n",
             text_message->text.c_str());
-  app->m_audioPlayer->say(text_message->text, text_message->id);
+  app->audio_player->say(text_message->text, text_message->id);
 }
 
 void State::react(events::AudioMessage *audio_message) {
   g_message("Received AudioMessage, playing URL: %s\n", audio_message->url);
-  app->m_audioPlayer->playURI(audio_message->url.c_str(),
+  app->audio_player->playURI(audio_message->url.c_str(),
                               AudioDestination::MUSIC);
 }
 
 void State::react(events::SoundMessage *sound_message) {
   g_message("Received SoundMessage, playing sound ID: %d\n",
             sound_message->sound_id);
-  app->m_audioPlayer->playSound(sound_message->sound_id,
+  app->audio_player->playSound(sound_message->sound_id,
                                 AudioDestination::MUSIC);
 }
 
@@ -87,18 +91,33 @@ void State::react(events::AskSpecialMessage *ask_special_message) {
 }
 
 void State::react(events::SpotifyCredentials *spotify_credentials) {
-  app->m_spotifyd->set_credentials(spotify_credentials->username,
+  app->spotifyd->set_credentials(spotify_credentials->username,
                                    spotify_credentials->access_token);
 }
 
 void State::react(events::AdjustVolume *adjust_volume) {
-  app->m_audioPlayer->adjust_playback_volume(adjust_volume->delta);
+  app->audio_player->adjust_playback_volume(adjust_volume->delta);
 }
 
 void State::react(events::PlayerStreamEnd *player_stream_end) {
   g_message("Received PlayerStreamEnd with type=%d ref_id=%" G_GINT64_FORMAT
             ", ignoring.",
             player_stream_end->type, player_stream_end->ref_id);
+}
+
+// Speech-To-Text (STT)
+// ---------------------------------------------------------------------------
+
+void State::react(events::stt::TextResponse *response) {
+  app->audio_player.get()->clean_queue();
+  app->conversation_client.get()->send_command(response->text);
+}
+
+void State::react(events::stt::ErrorResponse *response) {
+  g_warning("STT completed with an error (code=%d): %s", response->code,
+            response->message);
+  app->audio_player.get()->playSound(SOUND_NO_MATCH);
+  app->audio_player.get()->resume();
 }
 
 } // namespace state

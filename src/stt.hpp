@@ -22,9 +22,6 @@
 #include <libsoup/soup.h>
 
 #include "app.hpp"
-#include "audioinput.hpp"
-#include "audioplayer.hpp"
-#include "conversation_client.hpp"
 #include "autoptrs.hpp"
 #include <queue>
 

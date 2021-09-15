@@ -100,24 +100,14 @@ public:
   
   template <typename E>
   guint dispatch(E *event) {
-    return m_state_machine->dispatch(event);
+    return state_machine->dispatch(event);
   }
 
   SoupSession* get_soup_session() {
-    return m_soup_session.get();
+    return soup_session.get();
   }
 
-  GMainLoop *main_loop;
-  std::unique_ptr<Config> m_config;
-  std::unique_ptr<AudioInput> m_audioInput;
-  std::unique_ptr<AudioFIFO> m_audioFIFO;
-  std::unique_ptr<AudioPlayer> m_audioPlayer;
-  std::unique_ptr<EVInput> m_evInput;
-  std::unique_ptr<Leds> m_leds;
-  std::unique_ptr<Spotifyd> m_spotifyd;
-  std::unique_ptr<STT> m_stt;
-  std::unique_ptr<ConversationClient> conversation_client;
-  std::unique_ptr<DNSController> m_dns_controller;
+  std::unique_ptr<Config> config;
 
 private:
 // ===========================================================================
@@ -125,9 +115,20 @@ private:
   // Private Instance Members
   // =========================================================================
   
-  std::unique_ptr<state::Machine> m_state_machine;
-
-  auto_gobject_ptr<SoupSession> m_soup_session;
+  GMainLoop *main_loop;
+  auto_gobject_ptr<SoupSession> soup_session;
+  
+  // ### Component Instances ###
+  
+  std::unique_ptr<AudioInput> audio_input;
+  std::unique_ptr<AudioPlayer> audio_player;
+  std::unique_ptr<ConversationClient> conversation_client;
+  std::unique_ptr<DNSController> dns_controller;
+  std::unique_ptr<EVInput> ev_input;
+  std::unique_ptr<Leds> leds;
+  std::unique_ptr<Spotifyd> spotifyd;
+  std::unique_ptr<state::Machine> state_machine;
+  std::unique_ptr<STT> stt;
 
   gboolean isProcessing;
   struct timeval tStartProcessing;

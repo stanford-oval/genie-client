@@ -47,15 +47,10 @@ genie::AudioInput::~AudioInput() {
   snd_pcm_close(alsa_handle);
   pv_porcupine_delete_func(porcupine);
   dlclose(porcupine_library);
-#ifdef DEBUG_DUMP_STREAMS
-  fclose(fp_input);
-  fclose(fp_output);
-  fclose(fp_filter);
-#endif
 }
 
 int genie::AudioInput::init() {
-  gchar *input_audio_device = app->m_config->audioInputDevice;
+  gchar *input_audio_device = app->config->audioInputDevice;
 
   const char *library_path = "assets/libpv_porcupine.so";
   const char *model_path = "assets/porcupine_params.pv";
@@ -246,33 +241,19 @@ int genie::AudioInput::init() {
   }
 
   vad_start_frame_count = ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH,
-                                       app->m_config->vad_start_speaking_ms);
+                                       app->config->vad_start_speaking_ms);
   g_message("Calculated start VAD: %d ms -> %d frames",
-            app->m_config->vad_start_speaking_ms, vad_start_frame_count);
+            app->config->vad_start_speaking_ms, vad_start_frame_count);
 
   vad_done_frame_count = ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH,
-                                      app->m_config->vad_done_speaking_ms);
+                                      app->config->vad_done_speaking_ms);
   g_message("Calculated done VAD: %d ms -> %d frames",
-            app->m_config->vad_done_speaking_ms, vad_done_frame_count);
+            app->config->vad_done_speaking_ms, vad_done_frame_count);
 
   min_woke_frame_count = ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH,
-                                      app->m_config->vad_min_woke_ms);
+                                      app->config->vad_min_woke_ms);
   g_message("Calculated min woke frames: %d ms -> %d frames",
-            app->m_config->vad_min_woke_ms, min_woke_frame_count);
-
-  echo_state = speex_echo_state_init_mc(
-      pv_frame_length, ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH, 500), 1, 1);
-  speex_echo_ctl(echo_state, SPEEX_ECHO_SET_SAMPLING_RATE, &(sample_rate));
-
-  PaUtil_AdvanceRingBufferReadIndex(
-      &app->m_audioFIFO.get()->ring_buffer,
-      PaUtil_GetRingBufferReadAvailable(&app->m_audioFIFO.get()->ring_buffer));
-
-#ifdef DEBUG_DUMP_STREAMS
-  fp_input = fopen("/tmp/input.raw", "wb+");
-  fp_output = fopen("/tmp/playback.raw", "wb+");
-  fp_filter = fopen("/tmp/filter.raw", "wb+");
-#endif
+            app->config->vad_min_woke_ms, min_woke_frame_count);
 
   GError *thread_error = NULL;
   g_thread_try_new("audioInputThread", (GThreadFunc)loop, this, &thread_error);

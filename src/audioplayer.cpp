@@ -162,9 +162,9 @@ bool genie::AudioPlayer::playURI(const std::string &uri,
     return false;
 
   auto sink = auto_gst_ptr<GstElement>(
-      gst_element_factory_make(app->m_config->audioSink, "audio-output"),
+      gst_element_factory_make(app->config->audioSink, "audio-output"),
       adopt_mode::ref_sink);
-  const char *output_device = getAudioOutput(*app->m_config, destination);
+  const char *output_device = getAudioOutput(*app->config, destination);
   if (output_device)
     g_object_set(G_OBJECT(sink.get()), "device", output_device, NULL);
 
@@ -192,14 +192,14 @@ bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
                                            adopt_mode::ref_sink);
   source = gst_element_factory_make("souphttpsrc", "http-source");
   decoder = gst_element_factory_make("wavparse", "wav-parser");
-  sink = gst_element_factory_make(app->m_config->audioSink, "audio-output");
+  sink = gst_element_factory_make(app->config->audioSink, "audio-output");
 
   if (!pipeline || !source || !decoder || !sink) {
     g_printerr("Gst element could not be created\n");
     return false;
   }
 
-  gchar *location = g_strdup_printf("%s/en-US/voice/tts", app->m_config->nlURL);
+  gchar *location = g_strdup_printf("%s/en-US/voice/tts", app->config->nlURL);
   g_object_set(G_OBJECT(source), "location", location, NULL);
   g_free(location);
   g_object_set(G_OBJECT(source), "method", "POST", NULL);
@@ -212,7 +212,7 @@ bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
   json_builder_add_string_value(builder, text.c_str());
 
   json_builder_set_member_name(builder, "gender");
-  json_builder_add_string_value(builder, app->m_config->audioVoice);
+  json_builder_add_string_value(builder, app->config->audioVoice);
 
   json_builder_end_object(builder);
 
@@ -229,7 +229,7 @@ bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
   g_object_unref(builder);
 
   const char *output_device =
-      getAudioOutput(*app->m_config, AudioDestination::VOICE);
+      getAudioOutput(*app->config, AudioDestination::VOICE);
   if (output_device) {
     g_object_set(G_OBJECT(sink), "device", output_device, NULL);
   }
@@ -311,7 +311,7 @@ genie::AudioPlayer::get_mixer_element(snd_mixer_t *handle,
   snd_mixer_selem_id_t *sid;
 
   snd_mixer_open(&handle, 0);
-  snd_mixer_attach(handle, app->m_config->audio_output_device);
+  snd_mixer_attach(handle, app->config->audio_output_device);
   snd_mixer_selem_register(handle, NULL, NULL);
   snd_mixer_load(handle);
 
@@ -328,7 +328,7 @@ int genie::AudioPlayer::adjust_playback_volume(long delta) {
   snd_mixer_selem_id_t *sid;
 
   snd_mixer_open(&handle, 0);
-  snd_mixer_attach(handle, app->m_config->audio_output_device);
+  snd_mixer_attach(handle, app->config->audio_output_device);
   snd_mixer_selem_register(handle, NULL, NULL);
   snd_mixer_load(handle);
 

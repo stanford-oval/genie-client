@@ -77,7 +77,7 @@ void genie::ConversationClient::maybe_flush_queue() {
   m_outgoing_queue.clear();
 }
 
-void genie::ConversationClient::send_command(const char *data) {
+void genie::ConversationClient::send_command(const std::string text) {
   auto_gobject_ptr<JsonBuilder> builder(json_builder_new(), adopt_mode::owned);
 
   json_builder_begin_object(builder.get());
@@ -86,7 +86,7 @@ void genie::ConversationClient::send_command(const char *data) {
   json_builder_add_string_value(builder.get(), "command");
 
   json_builder_set_member_name(builder.get(), "text");
-  json_builder_add_string_value(builder.get(), data);
+  json_builder_add_string_value(builder.get(), text.c_str());
 
   json_builder_end_object(builder.get());
 
@@ -363,8 +363,8 @@ void genie::ConversationClient::on_connection(SoupSession *session,
 genie::ConversationClient::ConversationClient(App *appInstance) {
   app = appInstance;
   conversationId = NULL;
-  accessToken = g_strdup(app->m_config->genieAccessToken);
-  url = g_strdup(app->m_config->genieURL);
+  accessToken = g_strdup(app->config->genieAccessToken);
+  url = g_strdup(app->config->genieURL);
 
   tInit = false;
   lastSaidTextID = -1;
@@ -382,9 +382,9 @@ void genie::ConversationClient::connect() {
   SoupMessage *msg;
 
   SoupURI *uri = soup_uri_new(url);
-  if (app->m_config->conversationId) {
+  if (app->config->conversationId) {
     soup_uri_set_query_from_fields(uri, "skip_history", "1", "sync_devices",
-                                   "1", "id", app->m_config->conversationId,
+                                   "1", "id", app->config->conversationId,
                                    nullptr);
   } else {
     soup_uri_set_query_from_fields(uri, "skip_history", "1", "sync_devices",

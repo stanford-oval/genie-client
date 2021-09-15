@@ -32,10 +32,10 @@ genie::Leds::~Leds() {}
 int genie::Leds::init() { return true; }
 
 void genie::Leds::set_active(bool active) {
-  if (!app->m_config->leds_path)
+  if (!app->config->leds_path)
     return;
 
-  int fd = open(app->m_config->leds_path, O_WRONLY);
+  int fd = open(app->config->leds_path, O_WRONLY);
   if (fd > 0) {
     write(fd, active ? "1" : "0", 1);
   }
