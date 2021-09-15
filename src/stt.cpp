@@ -48,7 +48,7 @@ void genie::STT::complete_success(STTSession *session, const char *text) {
   m_current_session = nullptr;
 
   m_app->m_audioPlayer.get()->clean_queue();
-  m_app->m_wsClient.get()->send_command(text);
+  m_app->conversation_client.get()->send_command(text);
 }
 
 void genie::STT::complete_error(STTSession *session, int error_code,

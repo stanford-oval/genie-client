@@ -116,7 +116,7 @@ public:
   std::unique_ptr<Leds> m_leds;
   std::unique_ptr<Spotifyd> m_spotifyd;
   std::unique_ptr<STT> m_stt;
-  std::unique_ptr<ConversationClient> m_wsClient;
+  std::unique_ptr<ConversationClient> conversation_client;
   std::unique_ptr<DNSController> m_dns_controller;
 
 private:
