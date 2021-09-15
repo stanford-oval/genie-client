@@ -55,19 +55,28 @@ gboolean genie::EVInput::event_dispatch(GSource *g_source, GSourceFunc callback,
   while (rc != -EAGAIN) {
     rc = libevdev_next_event(source->device, LIBEVDEV_READ_FLAG_NORMAL, &ev);
 
-    g_print("read ev err %d\n", rc);
     if (rc == 0) {
-      g_debug("Event type %d (%s), code %d (%s), value %d\n", ev.type,
+      g_debug("Event type %d (%s), code %d (%s), value %d", ev.type,
               libevdev_event_type_get_name(ev.type), ev.code,
               libevdev_event_code_get_name(ev.type, ev.code), ev.value);
       // Dispatch key events
       if (ev.type == EV_KEY && ev.value == 0) {
+        // For key constant names/values see:
+        // 
+        // https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h
+        // 
         switch (ev.code) {
           case KEY_VOLUMEUP:
             ev_input->app->dispatch(new state::events::AdjustVolume(1));
             break;
           case KEY_VOLUMEDOWN:
             ev_input->app->dispatch(new state::events::AdjustVolume(-1));
+            break;
+          case KEY_MUTE:
+            ev_input->app->dispatch(new state::events::Wake());
+            break;
+          case KEY_PLAYPAUSE:
+            ev_input->app->dispatch(new state::events::TogglePlayback());
             break;
           default:
             g_warning("Unhandled button up event, code=%d", ev.code);

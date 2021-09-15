@@ -31,6 +31,7 @@ Listening::Listening(Machine *machine) : State{machine} {}
 
 void Listening::enter() {
   g_message("ENTER state Listening\n");
+  app->stt->begin_session();
   app->audio_input->wake();
   app->duck();
   g_message("Stopping audio player...\n");
@@ -38,7 +39,6 @@ void Listening::enter() {
   g_message("Playing match sound...\n");
   app->audio_player->playSound(SOUND_MATCH);
   g_message("Connecting STT...\n");
-  app->stt->begin_session();
 }
   
 void Listening::react(events::Wake *) {
