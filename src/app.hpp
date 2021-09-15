@@ -20,6 +20,7 @@
 
 #include "config.h"
 #include "config.hpp"
+#include "audio.hpp"
 #include "state/machine.hpp"
 #include <glib.h>
 #include <libsoup/soup.h>
@@ -75,6 +76,11 @@ enum ProcesingEvent_t {
 };
 
 class App {
+  friend class state::State;
+  friend class state::Sleeping;
+  friend class state::Listening;
+  friend class state::FollowUp;
+  
 public:
   App();
   ~App();
@@ -110,10 +116,15 @@ public:
   std::unique_ptr<Leds> m_leds;
   std::unique_ptr<Spotifyd> m_spotifyd;
   std::unique_ptr<STT> m_stt;
-  std::unique_ptr<ConversationClient> m_wsClient;
+  std::unique_ptr<ConversationClient> conversation_client;
   std::unique_ptr<DNSController> m_dns_controller;
 
 private:
+// ===========================================================================
+
+  // Private Instance Members
+  // =========================================================================
+  
   std::unique_ptr<state::Machine> m_state_machine;
 
   auto_gobject_ptr<SoupSession> m_soup_session;
@@ -126,9 +137,18 @@ private:
   struct timeval tEndGenie;
   struct timeval tStartTTS;
   struct timeval tEndTTS;
-
+  
+  // State Variables
+  // -------------------------------------------------------------------------
+  
+  gint64 follow_up_id = -1;
+  
+  // Private Instance Methods
+  // =========================================================================
+  
   void print_processing_entry(const char *name, double duration_ms,
                               double total_ms);
+  
 };
 
 } // namespace genie

@@ -144,8 +144,8 @@ void genie::ConversationClient::handleText(gint64 id, JsonReader *reader) {
     tInit = false;
   }
 
-  app->dispatch(new state::events::TextMessage(text));
-
+  app->dispatch(new state::events::TextMessage(id, text));
+  ask_special_text_id = id;
   lastSaidTextID = id;
 }
 
@@ -189,8 +189,12 @@ void genie::ConversationClient::handleAskSpecial(JsonReader *reader) {
   json_reader_read_member(reader, "ask");
   const gchar *ask = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
-  g_debug("Disptaching type=askSpecial ask=%s\n", ask);
-  app->dispatch(new state::events::AskSpecialMessage(ask));
+  g_debug("Disptaching type=askSpecial ask=%s for text id=%" G_GINT64_FORMAT,
+          ask, ask_special_text_id);
+  app->dispatch(new state::events::AskSpecialMessage(ask, ask_special_text_id));
+  if (ask_special_text_id != -1) {
+    ask_special_text_id = -1;
+  }
 }
 
 void genie::ConversationClient::handlePing(JsonReader *reader) {
@@ -364,6 +368,7 @@ genie::ConversationClient::ConversationClient(App *appInstance) {
 
   tInit = false;
   lastSaidTextID = -1;
+  ask_special_text_id = -1;
 }
 
 genie::ConversationClient::~ConversationClient() {}

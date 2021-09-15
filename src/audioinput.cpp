@@ -37,6 +37,7 @@ FILE *fp_filter;
 genie::AudioInput::AudioInput(App *appInstance) {
   app = appInstance;
   vad_instance = WebRtcVad_Create();
+  state = State::WAITING;
 }
 
 genie::AudioInput::~AudioInput() {
@@ -284,6 +285,40 @@ int genie::AudioInput::init() {
   running = true;
 
   return 0;
+}
+
+/**
+ * @brief Tell the audio input loop (running on it's own thread) to start
+ * listening if it wasn't.
+ * 
+ * Essentially synthesizes hearing the wake-word, hence the name.
+ * 
+ * This method is designed to be _thread-safe_ -- while the audio input loop
+ * runs on it's own thread, this method can be called from any thread, allowing
+ * listening to be triggered externally.
+ * 
+ * The method works by changing `this->state` to `State::WAKE` if it was 
+ * `State::WAITING`, which is picked up by the next loop iteration in the
+ * audio input thread.
+ */
+void genie::AudioInput::wake() {
+  State expect = State::WAITING;
+  // SEE  https://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange
+  // 
+  // Ok, the way I understand this is:
+  // 
+  // If the value of `this->state` is `expect` -- which is `State::WAITING` --
+  // then change it to `State::WOKE`.
+  // 
+  // If the value of `this->state` is _not_ `expect` (`State::WAITING`) then 
+  // write the value of `this->state` over `expect`.
+  // 
+  // Since we only want to change the value of `this->state` _if_ it is 
+  // `State::WAITING` and don't want to do anything if `this->state` is anything
+  // else, this should be all we need -- we don't care that `expect` gets set
+  // to something else when `this->state` was not `State::WAITING`.
+  // 
+  state.compare_exchange_strong(expect, State::WOKE);
 }
 
 /**

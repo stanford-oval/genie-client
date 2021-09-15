@@ -21,37 +21,15 @@
 #include <string>
 
 namespace genie {
-
-enum Sound_t {
-  SOUND_NO_MATCH = -1,
-  SOUND_MATCH = 0,
-  SOUND_NEWS_INTRO = 1,
-  SOUND_ALARM_CLOCK_ELAPSED = 2,
-};
-
-struct AudioFrame {
-  int16_t *samples;
-  size_t length;
-
-  AudioFrame(size_t len) : samples(new int16_t[len]), length(len) {}
-  ~AudioFrame() { delete[] samples; }
-
-  AudioFrame(const AudioFrame &) = delete;
-  AudioFrame &operator=(const AudioFrame &) = delete;
-
-  AudioFrame(AudioFrame &&other)
-      : samples(other.samples), length(other.length) {
-    other.samples = nullptr;
-    other.length = 0;
-  }
-};
-
 namespace state {
 namespace events {
 
 struct Event {
   virtual ~Event() = default;
 };
+
+// Audio Input Events
+// ===========================================================================
 
 struct Wake : Event {};
 
@@ -67,12 +45,14 @@ struct InputNotDetected : Event {};
 
 struct InputTimeout : Event {};
 
-// ### Conversation Events ###
+// Conversation Events
+// ===========================================================================
 
 struct TextMessage : Event {
+  gint64 id;
   std::string text;
 
-  TextMessage(const gchar *text) : text(text) {}
+  TextMessage(gint64 id, const gchar *text) : id(id), text(text) {}
 };
 
 struct AudioMessage : Event {
@@ -82,20 +62,22 @@ struct AudioMessage : Event {
 };
 
 struct SoundMessage : Event {
-  Sound_t id;
+  Sound_t sound_id;
 
-  SoundMessage(Sound_t id) : id(id) {}
+  SoundMessage(Sound_t sound_id) : sound_id(sound_id) {}
 };
 
 struct AskSpecialMessage : Event {
   std::string ask;
-  
+  gint64 text_id;
+
   // NOTE   Per the spec, the `ask` field may be `null` in the JSON, which
   //        results in the `const gchar *` being `nullptr`. Since it's undefined
-  //        behavior to create a `std::string` from a null `char *` we need 
+  //        behavior to create a `std::string` from a null `char *` we need
   //        to check for that condition. In this case, we simply use the empty
   //        string in place of `null`.
-  AskSpecialMessage(const gchar *ask) : ask(ask == nullptr ? "" : ask) {}
+  AskSpecialMessage(const gchar *ask, gint64 text_id)
+      : ask(ask == nullptr ? "" : ask), text_id(text_id) {}
 };
 
 struct SpotifyCredentials : Event {
@@ -107,12 +89,24 @@ struct SpotifyCredentials : Event {
         username(username == nullptr ? "" : username) {}
 };
 
-// ### Button Events ###
+// Button Events
+// ===========================================================================
 
 struct AdjustVolume : Event {
   long delta;
 
   AdjustVolume(long delta) : delta(delta) {}
+};
+
+// Audio Player Events
+// ===========================================================================
+
+struct PlayerStreamEnd : Event {
+  AudioTaskType type;
+  gint64 ref_id;
+
+  PlayerStreamEnd(AudioTaskType type, gint64 ref_id)
+      : type(type), ref_id(ref_id) {}
 };
 
 } // namespace events

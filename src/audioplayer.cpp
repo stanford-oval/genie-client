@@ -68,9 +68,9 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
       }
       break;
     case GST_MESSAGE_EOS:
-      g_debug("End of stream\n");
-      // PROF_TIME_DIFF("End of stream", obj->playingTask->tStart);
-      obj->app->track_processing_event(PROCESSING_FINISH);
+      g_debug("End of stream");
+      obj->app->dispatch(new state::events::PlayerStreamEnd(
+          obj->playingTask->type, obj->playingTask->ref_id));
       delete obj->playingTask;
       obj->playingTask = NULL;
       obj->playing = false;
@@ -157,7 +157,7 @@ static const gchar *getAudioOutput(const genie::Config &config,
 }
 
 bool genie::AudioPlayer::playURI(const std::string &uri,
-                                 AudioDestination destination) {
+                                 AudioDestination destination, gint64 ref_id) {
   if (uri.empty())
     return false;
 
@@ -174,12 +174,12 @@ bool genie::AudioPlayer::playURI(const std::string &uri,
   g_object_set(G_OBJECT(pipeline.get()), "uri", uri.c_str(), "audio-sink",
                sink.get(), nullptr);
 
-  add_queue(pipeline);
+  add_queue(pipeline, AudioTaskType::URI, ref_id);
   dispatch_queue();
   return true;
 }
 
-bool genie::AudioPlayer::say(const std::string &text) {
+bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
   if (text.empty())
     return false;
 
@@ -238,7 +238,7 @@ bool genie::AudioPlayer::say(const std::string &text) {
 
   gst_element_link_many(source, decoder, sink, NULL);
 
-  add_queue(pipeline);
+  add_queue(pipeline, AudioTaskType::SAY, ref_id);
   dispatch_queue();
 
   return true;
@@ -257,13 +257,14 @@ void genie::AudioPlayer::dispatch_queue() {
   }
 }
 
-gboolean genie::AudioPlayer::add_queue(const auto_gst_ptr<GstElement> &p) {
+gboolean genie::AudioPlayer::add_queue(const auto_gst_ptr<GstElement> &p,
+                                       AudioTaskType type, gint64 ref_id) {
   auto *bus = gst_pipeline_get_bus(GST_PIPELINE(p.get()));
   auto bus_watch_id =
       gst_bus_add_watch(bus, genie::AudioPlayer::bus_call_queue, this);
   gst_object_unref(bus);
 
-  AudioTask *t = new AudioTask(p, bus_watch_id);
+  AudioTask *t = new AudioTask(p, bus_watch_id, type, ref_id);
   g_queue_push_tail(playerQueue, t);
   return true;
 }

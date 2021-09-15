@@ -51,6 +51,7 @@ public:
   virtual void react(events::AskSpecialMessage *ask_special_message);
   virtual void react(events::SpotifyCredentials *spotify_credentials);
   virtual void react(events::AdjustVolume *adjust_volume);
+  virtual void react(events::PlayerStreamEnd *player_stream_end);
 };
 
 } // namespace state

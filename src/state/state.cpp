@@ -56,7 +56,7 @@ void State::react(events::InputTimeout *) {
 void State::react(events::TextMessage *text_message) {
   g_message("Received TextMessage, saying text: %s\n",
             text_message->text.c_str());
-  app->m_audioPlayer->say(text_message->text);
+  app->m_audioPlayer->say(text_message->text, text_message->id);
 }
 
 void State::react(events::AudioMessage *audio_message) {
@@ -66,16 +66,23 @@ void State::react(events::AudioMessage *audio_message) {
 }
 
 void State::react(events::SoundMessage *sound_message) {
-  g_message("Received SoundMessage, playing sound ID: %d\n", sound_message->id);
-  app->m_audioPlayer->playSound(sound_message->id, AudioDestination::MUSIC);
+  g_message("Received SoundMessage, playing sound ID: %d\n",
+            sound_message->sound_id);
+  app->m_audioPlayer->playSound(sound_message->sound_id,
+                                AudioDestination::MUSIC);
 }
 
 void State::react(events::AskSpecialMessage *ask_special_message) {
   if (ask_special_message->ask.empty()) {
     g_message("Received empty AskSpecialMessage, round done.");
   } else {
-    g_warning("FIXME received AskSpecialMessage with ask=%s, ignoring.",
-              ask_special_message->ask.c_str());
+    g_message(
+        "Received AskSpecialMessage with ask=%s for text id=%" G_GINT64_FORMAT,
+        ask_special_message->ask.c_str(), ask_special_message->text_id);
+    if (ask_special_message->text_id >= 0) {
+      app->follow_up_id = ask_special_message->text_id;
+      machine->transit<FollowUp>();
+    }
   }
 }
 
@@ -86,6 +93,12 @@ void State::react(events::SpotifyCredentials *spotify_credentials) {
 
 void State::react(events::AdjustVolume *adjust_volume) {
   app->m_audioPlayer->adjust_playback_volume(adjust_volume->delta);
+}
+
+void State::react(events::PlayerStreamEnd *player_stream_end) {
+  g_message("Received PlayerStreamEnd with type=%d ref_id=%" G_GINT64_FORMAT
+            ", ignoring.",
+            player_stream_end->type, player_stream_end->ref_id);
 }
 
 } // namespace state

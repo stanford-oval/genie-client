@@ -73,6 +73,7 @@ private:
   struct timeval tStart;
   gboolean tInit;
   gint64 lastSaidTextID;
+  gint64 ask_special_text_id;
 };
 
 } // namespace genie
