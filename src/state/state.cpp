@@ -99,6 +99,10 @@ void State::react(events::AdjustVolume *adjust_volume) {
   app->audio_player->adjust_playback_volume(adjust_volume->delta);
 }
 
+void State::react(events::TogglePlayback *) {
+  g_warning("TODO Playback toggled");
+}
+
 void State::react(events::PlayerStreamEnd *player_stream_end) {
   g_message("Received PlayerStreamEnd with type=%d ref_id=%" G_GINT64_FORMAT
             ", ignoring.",

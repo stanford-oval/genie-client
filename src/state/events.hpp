@@ -98,6 +98,8 @@ struct AdjustVolume : Event {
   AdjustVolume(long delta) : delta(delta) {}
 };
 
+struct TogglePlayback : Event {};
+
 // Audio Player Events
 // ===========================================================================
 
