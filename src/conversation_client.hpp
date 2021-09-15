@@ -19,11 +19,11 @@
 #pragma once
 
 #include "app.hpp"
+#include "autoptrs.hpp"
 #include <deque>
 #include <json-glib/json-glib.h>
 #include <libsoup/soup.h>
-
-#include "autoptrs.hpp"
+#include <string>
 
 namespace genie {
 
@@ -33,7 +33,7 @@ public:
   ~ConversationClient();
 
   int init();
-  void send_command(const char *data);
+  void send_command(const std::string text);
   void send_thingtalk(const char *data);
 
 protected:

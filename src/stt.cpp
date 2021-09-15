@@ -31,8 +31,10 @@
 #include <sstream>
 #include <string>
 
+using namespace genie::state::events::stt;
+
 static std::string get_ws_url(genie::App *app) {
-  const char *nl_url = app->m_config->nlURL;
+  const char *nl_url = app->config->nlURL;
   g_assert(g_str_has_prefix(nl_url, "http"));
 
   std::stringstream ws_url;
@@ -46,9 +48,8 @@ void genie::STT::complete_success(STTSession *session, const char *text) {
   if (session != m_current_session.get())
     return;
   m_current_session = nullptr;
-
-  m_app->m_audioPlayer.get()->clean_queue();
-  m_app->conversation_client.get()->send_command(text);
+  
+  m_app->dispatch(new TextResponse(text));
 }
 
 void genie::STT::complete_error(STTSession *session, int error_code,
@@ -56,10 +57,8 @@ void genie::STT::complete_error(STTSession *session, int error_code,
   if (session != m_current_session.get())
     return;
   m_current_session = nullptr;
-
-  g_warning("STT completed with an error (%d): %s", error_code, error_message);
-  m_app->m_audioPlayer.get()->playSound(SOUND_NO_MATCH);
-  m_app->m_audioPlayer.get()->resume();
+  
+  m_app->dispatch(new ErrorResponse(error_code, error_message));
 }
 
 void genie::STT::begin_session() {
@@ -252,7 +251,6 @@ void genie::STTSession::on_message(SoupWebsocketConnection *conn, gint type,
       const gchar *text = json_reader_get_string_value(reader);
       json_reader_end_member(reader);
 
-      // PROF_TIME_DIFF("STT full", obj->app->m_audioInput->tStart);
       PROF_PRINT("STT text: %s\n", text);
       self->handle_stt_result(text);
     }

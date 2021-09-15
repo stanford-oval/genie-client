@@ -21,15 +21,14 @@
 
 #include "app.hpp"
 #include "audioinput.hpp"
-#include "audiofifo.hpp"
 #include "audioplayer.hpp"
 #include "config.hpp"
+#include "conversation_client.hpp"
+#include "dns_controller.hpp"
 #include "evinput.hpp"
 #include "leds.hpp"
 #include "spotifyd.hpp"
 #include "stt.hpp"
-#include "conversation_client.hpp"
-#include "dns_controller.hpp"
 
 double time_diff(struct timeval x, struct timeval y) {
   return (((double)y.tv_sec * 1000000 + (double)y.tv_usec) -
@@ -44,10 +43,12 @@ genie::App::App() {
   isProcessing = FALSE;
 
   // initialize a shared SoupSession to be used by all outgoing connections
-  m_soup_session = auto_gobject_ptr<SoupSession>(soup_session_new(), adopt_mode::owned);
+  soup_session =
+      auto_gobject_ptr<SoupSession>(soup_session_new(), adopt_mode::owned);
   // enable the wss support
   const gchar *wss_aliases[] = {"wss", NULL};
-  g_object_set(m_soup_session.get(), SOUP_SESSION_HTTPS_ALIASES, wss_aliases, NULL);
+  g_object_set(soup_session.get(), SOUP_SESSION_HTTPS_ALIASES, wss_aliases,
+               NULL);
 }
 
 genie::App::~App() { g_main_loop_unref(main_loop); }
@@ -60,39 +61,36 @@ int genie::App::exec() {
   g_unix_signal_add(SIGINT, sig_handler, main_loop);
   g_unix_signal_add(SIGTERM, sig_handler, main_loop);
 
-  m_config = std::make_unique<Config>();
-  m_config->load();
+  config = std::make_unique<Config>();
+  config->load();
 
   g_setenv("GST_REGISTRY_UPDATE", "no", true);
 
-  m_audioFIFO = std::make_unique<AudioFIFO>(this);
-  m_audioFIFO->init();
+  audio_player = std::make_unique<AudioPlayer>(this);
 
-  m_audioPlayer = std::make_unique<AudioPlayer>(this);
+  stt = std::make_unique<STT>(this);
 
-  m_stt = std::make_unique<STT>(this);
+  audio_input = std::make_unique<AudioInput>(this);
+  audio_input->init();
 
-  m_audioInput = std::make_unique<AudioInput>(this);
-  m_audioInput->init();
-
-  m_spotifyd = std::make_unique<Spotifyd>(this);
-  m_spotifyd->init();
+  spotifyd = std::make_unique<Spotifyd>(this);
+  spotifyd->init();
 
   conversation_client = std::make_unique<ConversationClient>(this);
   conversation_client->init();
 
-  m_evInput = std::make_unique<EVInput>(this);
-  m_evInput->init();
+  ev_input = std::make_unique<EVInput>(this);
+  ev_input->init();
 
-  m_leds = std::make_unique<Leds>(this);
-  m_leds->init();
-  m_leds->set_active(false);
+  leds = std::make_unique<Leds>(this);
+  leds->init();
+  leds->set_active(false);
 
-  if (m_config->dns_controller_enabled)
-    m_dns_controller = std::make_unique<DNSController>();
-  
-  m_state_machine = std::make_unique<state::Machine>(this);
-  m_state_machine->init<state::Sleeping>();
+  if (config->dns_controller_enabled)
+    dns_controller = std::make_unique<DNSController>();
+
+  state_machine = std::make_unique<state::Machine>(this);
+  state_machine->init<state::Sleeping>();
 
   g_debug("start main loop\n");
   g_main_loop_run(main_loop);

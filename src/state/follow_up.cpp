@@ -17,6 +17,7 @@
 // limitations under the License.
 
 #include "app.hpp"
+#include "audioplayer.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::FollowUp"

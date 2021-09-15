@@ -41,13 +41,13 @@ genie::AudioFIFO::~AudioFIFO() {
 
 int genie::AudioFIFO::init() {
   struct stat st;
-  if (stat(app->m_config->audioOutputFIFO, &st) != 0) {
-    mkfifo(app->m_config->audioOutputFIFO, 0666);
+  if (stat(app->config->audioOutputFIFO, &st) != 0) {
+    mkfifo(app->config->audioOutputFIFO, 0666);
   }
 
-  fd = open(app->m_config->audioOutputFIFO, O_RDONLY | O_NONBLOCK);
+  fd = open(app->config->audioOutputFIFO, O_RDONLY | O_NONBLOCK);
   if (fd < 0) {
-    g_printerr("failed to open %s, error %d\n", app->m_config->audioOutputFIFO, fd);
+    g_printerr("failed to open %s, error %d\n", app->config->audioOutputFIFO, fd);
     return false;
   }
 
