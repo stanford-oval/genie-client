@@ -29,6 +29,7 @@ Listening::Listening(Machine *machine) : State{machine} {}
 
 void Listening::enter() {
   g_message("ENTER state Listening\n");
+  app->m_audioInput->wake();
   app->duck();
   g_message("Stopping audio player...\n");
   app->m_audioPlayer->stop();

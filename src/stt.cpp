@@ -208,7 +208,7 @@ void genie::STTSession::handle_stt_result(const char *text) {
 
     g_free(dtext);
   } else {
-    m_controller->complete_error(this, 400, "wakeword not found");
+    m_controller->complete_success(this, text);
   }
 }
 

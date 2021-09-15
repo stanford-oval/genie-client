@@ -26,6 +26,7 @@
 #include <glib.h>
 #include <webrtc/webrtc_vad.h>
 #include <queue>
+#include <atomic>
 
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>
@@ -51,6 +52,7 @@ public:
   ~AudioInput();
   int init();
   void close();
+  void wake();
 
 protected:
   static void *loop(gpointer data);
@@ -87,7 +89,7 @@ private:
   int32_t min_woke_frame_count;
 
   // Loop state variables
-  State state = State::WAITING;
+  std::atomic<State> state;
   int32_t state_woke_frame_count;
   int32_t state_vad_frame_count;
 

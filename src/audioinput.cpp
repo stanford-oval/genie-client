@@ -37,6 +37,7 @@ FILE *fp_filter;
 genie::AudioInput::AudioInput(App *appInstance) {
   app = appInstance;
   vad_instance = WebRtcVad_Create();
+  state = State::WAITING;
 }
 
 genie::AudioInput::~AudioInput() {
@@ -284,6 +285,12 @@ int genie::AudioInput::init() {
   running = true;
 
   return 0;
+}
+
+void genie::AudioInput::wake() {
+  if (state == State::WAITING) {
+    state = State::WOKE;
+  }
 }
 
 /**

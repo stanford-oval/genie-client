@@ -19,9 +19,10 @@
 #pragma once
 
 #include "state/events.hpp"
-#include "state/listening.hpp"
-#include "state/sleeping.hpp"
 #include "state/state.hpp"
+#include "state/listening.hpp"
+#include "state/follow_up.hpp"
+#include "state/sleeping.hpp"
 #include <typeinfo>
 
 namespace genie {

@@ -83,6 +83,7 @@ executable(
   'spotifyd.cpp',
   'dns_controller.cpp',
   'state/listening.cpp',
+  'state/follow_up.cpp',
   'state/sleeping.cpp',
   'state/state.cpp',
   link_args : _linkArgs,
