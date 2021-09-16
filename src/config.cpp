@@ -21,7 +21,7 @@
 #include <glib.h>
 #include <string.h>
 
-#include "autoptrs.hpp"
+#include "utils/autoptrs.hpp"
 #include <memory>
 
 #undef G_LOG_DOMAIN

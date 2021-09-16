@@ -19,7 +19,7 @@
 #pragma once
 
 #include "app.hpp"
-#include "autoptrs.hpp"
+#include "utils/autoptrs.hpp"
 
 #include <alsa/asoundlib.h>
 #include <gst/gst.h>

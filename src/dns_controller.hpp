@@ -21,7 +21,7 @@
 #include <glib.h>
 #include <gio/gio.h>
 
-#include "autoptrs.hpp"
+#include "utils/autoptrs.hpp"
 
 namespace genie {
 

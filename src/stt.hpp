@@ -22,7 +22,7 @@
 #include <libsoup/soup.h>
 
 #include "app.hpp"
-#include "autoptrs.hpp"
+#include "utils/autoptrs.hpp"
 #include <queue>
 
 namespace genie {

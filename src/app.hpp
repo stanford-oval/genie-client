@@ -20,8 +20,8 @@
 
 #include "config.h"
 
-#include "autoptrs.hpp"
 #include "config.hpp"
+#include "utils/autoptrs.hpp"
 #include <glib.h>
 #include <libsoup/soup.h>
 #include <memory>
@@ -67,10 +67,13 @@ class Leds;
 class Spotifyd;
 class STT;
 class TTS;
-class ConversationClient;
 class DNSController;
+namespace conversation {
+class Client;
+}
 
 enum class ProcessingEventType {
+  BEGIN,
   START_STT,
   END_STT,
   START_GENIE,
@@ -161,7 +164,7 @@ private:
 
   std::unique_ptr<AudioInput> audio_input;
   std::unique_ptr<AudioPlayer> audio_player;
-  std::unique_ptr<ConversationClient> conversation_client;
+  std::unique_ptr<conversation::Client> conversation_client;
   std::unique_ptr<DNSController> dns_controller;
   std::unique_ptr<EVInput> ev_input;
   std::unique_ptr<Leds> leds;

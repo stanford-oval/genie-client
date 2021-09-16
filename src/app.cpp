@@ -23,7 +23,7 @@
 #include "audioinput.hpp"
 #include "audioplayer.hpp"
 #include "config.hpp"
-#include "conversation_client.hpp"
+#include "ws-protocol/client.hpp"
 #include "dns_controller.hpp"
 #include "evinput.hpp"
 #include "leds.hpp"
@@ -76,7 +76,7 @@ int genie::App::exec() {
   spotifyd = std::make_unique<Spotifyd>(this);
   spotifyd->init();
 
-  conversation_client = std::make_unique<ConversationClient>(this);
+  conversation_client = std::make_unique<conversation::Client>(this);
   conversation_client->init();
 
   ev_input = std::make_unique<EVInput>(this);
