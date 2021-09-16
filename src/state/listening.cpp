@@ -38,7 +38,7 @@ void Listening::enter() {
   g_message("Stopping audio player...\n");
   app->audio_player->stop();
   g_message("Playing match sound...\n");
-  app->audio_player->playSound(Sound_t::MATCH);
+  app->audio_player->playSound(Sound_t::WAKE);
   g_message("Connecting STT...\n");
 }
 
@@ -54,7 +54,7 @@ void Listening::react(events::InputDone *) {
   g_message("Handling InputDone...\n");
   app->stt->send_done();
   app->audio_player->stop();
-  app->audio_player->playSound(Sound_t::SENDING);
+  app->audio_player->playSound(Sound_t::WORKING);
   machine->transit(new Processing(machine));
 }
 
@@ -62,7 +62,7 @@ void Listening::react(events::InputNotDetected *) {
   g_message("Handling InputNotDetected...\n");
   app->stt->abort();
   app->audio_player->stop();
-  app->audio_player->playSound(Sound_t::NO_MATCH);
+  app->audio_player->playSound(Sound_t::NO_INPUT);
   machine->transit(new Sleeping(machine));
 }
 
@@ -70,7 +70,7 @@ void Listening::react(events::InputTimeout *) {
   g_message("Handling InputTimeout...\n");
   app->stt->abort();
   app->audio_player->stop();
-  app->audio_player->playSound(Sound_t::NO_MATCH);
+  app->audio_player->playSound(Sound_t::TOO_MUCH_INPUT);
   machine->transit(new Sleeping(machine));
 }
 

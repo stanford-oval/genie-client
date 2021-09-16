@@ -40,20 +40,14 @@ struct AudioFrame {
   }
 };
 
-// enum class Sound_t {
-//   NO_MATCH = -1,
-//   MATCH = 0,
-//   NEWS_INTRO = 1,
-//   ALARM_CLOCK_ELAPSED = 2,
-//   SENDING = 3,
-// };
-
 enum class Sound_t {
-  NO_MATCH,
-  MATCH,
+  NO_INPUT,
+  WAKE,
   NEWS_INTRO,
   ALARM_CLOCK_ELAPSED,
-  SENDING,
+  WORKING,
+  STT_ERROR,
+  TOO_MUCH_INPUT,
 };
 
 enum class AudioTaskType {

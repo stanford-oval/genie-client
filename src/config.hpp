@@ -31,6 +31,18 @@ public:
   static const gint DEFAULT_MIN_WOKE_MS = 1000;
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
 
+  // Sound Defaults
+  // ---------------------------------------------------------------------------
+
+  static const constexpr char *DEFAULT_SOUND_WAKE = "match.oga";
+  static const constexpr char *DEFAULT_SOUND_NO_INPUT = "no-match.oga";
+  static const constexpr char *DEFAULT_SOUND_TOO_MUCH_INPUT = "no-match.oga";
+  static const constexpr char *DEFAULT_SOUND_NEWS_INTRO = "news-intro.oga";
+  static const constexpr char *DEFAULT_SOUND_ALARM_CLOCK_ELAPSED =
+      "alarm-clock-elapsed.oga";
+  static const constexpr char *DEFAULT_SOUND_WORKING = "match.oga";
+  static const constexpr char *DEFAULT_SOUND_STT_ERROR = "no-match.oga";
+
   Config();
   ~Config();
   void load();
@@ -50,6 +62,17 @@ public:
   gint vad_start_speaking_ms;
   gint vad_done_speaking_ms;
   gint vad_min_woke_ms;
+
+  // Sounds
+  // -------------------------------------------------------------------------
+
+  gchar *sound_wake;
+  gchar *sound_no_input;
+  gchar *sound_too_much_input;
+  gchar *sound_news_intro;
+  gchar *sound_alarm_clock_elapsed;
+  gchar *sound_working;
+  gchar *sound_stt_error;
 
   /**
    * @brief The general/main audio output device; used to control volume.

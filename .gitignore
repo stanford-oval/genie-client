@@ -1,6 +1,10 @@
 .vscode/
 assets/*
 !assets/.gitkeep
+!assets/bling.oga
+!assets/diiing.oga
+!assets/err-erra.oga
+!assets/magic.oga
 !assets/news-intro.oga
 # Meson build directory
 /build/

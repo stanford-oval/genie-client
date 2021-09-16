@@ -21,8 +21,8 @@
 #include <glib.h>
 #include <string.h>
 
-#include <memory>
 #include "autoptrs.hpp"
+#include <memory>
 
 genie::Config::Config() {}
 
@@ -55,7 +55,8 @@ gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
 }
 
 void genie::Config::load() {
-  std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>> auto_key_file(g_key_file_new());
+  std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
+      auto_key_file(g_key_file_new());
   GKeyFile *key_file = auto_key_file.get();
   GError *error = NULL;
 
@@ -231,7 +232,26 @@ void genie::Config::load() {
   audio_output_device =
       get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
 
-  dns_controller_enabled = g_key_file_get_boolean(key_file, "system", "dns", nullptr);
+  dns_controller_enabled =
+      g_key_file_get_boolean(key_file, "system", "dns", nullptr);
 
   leds_path = g_key_file_get_string(key_file, "system", "leds", nullptr);
+
+  // Sounds
+  // =========================================================================
+
+  sound_wake = get_string(key_file, "sound", "wake", DEFAULT_SOUND_WAKE);
+  sound_no_input =
+      get_string(key_file, "sound", "no_input", DEFAULT_SOUND_NO_INPUT);
+  sound_too_much_input = get_string(key_file, "sound", "too_much_input",
+                                    DEFAULT_SOUND_TOO_MUCH_INPUT);
+  sound_news_intro =
+      get_string(key_file, "sound", "news_intro", DEFAULT_SOUND_NEWS_INTRO);
+  sound_alarm_clock_elapsed =
+      get_string(key_file, "sound", "alarm_clock_elapsed",
+                 DEFAULT_SOUND_ALARM_CLOCK_ELAPSED);
+  sound_working =
+      get_string(key_file, "sound", "working", DEFAULT_SOUND_WORKING);
+  sound_stt_error =
+      get_string(key_file, "sound", "news_intro", DEFAULT_SOUND_STT_ERROR);
 }

@@ -110,16 +110,20 @@ void genie::AudioPlayer::on_pad_added(GstElement *element, GstPad *pad,
 gboolean genie::AudioPlayer::playSound(enum Sound_t id,
                                        AudioDestination destination) {
   switch (id) {
-    case Sound_t::MATCH:
-      return playLocation("assets/match.oga", destination);
-    case Sound_t::NO_MATCH:
-      return playLocation("assets/no-match.oga", destination);
+    case Sound_t::WAKE:
+      return playLocation(app->config->sound_wake, destination);
+    case Sound_t::NO_INPUT:
+      return playLocation(app->config->sound_no_input, destination);
+    case Sound_t::TOO_MUCH_INPUT:
+      return playLocation(app->config->sound_too_much_input, destination);
     case Sound_t::NEWS_INTRO:
-      return playLocation("assets/news-intro.oga", destination);
+      return playLocation(app->config->sound_news_intro, destination);
     case Sound_t::ALARM_CLOCK_ELAPSED:
-      return playLocation("assets/alarm-clock-elapsed.oga", destination);
-    case Sound_t::SENDING:
-      return playLocation("assets/bling.oga", destination);
+      return playLocation(app->config->sound_alarm_clock_elapsed, destination);
+    case Sound_t::WORKING:
+      return playLocation(app->config->sound_working, destination);
+    case Sound_t::STT_ERROR:
+      return playLocation(app->config->sound_stt_error, destination);
   }
   return false;
 }
@@ -133,7 +137,7 @@ gboolean genie::AudioPlayer::playLocation(const gchar *location,
   if (*location == '/')
     path = g_strdup(location);
   else
-    path = g_build_filename(g_get_current_dir(), location, nullptr);
+    path = g_build_filename(g_get_current_dir(), "assets", location, nullptr);
   gchar *uri = g_strdup_printf("file://%s", path);
 
   gboolean ok = playURI(uri, destination);
