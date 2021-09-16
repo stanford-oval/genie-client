@@ -27,11 +27,9 @@ namespace genie {
 namespace state {
 
 void Saying::enter() {
-  app->track_processing_event(ProcessingEvent_t::START_TTS);
+  app->track_processing_event(ProcessingEventType::START_TTS);
   app->audio_player->say(text, text_id);
 }
-
-void Saying::exit() { app->track_processing_event(ProcessingEvent_t::FINISH); }
 
 void Saying::react(events::AskSpecialMessage *ask_special_message) {
   if (ask_special_message->ask.empty()) {

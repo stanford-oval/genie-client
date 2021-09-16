@@ -28,25 +28,25 @@ namespace genie {
 namespace state {
 
 void Processing::enter() {
-  app->track_processing_event(ProcessingEvent_t::START_STT);
+  app->track_processing_event(ProcessingEventType::START_STT);
 }
 
 void Processing::react(events::TextMessage *text_message) {
-  app->track_processing_event(ProcessingEvent_t::END_GENIE);
+  app->track_processing_event(ProcessingEventType::END_GENIE);
   g_message("Received TextMessage, responding with text: %s\n",
             text_message->text.c_str());
   app->transit(new Saying(app, text_message->id, text_message->text));
 }
 
 void Processing::react(events::stt::TextResponse *response) {
-  app->track_processing_event(ProcessingEvent_t::END_STT);
+  app->track_processing_event(ProcessingEventType::END_STT);
   app->audio_player.get()->clean_queue();
-  app->track_processing_event(ProcessingEvent_t::START_GENIE);
+  app->track_processing_event(ProcessingEventType::START_GENIE);
   app->conversation_client.get()->send_command(response->text);
 }
 
 void Processing::react(events::stt::ErrorResponse *response) {
-  app->track_processing_event(ProcessingEvent_t::END_STT);
+  app->track_processing_event(ProcessingEventType::END_STT);
   g_warning("STT completed with an error (code=%d): %s", response->code,
             response->message.c_str());
   app->audio_player.get()->playSound(Sound_t::STT_ERROR);

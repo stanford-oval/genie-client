@@ -32,7 +32,6 @@ public:
       : State{app}, text_id(text_id), text(text) {}
 
   void enter() override;
-  void exit() override;
 
   void react(events::AskSpecialMessage *ask_special_message) override;
   void react(events::PlayerStreamEnd *player_stream_end) override;

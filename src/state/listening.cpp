@@ -29,7 +29,6 @@ namespace genie {
 namespace state {
 
 void Listening::enter() {
-  app->track_processing_event(ProcessingEvent_t::BEGIN);
   g_message("ENTER state Listening\n");
   app->stt->begin_session();
   app->audio_input->wake();

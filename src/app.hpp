@@ -70,15 +70,13 @@ class TTS;
 class ConversationClient;
 class DNSController;
 
-enum class ProcessingEvent_t {
-  BEGIN,
+enum class ProcessingEventType {
   START_STT,
   END_STT,
   START_GENIE,
   END_GENIE,
   START_TTS,
   END_TTS,
-  FINISH,
 };
 
 class App {
@@ -108,7 +106,7 @@ public:
   // ---------------------------------------------------------------------------
 
   int exec();
-  void track_processing_event(ProcessingEvent_t eventType);
+  void track_processing_event(ProcessingEventType eventType);
   void duck();
   void unduck();
 
@@ -173,13 +171,12 @@ private:
   // ### Performance Tracking ###
 
   bool is_processing;
-  struct timeval tStartProcessing;
-  struct timeval tStartSTT;
-  struct timeval tEndSTT;
-  struct timeval tStartGenie;
-  struct timeval tEndGenie;
-  struct timeval tStartTTS;
-  struct timeval tEndTTS;
+  struct timeval start_stt;
+  struct timeval end_stt;
+  struct timeval start_genie;
+  struct timeval end_genie;
+  struct timeval start_tts;
+  struct timeval end_tts;
 
   // ### State Variables ###
 
