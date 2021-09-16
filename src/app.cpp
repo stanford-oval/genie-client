@@ -100,7 +100,7 @@ int genie::App::exec() {
 }
 
 gboolean genie::App::sig_handler(gpointer data) {
-  GMainLoop *loop = reinterpret_cast<GMainLoop *>(data);
+  GMainLoop *loop = static_cast<GMainLoop *>(data);
   g_main_loop_quit(loop);
   return G_SOURCE_REMOVE;
 }

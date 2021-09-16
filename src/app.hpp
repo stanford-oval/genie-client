@@ -191,6 +191,16 @@ private:
   void print_processing_entry(const char *name, double duration_ms,
                               double total_ms);
 
+  /**
+   * @brief GLib main loop callback for dispatching state events.
+   *
+   * `dispatch()` queues a call to this static method, passing a pointer to a
+   * `DispatchUserData` structure that contains pointers to the `App` instance
+   * and the dispatched `state::events::Event`.
+   *
+   * This method calls `state::State::react()` on the `current_state` with
+   * the `state::events::Event`, then deletes the event.
+   */
   template <typename E> static gboolean handle(gpointer user_data) {
     g_debug("HANDLE EVENT %s", typeid(E).name());
     DispatchUserData *dispatch_user_data =
@@ -201,6 +211,15 @@ private:
     return false;
   }
 
+  /**
+   * @brief Transit to a new `state::State`.
+   *
+   * Called in `state::State::react()` implementations to move the app to a
+   * the given `new_state`.
+   *
+   * Responsible for calling `state::State::exit()` on the `current_state` and
+   * `state::State::enter()` on the `new_state`.
+   */
   template <typename S> void transit(S *new_state) {
     g_message("TRANSIT to %s", S::NAME);
     current_state->exit();
