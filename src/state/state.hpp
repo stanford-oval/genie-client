@@ -32,10 +32,9 @@ class State {
 public:
   static const constexpr char *NAME = "State";
 
-  Machine *machine;
   App *app;
 
-  State(Machine *machine);
+  State(App *app) : app(app) {}
   virtual ~State() = default;
 
   virtual void enter(){};

@@ -28,7 +28,7 @@ class Sleeping : public State {
 public:
   static const constexpr char *NAME = "Sleeping";
 
-  Sleeping(Machine *machine) : State{machine} {}
+  Sleeping(App *app) : State{app} {}
 
   void enter() override;
 };

@@ -27,8 +27,6 @@
 namespace genie {
 namespace state {
 
-State::State(Machine *machine) : machine(machine), app(machine->app) {}
-
 // Event Handling Methods
 // ===========================================================================
 
@@ -37,7 +35,7 @@ void State::react(events::Event *event) {}
 void State::react(events::Wake *) {
   // Normally when we wake we start listening. The exception is the Listen
   // state itself.
-  machine->transit(new Listening(machine));
+  app->transit(new Listening(app));
 }
 
 void State::react(events::InputFrame *input_frame) {

@@ -93,8 +93,6 @@ void genie::ConversationClient::send_command(const std::string text) {
   queue_json(builder);
 
   gettimeofday(&tStart, NULL);
-  app->track_processing_event(PROCESSING_START_GENIE);
-  tInit = true;
 
   return;
 }
@@ -138,11 +136,6 @@ void genie::ConversationClient::handleText(gint64 id, JsonReader *reader) {
   json_reader_read_member(reader, "text");
   const gchar *text = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
-
-  if (tInit) {
-    app->track_processing_event(PROCESSING_END_GENIE);
-    tInit = false;
-  }
 
   app->dispatch(new state::events::TextMessage(id, text));
   ask_special_text_id = id;
@@ -367,7 +360,6 @@ genie::ConversationClient::ConversationClient(App *appInstance) {
   accessToken = g_strdup(app->config->genieAccessToken);
   url = g_strdup(app->config->genieURL);
 
-  tInit = false;
   lastSaidTextID = -1;
   ask_special_text_id = -1;
 }

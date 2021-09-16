@@ -26,10 +26,12 @@
 namespace genie {
 namespace state {
 
-Saying::Saying(Machine *machine, gint64 text_id, const std::string text)
-    : State{machine}, text_id(text_id), text(text) {}
+void Saying::enter() {
+  app->track_processing_event(ProcessingEvent_t::START_TTS);
+  app->audio_player->say(text, text_id);
+}
 
-void Saying::enter() { app->audio_player->say(text, text_id); }
+void Saying::exit() { app->track_processing_event(ProcessingEvent_t::FINISH); }
 
 void Saying::react(events::AskSpecialMessage *ask_special_message) {
   if (ask_special_message->ask.empty()) {
@@ -47,9 +49,9 @@ void Saying::react(events::AskSpecialMessage *ask_special_message) {
 void Saying::react(events::PlayerStreamEnd *player_stream_end) {
   if (player_stream_end->ref_id == text_id) {
     if (follow_up) {
-      machine->transit(new Listening(machine));
+      app->transit(new Listening(app));
     } else {
-      machine->transit(new Sleeping(machine));
+      app->transit(new Sleeping(app));
     }
   }
 }

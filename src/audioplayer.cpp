@@ -64,7 +64,7 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
       // times, with the second time over-writing the first, which results
       // in the desired state.
       if (type == GST_STREAM_STATUS_TYPE_ENTER) {
-        obj->app->track_processing_event(PROCESSING_END_TTS);
+        obj->app->track_processing_event(ProcessingEvent_t::END_TTS);
       }
       break;
     case GST_MESSAGE_EOS:
@@ -189,8 +189,6 @@ bool genie::AudioPlayer::playURI(const std::string &uri,
 bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
   if (text.empty())
     return false;
-
-  app->track_processing_event(PROCESSING_START_TTS);
 
   GstElement *source, *demuxer, *decoder, *conv, *sink;
   GstBus *bus;

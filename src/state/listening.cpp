@@ -28,9 +28,8 @@
 namespace genie {
 namespace state {
 
-Listening::Listening(Machine *machine) : State{machine} {}
-
 void Listening::enter() {
+  app->track_processing_event(ProcessingEvent_t::BEGIN);
   g_message("ENTER state Listening\n");
   app->stt->begin_session();
   app->audio_input->wake();
@@ -55,7 +54,7 @@ void Listening::react(events::InputDone *) {
   app->stt->send_done();
   app->audio_player->stop();
   app->audio_player->playSound(Sound_t::WORKING);
-  machine->transit(new Processing(machine));
+  app->transit(new Processing(app));
 }
 
 void Listening::react(events::InputNotDetected *) {
@@ -63,7 +62,7 @@ void Listening::react(events::InputNotDetected *) {
   app->stt->abort();
   app->audio_player->stop();
   app->audio_player->playSound(Sound_t::NO_INPUT);
-  machine->transit(new Sleeping(machine));
+  app->transit(new Sleeping(app));
 }
 
 void Listening::react(events::InputTimeout *) {
@@ -71,7 +70,7 @@ void Listening::react(events::InputTimeout *) {
   app->stt->abort();
   app->audio_player->stop();
   app->audio_player->playSound(Sound_t::TOO_MUCH_INPUT);
-  machine->transit(new Sleeping(machine));
+  app->transit(new Sleeping(app));
 }
 
 } // namespace state

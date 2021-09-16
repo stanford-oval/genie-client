@@ -28,7 +28,7 @@ class Listening : public State {
 public:
   static const constexpr char *NAME = "Listening";
 
-  Listening(Machine *machine);
+  Listening(App *app) : State{app} {}
 
   void enter() override;
 

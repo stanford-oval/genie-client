@@ -28,7 +28,9 @@ class Processing : public State {
 public:
   static const constexpr char *NAME = "Processing";
 
-  Processing(Machine *machine) : State{machine} {}
+  Processing(App *app) : State{app} {}
+
+  void enter() override;
 
   void react(events::TextMessage *text_message) override;
   void react(events::stt::TextResponse *response) override;

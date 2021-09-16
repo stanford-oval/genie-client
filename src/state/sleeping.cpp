@@ -27,7 +27,7 @@ namespace state {
 
 void Sleeping::enter() {
   g_message("ENTER state Sleeping\n");
-  this->app->unduck();
+  app->unduck();
 }
 
 } // namespace state
