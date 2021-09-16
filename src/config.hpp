@@ -24,11 +24,11 @@ namespace genie {
 
 class Config {
 public:
-  static const gint VAD_MIN_MS = 100;
-  static const gint VAD_MAX_MS = 5000;
-  static const gint DEFAULT_VAD_START_SPEAKING_MS = 2000;
-  static const gint DEFAULT_VAD_DONE_SPEAKING_MS = 500;
-  static const gint DEFAULT_MIN_WOKE_MS = 1000;
+  static const size_t VAD_MIN_MS = 100;
+  static const size_t VAD_MAX_MS = 5000;
+  static const size_t DEFAULT_VAD_START_SPEAKING_MS = 2000;
+  static const size_t DEFAULT_VAD_DONE_SPEAKING_MS = 320;
+  static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 320;
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
 
   // Sound Defaults
@@ -47,10 +47,23 @@ public:
   ~Config();
   void load();
 
+  // Configuration File Values
+  // =========================================================================
+  //
+  // Loaded from `/opt/genie/config.ini`
+  //
+
+  // General
+  // -------------------------------------------------------------------------
+
   gchar *genieURL;
   gchar *genieAccessToken;
   gchar *conversationId;
   gchar *nlURL;
+
+  // Audio
+  // -------------------------------------------------------------------------
+
   gchar *audioInputDevice;
   gchar *audioSink;
   gchar *audioOutputDeviceMusic;
@@ -58,10 +71,18 @@ public:
   gchar *audioOutputDeviceAlerts;
   gchar *audioOutputFIFO;
   gchar *audioVoice;
-  gchar *leds_path;
-  gint vad_start_speaking_ms;
-  gint vad_done_speaking_ms;
-  gint vad_min_woke_ms;
+
+  /**
+   * @brief The general/main audio output device; used to control volume.
+   */
+  gchar *audio_output_device;
+
+  // Voice Activity Detection (VAD)
+  // -------------------------------------------------------------------------
+
+  size_t vad_start_speaking_ms;
+  size_t vad_done_speaking_ms;
+  size_t vad_input_detected_noise_ms;
 
   // Sounds
   // -------------------------------------------------------------------------
@@ -74,17 +95,21 @@ public:
   gchar *sound_working;
   gchar *sound_stt_error;
 
-  /**
-   * @brief The general/main audio output device; used to control volume.
-   */
-  gchar *audio_output_device;
+  // System
+  // -------------------------------------------------------------------------
 
+  gchar *leds_path;
   bool dns_controller_enabled;
 
 protected:
 private:
   gchar *get_string(GKeyFile *key_file, const char *section, const char *key,
                     const gchar *default_value);
+  size_t get_size(GKeyFile *key_file, const char *section, const char *key,
+                  const size_t default_value);
+  size_t get_bounded_size(GKeyFile *key_file, const char *section,
+                          const char *key, const size_t default_value,
+                          const size_t min, const size_t max);
 };
 
 } // namespace genie
