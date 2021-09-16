@@ -452,7 +452,7 @@ void genie::AudioInput::loop_woke() {
 
   if (state_woke_frame_count >= vad_start_frame_count) {
     // We have not detected speech over the start frame count, give up
-    app->dispatch(new state::events::InputNotDetected());
+    app->dispatch(new state::events::InputDone(false));
     transition(State::WAITING);
   }
 }
@@ -475,7 +475,7 @@ void genie::AudioInput::loop_listening() {
     state_vad_silent_count = 0;
   }
   if (state_vad_silent_count >= vad_done_frame_count) {
-    app->dispatch(new state::events::InputDone());
+    app->dispatch(new state::events::InputDone(true));
     transition(State::WAITING);
   }
 }

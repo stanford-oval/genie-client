@@ -28,7 +28,7 @@ public:
   static const size_t VAD_MAX_MS = 5000;
   static const size_t DEFAULT_VAD_START_SPEAKING_MS = 2000;
   static const size_t DEFAULT_VAD_DONE_SPEAKING_MS = 320;
-  static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 320;
+  static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 640;
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
 
   // Sound Defaults

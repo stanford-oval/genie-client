@@ -49,11 +49,13 @@ void Listening::react(events::InputFrame *input_frame) {
   app->stt->send_frame(std::move(input_frame->frame));
 }
 
-void Listening::react(events::InputDone *) {
+void Listening::react(events::InputDone *input_done) {
   g_message("Handling InputDone...\n");
   app->stt->send_done();
   app->audio_player->stop();
-  app->audio_player->playSound(Sound_t::WORKING);
+  if (input_done->vad_detected) {
+    app->audio_player->playSound(Sound_t::WORKING);
+  }
   app->transit(new Processing(app));
 }
 

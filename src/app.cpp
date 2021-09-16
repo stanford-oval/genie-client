@@ -105,9 +105,7 @@ gboolean genie::App::sig_handler(gpointer data) {
   return G_SOURCE_REMOVE;
 }
 
-void genie::App::duck() {
-  system("amixer -D hw:audiocodec cset name='hd' 128");
-}
+void genie::App::duck() { system("amixer -D hw:audiocodec cset name='hd' 0"); }
 
 void genie::App::unduck() {
   system("amixer -D hw:audiocodec cset name='hd' 255");

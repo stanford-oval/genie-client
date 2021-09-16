@@ -41,7 +41,11 @@ struct InputFrame : Event {
   InputFrame(AudioFrame frame) : frame(std::move(frame)) {}
 };
 
-struct InputDone : Event {};
+struct InputDone : Event {
+  bool vad_detected;
+
+  InputDone(bool vad_detected) : vad_detected(vad_detected) {}
+};
 
 struct InputNotDetected : Event {};
 
