@@ -14,7 +14,7 @@ setuptools.setup(
     python_requires=">=3.6,<4",
     install_requires=[
         "splatlog>=0.1.0",
-        "clavier>=0.1.0",
+        "clavier>=0.1.1",
         "paramiko>=2.7.2",
     ],
     scripts=[
