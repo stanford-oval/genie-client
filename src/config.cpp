@@ -253,5 +253,5 @@ void genie::Config::load() {
   sound_working =
       get_string(key_file, "sound", "working", DEFAULT_SOUND_WORKING);
   sound_stt_error =
-      get_string(key_file, "sound", "news_intro", DEFAULT_SOUND_STT_ERROR);
+      get_string(key_file, "sound", "stt_error", DEFAULT_SOUND_STT_ERROR);
 }
