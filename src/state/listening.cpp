@@ -54,7 +54,7 @@ void Listening::react(events::InputDone *) {
   app->stt->send_done();
   app->audio_player->stop();
   app->audio_player->playSound(SOUND_MATCH);
-  machine->transit<Sleeping>();
+  machine->transit(new Processing(machine));
 }
 
 void Listening::react(events::InputNotDetected *) {
@@ -62,7 +62,7 @@ void Listening::react(events::InputNotDetected *) {
   app->stt->abort();
   app->audio_player->stop();
   app->audio_player->playSound(SOUND_NO_MATCH);
-  machine->transit<Sleeping>();
+  machine->transit(new Sleeping(machine));
 }
 
 void Listening::react(events::InputTimeout *) {
@@ -70,7 +70,7 @@ void Listening::react(events::InputTimeout *) {
   app->stt->abort();
   app->audio_player->stop();
   app->audio_player->playSound(SOUND_NO_MATCH);
-  machine->transit<Sleeping>();
+  machine->transit(new Sleeping(machine));
 }
 
 } // namespace state

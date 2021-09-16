@@ -37,7 +37,7 @@ void State::react(events::Event *event) {}
 void State::react(events::Wake *) {
   // Normally when we wake we start listening. The exception is the Listen
   // state itself.
-  machine->transit<Listening>();
+  machine->transit(new Listening(machine));
 }
 
 void State::react(events::InputFrame *input_frame) {
@@ -76,19 +76,7 @@ void State::react(events::SoundMessage *sound_message) {
                                 AudioDestination::MUSIC);
 }
 
-void State::react(events::AskSpecialMessage *ask_special_message) {
-  if (ask_special_message->ask.empty()) {
-    g_message("Received empty AskSpecialMessage, round done.");
-  } else {
-    g_message(
-        "Received AskSpecialMessage with ask=%s for text id=%" G_GINT64_FORMAT,
-        ask_special_message->ask.c_str(), ask_special_message->text_id);
-    if (ask_special_message->text_id >= 0) {
-      app->follow_up_id = ask_special_message->text_id;
-      machine->transit<FollowUp>();
-    }
-  }
-}
+void State::react(events::AskSpecialMessage *ask_special_message) {}
 
 void State::react(events::SpotifyCredentials *spotify_credentials) {
   app->spotifyd->set_credentials(spotify_credentials->username,

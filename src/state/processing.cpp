@@ -17,16 +17,18 @@
 // limitations under the License.
 
 #include "app.hpp"
+#include "audioplayer.hpp"
 
 #undef G_LOG_DOMAIN
-#define G_LOG_DOMAIN "genie::state::Sleeping"
+#define G_LOG_DOMAIN "genie::state::Processing"
 
 namespace genie {
 namespace state {
 
-void Sleeping::enter() {
-  g_message("ENTER state Sleeping\n");
-  this->app->unduck();
+void Processing::react(events::TextMessage *text_message) {
+  g_message("Received TextMessage, responding with text: %s\n",
+            text_message->text.c_str());
+  machine->transit(new Saying(machine, text_message->id, text_message->text));
 }
 
 } // namespace state

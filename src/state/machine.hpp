@@ -21,7 +21,8 @@
 #include "state/events.hpp"
 #include "state/state.hpp"
 #include "state/listening.hpp"
-#include "state/follow_up.hpp"
+#include "state/processing.hpp"
+#include "state/saying.hpp"
 #include "state/sleeping.hpp"
 #include <typeinfo>
 
@@ -69,12 +70,13 @@ public:
     return false;
   }
 
-  template <typename S> void transit() {
+  template <typename S> void transit(S *new_state) {
     g_message("TRANSIT to %s", S::NAME);
-    this->current_state->exit();
-    delete this->current_state;
-    this->current_state = new S(this);
-    this->current_state->enter();
+    current_state->exit();
+    delete current_state;
+    // this->current_state = new S(this);
+    current_state = new_state;
+    current_state->enter();
   }
 };
 

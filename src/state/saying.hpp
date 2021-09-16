@@ -16,25 +16,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "app.hpp"
-#include "audioplayer.hpp"
+#pragma once
 
-#undef G_LOG_DOMAIN
-#define G_LOG_DOMAIN "genie::state::FollowUp"
+#include "state/events.hpp"
+#include "state/state.hpp"
 
 namespace genie {
 namespace state {
 
-FollowUp::FollowUp(Machine *machine) : State{machine} {}
+class Saying : public State {
+public:
+  static const constexpr char *NAME = "Saying";
 
-void FollowUp::exit() { app->follow_up_id = -1; }
+  Saying(Machine *machine, gint64 text_id, const std::string text);
 
-void FollowUp::react(events::PlayerStreamEnd *player_stream_end) {
-  if (app->follow_up_id >= 0 &&
-      app->follow_up_id == player_stream_end->ref_id) {
-    machine->transit<Listening>();
-  }
-}
+  void enter() override;
+
+  void react(events::AskSpecialMessage *ask_special_message) override;
+  void react(events::PlayerStreamEnd *player_stream_end) override;
+
+private:
+  gint64 text_id;
+  std::string text;
+  bool follow_up = false;
+};
 
 } // namespace state
 } // namespace genie

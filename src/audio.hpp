@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace genie {
 
 struct AudioFrame {
@@ -36,7 +38,7 @@ struct AudioFrame {
     other.length = 0;
   }
 };
-  
+
 enum Sound_t {
   SOUND_NO_MATCH = -1,
   SOUND_MATCH = 0,

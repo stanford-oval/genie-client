@@ -19,15 +19,16 @@
 #pragma once
 
 #include "config.h"
+
+#include "autoptrs.hpp"
 #include "config.hpp"
-#include "audio.hpp"
-#include "state/machine.hpp"
 #include <glib.h>
 #include <libsoup/soup.h>
 #include <memory>
 #include <sys/time.h>
 
-#include "autoptrs.hpp"
+#include "audio.hpp"
+#include "state/machine.hpp"
 
 #define PROF_PRINT(...)                                                        \
   do {                                                                         \
@@ -79,47 +80,43 @@ class App {
   friend class state::State;
   friend class state::Sleeping;
   friend class state::Listening;
-  friend class state::FollowUp;
-  
+  friend class state::Processing;
+  friend class state::Saying;
+
 public:
   App();
   ~App();
-  
+
   // Public Static Methods
   // =========================================================================
-  
+
   static gboolean sig_handler(gpointer data);
-  
+
   // Public Instance Methods
   // =========================================================================
-  
+
   int exec();
   void track_processing_event(ProcesingEvent_t eventType);
   void duck();
   void unduck();
-  
-  template <typename E>
-  guint dispatch(E *event) {
+
+  template <typename E> guint dispatch(E *event) {
     return state_machine->dispatch(event);
   }
 
-  SoupSession* get_soup_session() {
-    return soup_session.get();
-  }
+  SoupSession *get_soup_session() { return soup_session.get(); }
 
   std::unique_ptr<Config> config;
 
-private:
-// ===========================================================================
-
+private: // ==================================================================
   // Private Instance Members
   // =========================================================================
-  
+
   GMainLoop *main_loop;
   auto_gobject_ptr<SoupSession> soup_session;
-  
+
   // ### Component Instances ###
-  
+
   std::unique_ptr<AudioInput> audio_input;
   std::unique_ptr<AudioPlayer> audio_player;
   std::unique_ptr<ConversationClient> conversation_client;
@@ -138,18 +135,17 @@ private:
   struct timeval tEndGenie;
   struct timeval tStartTTS;
   struct timeval tEndTTS;
-  
+
   // State Variables
   // -------------------------------------------------------------------------
-  
+
   gint64 follow_up_id = -1;
-  
+
   // Private Instance Methods
   // =========================================================================
-  
+
   void print_processing_entry(const char *name, double duration_ms,
                               double total_ms);
-  
 };
 
 } // namespace genie

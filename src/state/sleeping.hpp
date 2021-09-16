@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "state/events.hpp"
 #include "state/state.hpp"
 
 namespace genie {
@@ -26,8 +27,8 @@ namespace state {
 class Sleeping : public State {
 public:
   static const constexpr char *NAME = "Sleeping";
-  
-  Sleeping(Machine *machine);
+
+  Sleeping(Machine *machine) : State{machine} {}
 
   void enter() override;
 };
