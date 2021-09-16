@@ -30,14 +30,15 @@ class Machine;
 
 class State {
 public:
-  Machine *machine;
+  static const constexpr char *NAME = "State";
+
   App *app;
 
-  State(Machine *machine);
+  State(App *app) : app(app) {}
   virtual ~State() = default;
 
-  virtual void enter() {};
-  virtual void exit() {};
+  virtual void enter(){};
+  virtual void exit(){};
 
   virtual void react(events::Event *event);
   virtual void react(events::Wake *);

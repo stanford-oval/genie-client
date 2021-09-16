@@ -16,18 +16,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "state/state.hpp"
 #include "app.hpp"
 #include "audioplayer.hpp"
 #include "spotifyd.hpp"
-#include "conversation_client.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::State"
 
 namespace genie {
 namespace state {
-
-State::State(Machine *machine) : machine(machine), app(machine->app) {}
 
 // Event Handling Methods
 // ===========================================================================
@@ -37,7 +35,7 @@ void State::react(events::Event *event) {}
 void State::react(events::Wake *) {
   // Normally when we wake we start listening. The exception is the Listen
   // state itself.
-  machine->transit<Listening>();
+  app->transit(new Listening(app));
 }
 
 void State::react(events::InputFrame *input_frame) {
@@ -66,33 +64,21 @@ void State::react(events::TextMessage *text_message) {
 void State::react(events::AudioMessage *audio_message) {
   g_message("Received AudioMessage, playing URL: %s\n", audio_message->url);
   app->audio_player->playURI(audio_message->url.c_str(),
-                              AudioDestination::MUSIC);
+                             AudioDestination::MUSIC);
 }
 
 void State::react(events::SoundMessage *sound_message) {
   g_message("Received SoundMessage, playing sound ID: %d\n",
             sound_message->sound_id);
   app->audio_player->playSound(sound_message->sound_id,
-                                AudioDestination::MUSIC);
+                               AudioDestination::MUSIC);
 }
 
-void State::react(events::AskSpecialMessage *ask_special_message) {
-  if (ask_special_message->ask.empty()) {
-    g_message("Received empty AskSpecialMessage, round done.");
-  } else {
-    g_message(
-        "Received AskSpecialMessage with ask=%s for text id=%" G_GINT64_FORMAT,
-        ask_special_message->ask.c_str(), ask_special_message->text_id);
-    if (ask_special_message->text_id >= 0) {
-      app->follow_up_id = ask_special_message->text_id;
-      machine->transit<FollowUp>();
-    }
-  }
-}
+void State::react(events::AskSpecialMessage *ask_special_message) {}
 
 void State::react(events::SpotifyCredentials *spotify_credentials) {
   app->spotifyd->set_credentials(spotify_credentials->username,
-                                   spotify_credentials->access_token);
+                                 spotify_credentials->access_token);
 }
 
 void State::react(events::AdjustVolume *adjust_volume) {
@@ -100,7 +86,7 @@ void State::react(events::AdjustVolume *adjust_volume) {
 }
 
 void State::react(events::TogglePlayback *) {
-  g_warning("TODO Playback toggled");
+  g_warning("TODO Playback toggled in state %s", NAME);
 }
 
 void State::react(events::PlayerStreamEnd *player_stream_end) {
@@ -113,15 +99,11 @@ void State::react(events::PlayerStreamEnd *player_stream_end) {
 // ---------------------------------------------------------------------------
 
 void State::react(events::stt::TextResponse *response) {
-  app->audio_player.get()->clean_queue();
-  app->conversation_client.get()->send_command(response->text);
+  g_warning("FIXME Received events::stt::TextResponse in state %s", NAME);
 }
 
 void State::react(events::stt::ErrorResponse *response) {
-  g_warning("STT completed with an error (code=%d): %s", response->code,
-            response->message);
-  app->audio_player.get()->playSound(SOUND_NO_MATCH);
-  app->audio_player.get()->resume();
+  g_warning("FIXME Received events::stt::ErrorResponse in state %s", NAME);
 }
 
 } // namespace state

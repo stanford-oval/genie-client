@@ -71,7 +71,6 @@ private:
   std::deque<auto_gobject_ptr<JsonBuilder>> m_outgoing_queue;
 
   struct timeval tStart;
-  gboolean tInit;
   gint64 lastSaidTextID;
   gint64 ask_special_text_id;
 };

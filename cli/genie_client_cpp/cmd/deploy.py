@@ -3,6 +3,7 @@ from argparse import BooleanOptionalAction
 
 from clavier import log as logging, CFG
 
+from genie_client_cpp.config import CONFIG
 from genie_client_cpp.remote import Remote
 from genie_client_cpp.context import Context
 from . import remove
@@ -27,7 +28,7 @@ def add_to(subparsers):
     parser = subparsers.add_parser(
         "deploy",
         target=run,
-        help="Run a command on the remote host",
+        help=f"Push build artifacts under {CONFIG.paths.out} to a target device",
     )
 
     parser.add_argument(
@@ -41,24 +42,31 @@ def add_to(subparsers):
 
     parser.add_argument(
         "-x",
-        "--exe-only",
-        action=BooleanOptionalAction,
+        "--exe",
+        action="store_true",
         default=False,
-        help="Only push the `genie` bin to the target",
+        help="Push the `genie` bin to the target",
     )
 
     parser.add_argument(
         "-c",
-        "--config-only",
-        action=BooleanOptionalAction,
+        "--config",
+        action="store_true",
         default=False,
-        help="Only push `config.ini` to the target",
+        help="Push `config.ini` to the target",
+    )
+
+    parser.add_argument(
+        "--assets",
+        action="store_true",
+        default=False,
+        help="Deploy the assets",
     )
 
     parser.add_argument(
         "-b",
         "--build",
-        action=BooleanOptionalAction,
+        action="store_true",
         default=False,
         help="Build before deploying",
     )
@@ -66,7 +74,7 @@ def add_to(subparsers):
     parser.add_argument(
         "-p",
         "--plain",
-        action=BooleanOptionalAction,
+        action="store_true",
         default=False,
         help="Pass `--progress plain` to `docker build` (real Docker only!)",
     )
@@ -101,22 +109,30 @@ def deploy_config(target: str, log=LOG):
     log.info("Deploying config file...")
     Remote.create(target).push(OUT_PATHS.config, DEPLOY_PATHS.config)
 
+@LOG.inject
+def deploy_assets(target: str, log=LOG):
+    log.info("Deploying assets...")
+    Remote.create(target).push(OUT_PATHS.assets, DEPLOY_PATHS.assets)
 
 @Context.inject_current
 def run(
     target: str,
+    *,
     build: bool,
-    exe_only: bool,
-    config_only: bool,
-    plain: bool
+    plain: bool,
+    exe: bool,
+    config: bool,
+    assets: bool,
 ):
     if build:
-        build_cmd.run(exe_only=exe_only, plain=plain)
+        build_cmd.run(exe_only=exe, plain=plain)
 
-    if exe_only or config_only:
-        if exe_only:
+    if exe or config or assets:
+        if exe:
             deploy_exe(target)
-        if config_only:
+        if config:
             deploy_config(target)
+        if assets:
+            deploy_assets(target)
     else:
         deploy_all(target)

@@ -23,10 +23,10 @@
 #include "pv_porcupine.h"
 #include "stt.hpp"
 #include <alsa/asoundlib.h>
-#include <glib.h>
-#include <webrtc/webrtc_vad.h>
-#include <queue>
 #include <atomic>
+#include <glib.h>
+#include <queue>
+#include <webrtc/webrtc_vad.h>
 
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>
@@ -72,7 +72,7 @@ private:
   int16_t *pcmOutput;
   int16_t *pcmFilter;
   int32_t pv_frame_length;
-  int32_t sample_rate;
+  size_t sample_rate;
   std::queue<AudioFrame> frame_buffer;
 
   SpeexEchoState *echo_state;
@@ -81,21 +81,19 @@ private:
   VadInst *vad_instance;
   App *app;
 
-  int32_t vad_start_frame_count;
-  int32_t vad_done_frame_count;
-
-  // How many frames we need to be woke before we go into `State::LISTENING`,
-  // where we terminate input after the `vad_done_frame_count`
-  int32_t min_woke_frame_count;
+  size_t vad_start_frame_count;
+  size_t vad_done_frame_count;
+  size_t vad_input_detected_noise_frame_count;
 
   // Loop state variables
   std::atomic<State> state;
-  int32_t state_woke_frame_count;
-  int32_t state_vad_frame_count;
+  size_t state_woke_frame_count;
+  size_t state_vad_silent_count;
+  size_t state_vad_noise_count;
 
   AudioFrame read_frame(int32_t frame_length);
 
-  int32_t ms_to_frames(int32_t frame_length, int32_t ms);
+  size_t ms_to_frames(size_t frame_length, size_t ms);
   void loop_waiting();
   void loop_woke();
   void loop_listening();

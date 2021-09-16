@@ -40,7 +40,7 @@ double time_diff_ms(struct timeval x, struct timeval y) {
 }
 
 genie::App::App() {
-  isProcessing = FALSE;
+  is_processing = FALSE;
 
   // initialize a shared SoupSession to be used by all outgoing connections
   soup_session =
@@ -89,8 +89,8 @@ int genie::App::exec() {
   if (config->dns_controller_enabled)
     dns_controller = std::make_unique<DNSController>();
 
-  state_machine = std::make_unique<state::Machine>(this);
-  state_machine->init<state::Sleeping>();
+  this->current_state = new state::Sleeping(this);
+  this->current_state->enter();
 
   g_debug("start main loop\n");
   g_main_loop_run(main_loop);
@@ -100,14 +100,12 @@ int genie::App::exec() {
 }
 
 gboolean genie::App::sig_handler(gpointer data) {
-  GMainLoop *loop = reinterpret_cast<GMainLoop *>(data);
+  GMainLoop *loop = static_cast<GMainLoop *>(data);
   g_main_loop_quit(loop);
   return G_SOURCE_REMOVE;
 }
 
-void genie::App::duck() {
-  system("amixer -D hw:audiocodec cset name='hd' 128");
-}
+void genie::App::duck() { system("amixer -D hw:audiocodec cset name='hd' 0"); }
 
 void genie::App::unduck() {
   system("amixer -D hw:audiocodec cset name='hd' 255");
@@ -126,37 +124,37 @@ void genie::App::print_processing_entry(const char *name, double duration_ms,
  *
  * @param eventType
  */
-void genie::App::track_processing_event(ProcesingEvent_t eventType) {
+void genie::App::track_processing_event(ProcessingEvent_t eventType) {
   // Unless we are starting a turn or already in a turn just bail out. This
   // avoids tracking the "Hi..." and any other messages at connect.
-  if (!(eventType == PROCESSING_BEGIN || isProcessing)) {
+  if (!(eventType == ProcessingEvent_t::BEGIN || is_processing)) {
     return;
   }
 
   switch (eventType) {
-    case PROCESSING_BEGIN:
+    case ProcessingEvent_t::BEGIN:
       gettimeofday(&tStartProcessing, NULL);
-      isProcessing = TRUE;
+      is_processing = true;
       break;
-    case PROCESSING_START_STT:
+    case ProcessingEvent_t::START_STT:
       gettimeofday(&tStartSTT, NULL);
       break;
-    case PROCESSING_END_STT:
+    case ProcessingEvent_t::END_STT:
       gettimeofday(&tEndSTT, NULL);
       break;
-    case PROCESSING_START_GENIE:
+    case ProcessingEvent_t::START_GENIE:
       gettimeofday(&tStartGenie, NULL);
       break;
-    case PROCESSING_END_GENIE:
+    case ProcessingEvent_t::END_GENIE:
       gettimeofday(&tEndGenie, NULL);
       break;
-    case PROCESSING_START_TTS:
+    case ProcessingEvent_t::START_TTS:
       gettimeofday(&tStartTTS, NULL);
       break;
-    case PROCESSING_END_TTS:
+    case ProcessingEvent_t::END_TTS:
       gettimeofday(&tEndTTS, NULL);
       break;
-    case PROCESSING_FINISH:
+    case ProcessingEvent_t::FINISH:
       int total_ms = time_diff_ms(tStartProcessing, tEndTTS);
 
       g_print("############# Processing Performance #################\n");
@@ -174,7 +172,7 @@ void genie::App::track_processing_event(ProcesingEvent_t eventType) {
       print_processing_entry("Total", total_ms, total_ms);
       g_print("######################################################\n");
 
-      isProcessing = FALSE;
+      is_processing = false;
       break;
   }
 }

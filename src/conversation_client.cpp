@@ -93,8 +93,6 @@ void genie::ConversationClient::send_command(const std::string text) {
   queue_json(builder);
 
   gettimeofday(&tStart, NULL);
-  app->track_processing_event(PROCESSING_START_GENIE);
-  tInit = true;
 
   return;
 }
@@ -139,11 +137,6 @@ void genie::ConversationClient::handleText(gint64 id, JsonReader *reader) {
   const gchar *text = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
 
-  if (tInit) {
-    app->track_processing_event(PROCESSING_END_GENIE);
-    tInit = false;
-  }
-
   app->dispatch(new state::events::TextMessage(id, text));
   ask_special_text_id = id;
   lastSaidTextID = id;
@@ -157,11 +150,12 @@ void genie::ConversationClient::handleSound(gint64 id, JsonReader *reader) {
   if (strcmp(name, "news-intro") == 0) {
     g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s\n", id,
             name);
-    app->dispatch(new state::events::SoundMessage(SOUND_NEWS_INTRO));
+    app->dispatch(new state::events::SoundMessage(Sound_t::NEWS_INTRO));
   } else if (strcmp(name, "alarm-clock-elapsed") == 0) {
     g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s\n", id,
             name);
-    app->dispatch(new state::events::SoundMessage(SOUND_ALARM_CLOCK_ELAPSED));
+    app->dispatch(
+        new state::events::SoundMessage(Sound_t::ALARM_CLOCK_ELAPSED));
   } else {
     g_warning("Sound not recognized id=%" G_GINT64_FORMAT " name=%s\n", id,
               name);
@@ -366,7 +360,6 @@ genie::ConversationClient::ConversationClient(App *appInstance) {
   accessToken = g_strdup(app->config->genieAccessToken);
   url = g_strdup(app->config->genieURL);
 
-  tInit = false;
   lastSaidTextID = -1;
   ask_special_text_id = -1;
 }

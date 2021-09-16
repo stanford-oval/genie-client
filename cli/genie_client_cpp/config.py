@@ -47,3 +47,5 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
 
 with CFG.configure(io.rel, src=__file__) as rel:
     rel.to = CFG.genie_client_cpp.paths.repo
+
+CONFIG = CFG.genie_client_cpp

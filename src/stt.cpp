@@ -48,7 +48,7 @@ void genie::STT::complete_success(STTSession *session, const char *text) {
   if (session != m_current_session.get())
     return;
   m_current_session = nullptr;
-  
+
   m_app->dispatch(new TextResponse(text));
 }
 
@@ -57,7 +57,7 @@ void genie::STT::complete_error(STTSession *session, int error_code,
   if (session != m_current_session.get())
     return;
   m_current_session = nullptr;
-  
+
   m_app->dispatch(new ErrorResponse(error_code, error_message));
 }
 
@@ -103,8 +103,8 @@ void genie::STT::record_timing_event(STTSession *session,
     return;
 
   switch (event) {
-    case genie::STT::Event::END_STT:
-      m_app->track_processing_event(PROCESSING_END_STT);
+    case genie::STT::Event::DONE:
+      gettimeofday(&tDone, NULL);
       break;
 
     case genie::STT::Event::CONNECT:
@@ -154,11 +154,6 @@ void genie::STTSession::on_connection(SoupSession *session, GAsyncResult *res,
 
   g_debug("STT connected");
   self->m_controller->record_timing_event(self, STT::Event::FIRST_FRAME);
-
-  // PROF_TIME_DIFF(
-  //     "STT connect time (connect -> on_connection)",
-  //     obj->tConnect
-  // );
 
   SoupWebsocketConnection *conn;
   GError *error = NULL;
@@ -225,7 +220,7 @@ void genie::STTSession::on_message(SoupWebsocketConnection *conn, gint type,
     return;
   }
 
-  self->m_controller->record_timing_event(self, STT::Event::END_STT);
+  self->m_controller->record_timing_event(self, STT::Event::DONE);
   self->m_state = State::CLOSING;
 
   gsize sz;

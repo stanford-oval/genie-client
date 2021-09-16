@@ -16,6 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "state/sleeping.hpp"
 #include "app.hpp"
 
 #undef G_LOG_DOMAIN
@@ -24,11 +25,9 @@
 namespace genie {
 namespace state {
 
-Sleeping::Sleeping(Machine *machine) : State{machine} {}
-
 void Sleeping::enter() {
   g_message("ENTER state Sleeping\n");
-  this->app->unduck();
+  app->unduck();
 }
 
 } // namespace state
