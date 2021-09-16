@@ -18,6 +18,8 @@
 
 #pragma once
 
+#include "audio.hpp"
+#include <glib.h>
 #include <string>
 
 namespace genie {

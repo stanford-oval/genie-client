@@ -157,11 +157,12 @@ void genie::ConversationClient::handleSound(gint64 id, JsonReader *reader) {
   if (strcmp(name, "news-intro") == 0) {
     g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s\n", id,
             name);
-    app->dispatch(new state::events::SoundMessage(SOUND_NEWS_INTRO));
+    app->dispatch(new state::events::SoundMessage(Sound_t::NEWS_INTRO));
   } else if (strcmp(name, "alarm-clock-elapsed") == 0) {
     g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s\n", id,
             name);
-    app->dispatch(new state::events::SoundMessage(SOUND_ALARM_CLOCK_ELAPSED));
+    app->dispatch(
+        new state::events::SoundMessage(Sound_t::ALARM_CLOCK_ELAPSED));
   } else {
     g_warning("Sound not recognized id=%" G_GINT64_FORMAT " name=%s\n", id,
               name);

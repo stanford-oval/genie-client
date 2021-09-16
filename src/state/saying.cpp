@@ -16,6 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "state/saying.hpp"
 #include "app.hpp"
 #include "audioplayer.hpp"
 

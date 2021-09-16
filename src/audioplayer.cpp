@@ -109,14 +109,17 @@ void genie::AudioPlayer::on_pad_added(GstElement *element, GstPad *pad,
 
 gboolean genie::AudioPlayer::playSound(enum Sound_t id,
                                        AudioDestination destination) {
-  if (id == SOUND_MATCH) {
-    return playLocation("assets/match.oga", destination);
-  } else if (id == SOUND_NO_MATCH) {
-    return playLocation("assets/no-match.oga", destination);
-  } else if (id == SOUND_NEWS_INTRO) {
-    return playLocation("assets/news-intro.oga", destination);
-  } else if (id == SOUND_ALARM_CLOCK_ELAPSED) {
-    return playLocation("assets/alarm-clock-elapsed.oga", destination);
+  switch (id) {
+    case Sound_t::MATCH:
+      return playLocation("assets/match.oga", destination);
+    case Sound_t::NO_MATCH:
+      return playLocation("assets/no-match.oga", destination);
+    case Sound_t::NEWS_INTRO:
+      return playLocation("assets/news-intro.oga", destination);
+    case Sound_t::ALARM_CLOCK_ELAPSED:
+      return playLocation("assets/alarm-clock-elapsed.oga", destination);
+    case Sound_t::SENDING:
+      return playLocation("assets/bling.oga", destination);
   }
   return false;
 }

@@ -16,17 +16,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "state/listening.hpp"
 #include "app.hpp"
-#include "stt.hpp"
 #include "audioinput.hpp"
 #include "audioplayer.hpp"
+#include "stt.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::Listening"
 
 namespace genie {
 namespace state {
-  
+
 Listening::Listening(Machine *machine) : State{machine} {}
 
 void Listening::enter() {
@@ -37,10 +38,10 @@ void Listening::enter() {
   g_message("Stopping audio player...\n");
   app->audio_player->stop();
   g_message("Playing match sound...\n");
-  app->audio_player->playSound(SOUND_MATCH);
+  app->audio_player->playSound(Sound_t::MATCH);
   g_message("Connecting STT...\n");
 }
-  
+
 void Listening::react(events::Wake *) {
   g_warning("FIXME Received Wake event while in Listening state.\n");
 }
@@ -53,7 +54,7 @@ void Listening::react(events::InputDone *) {
   g_message("Handling InputDone...\n");
   app->stt->send_done();
   app->audio_player->stop();
-  app->audio_player->playSound(SOUND_MATCH);
+  app->audio_player->playSound(Sound_t::SENDING);
   machine->transit(new Processing(machine));
 }
 
@@ -61,7 +62,7 @@ void Listening::react(events::InputNotDetected *) {
   g_message("Handling InputNotDetected...\n");
   app->stt->abort();
   app->audio_player->stop();
-  app->audio_player->playSound(SOUND_NO_MATCH);
+  app->audio_player->playSound(Sound_t::NO_MATCH);
   machine->transit(new Sleeping(machine));
 }
 
@@ -69,7 +70,7 @@ void Listening::react(events::InputTimeout *) {
   g_message("Handling InputTimeout...\n");
   app->stt->abort();
   app->audio_player->stop();
-  app->audio_player->playSound(SOUND_NO_MATCH);
+  app->audio_player->playSound(Sound_t::NO_MATCH);
   machine->transit(new Sleeping(machine));
 }
 

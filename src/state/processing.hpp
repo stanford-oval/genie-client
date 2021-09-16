@@ -27,10 +27,12 @@ namespace state {
 class Processing : public State {
 public:
   static const constexpr char *NAME = "Processing";
-  
+
   Processing(Machine *machine) : State{machine} {}
-  
+
   void react(events::TextMessage *text_message) override;
+  void react(events::stt::TextResponse *response) override;
+  void react(events::stt::ErrorResponse *response) override;
 };
 
 } // namespace state

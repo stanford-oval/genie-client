@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 namespace genie {
@@ -39,11 +40,20 @@ struct AudioFrame {
   }
 };
 
-enum Sound_t {
-  SOUND_NO_MATCH = -1,
-  SOUND_MATCH = 0,
-  SOUND_NEWS_INTRO = 1,
-  SOUND_ALARM_CLOCK_ELAPSED = 2,
+// enum class Sound_t {
+//   NO_MATCH = -1,
+//   MATCH = 0,
+//   NEWS_INTRO = 1,
+//   ALARM_CLOCK_ELAPSED = 2,
+//   SENDING = 3,
+// };
+
+enum class Sound_t {
+  NO_MATCH,
+  MATCH,
+  NEWS_INTRO,
+  ALARM_CLOCK_ELAPSED,
+  SENDING,
 };
 
 enum class AudioTaskType {
