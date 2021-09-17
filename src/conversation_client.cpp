@@ -139,14 +139,24 @@ void genie::ConversationClient::send_thingtalk(const char *data) {
   queue_json(builder);
 }
 
+<<<<<<< HEAD
 void genie::ConversationClient::handleConversationID(JsonReader *reader) {
-  const gchar *text = gen_random(12);
+  std::string str = gen_random(12);
+  const gchar *text = str.c_str();
+=======
+void genie::ConversationClient::handleConversationID() {
+>>>>>>> feb6d5ada90f19dc5449ef12d16fa3aa19f01bb5
 
   if (conversationId) {
     g_free(conversationId);
   }
+<<<<<<< HEAD
   conversationId = g_strdup(text);
   g_message("Set conversation id: %s", conversationId);
+=======
+  conversationId = gen_random(12);
+  g_message("Set conversation id: %s\n", conversationId);
+>>>>>>> feb6d5ada90f19dc5449ef12d16fa3aa19f01bb5
 }
 
 void genie::ConversationClient::handleText(gint64 id, JsonReader *reader) {
