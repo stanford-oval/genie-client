@@ -19,15 +19,21 @@
 #pragma once
 
 #include "config.h"
+
+#include "autoptrs.hpp"
 #include "config.hpp"
-#include "audio.hpp"
-#include "state/machine.hpp"
 #include <glib.h>
 #include <libsoup/soup.h>
 #include <memory>
 #include <sys/time.h>
 
-#include "autoptrs.hpp"
+#include "audio.hpp"
+#include "state/events.hpp"
+#include "state/listening.hpp"
+#include "state/processing.hpp"
+#include "state/saying.hpp"
+#include "state/sleeping.hpp"
+#include "state/state.hpp"
 
 #define PROF_PRINT(...)                                                        \
   do {                                                                         \
@@ -64,62 +70,95 @@ class TTS;
 class ConversationClient;
 class DNSController;
 
-enum ProcesingEvent_t {
-  PROCESSING_BEGIN = 0,
-  PROCESSING_START_STT = 1,
-  PROCESSING_END_STT = 2,
-  PROCESSING_START_GENIE = 3,
-  PROCESSING_END_GENIE = 4,
-  PROCESSING_START_TTS = 5,
-  PROCESSING_END_TTS = 6,
-  PROCESSING_FINISH = 7,
+enum class ProcessingEventType {
+  START_STT,
+  END_STT,
+  START_GENIE,
+  END_GENIE,
+  START_TTS,
+  END_TTS,
 };
 
 class App {
   friend class state::State;
   friend class state::Sleeping;
   friend class state::Listening;
-  friend class state::FollowUp;
-  
+  friend class state::Processing;
+  friend class state::Saying;
+
 public:
+  // =========================================================================
+
   App();
   ~App();
-  
-  // Public Static Methods
-  // =========================================================================
-  
-  static gboolean sig_handler(gpointer data);
-  
-  // Public Instance Methods
-  // =========================================================================
-  
-  int exec();
-  void track_processing_event(ProcesingEvent_t eventType);
-  void duck();
-  void unduck();
-  
-  template <typename E>
-  guint dispatch(E *event) {
-    return state_machine->dispatch(event);
-  }
 
-  SoupSession* get_soup_session() {
-    return soup_session.get();
-  }
+  // Public Static Methods
+  // -------------------------------------------------------------------------
+
+  static gboolean sig_handler(gpointer data);
+
+  // Public Instance Members
+  // -------------------------------------------------------------------------
 
   std::unique_ptr<Config> config;
 
+  // Public Instance Methods
+  // ---------------------------------------------------------------------------
+
+  int exec();
+  void track_processing_event(ProcessingEventType eventType);
+  void duck();
+  void unduck();
+
+  /**
+   * @brief Dispatch a state `event`. This method is _thread-safe_.
+   *
+   * When called it queues handling of the `event` on the main thread via
+   * [g_idle_add](https://docs.gtk.org/glib/func.idle_add.html).
+   *
+   * After the `event` is handled it is deleted.
+   */
+  template <typename E> guint dispatch(E *event) {
+    g_debug("DISPATCH EVENT %s", typeid(E).name());
+    DispatchUserData *dispatch_user_data = new DispatchUserData(this, event);
+    return g_idle_add(handle<E>, dispatch_user_data);
+  }
+
+  SoupSession *get_soup_session() { return soup_session.get(); }
+
 private:
-// ===========================================================================
+  // =========================================================================
+
+  // Private Structures
+  // -------------------------------------------------------------------------
+
+  /**
+   * @brief Structure passed as `user_data` through the GLib main loop when
+   * dispatching an event.
+   *
+   * Contains a pointer to the app instance and a pointer to the event being
+   * dispatched.
+   *
+   * After the event is handled the structure is deleted, which in turn
+   * deletes the referenced event.
+   */
+  struct DispatchUserData {
+    App *app;
+    state::events::Event *event;
+
+    DispatchUserData(App *app, state::events::Event *event)
+        : app(app), event(event) {}
+    ~DispatchUserData() { delete event; }
+  };
 
   // Private Instance Members
-  // =========================================================================
-  
+  // -------------------------------------------------------------------------
+
   GMainLoop *main_loop;
   auto_gobject_ptr<SoupSession> soup_session;
-  
+
   // ### Component Instances ###
-  
+
   std::unique_ptr<AudioInput> audio_input;
   std::unique_ptr<AudioPlayer> audio_player;
   std::unique_ptr<ConversationClient> conversation_client;
@@ -127,29 +166,64 @@ private:
   std::unique_ptr<EVInput> ev_input;
   std::unique_ptr<Leds> leds;
   std::unique_ptr<Spotifyd> spotifyd;
-  std::unique_ptr<state::Machine> state_machine;
   std::unique_ptr<STT> stt;
 
-  gboolean isProcessing;
-  struct timeval tStartProcessing;
-  struct timeval tStartSTT;
-  struct timeval tEndSTT;
-  struct timeval tStartGenie;
-  struct timeval tEndGenie;
-  struct timeval tStartTTS;
-  struct timeval tEndTTS;
-  
-  // State Variables
-  // -------------------------------------------------------------------------
-  
-  gint64 follow_up_id = -1;
-  
+  // ### Performance Tracking ###
+
+  bool is_processing;
+  struct timeval start_stt;
+  struct timeval end_stt;
+  struct timeval start_genie;
+  struct timeval end_genie;
+  struct timeval start_tts;
+  struct timeval end_tts;
+
+  // ### State Variables ###
+
+  state::State *current_state;
+
   // Private Instance Methods
   // =========================================================================
-  
+
   void print_processing_entry(const char *name, double duration_ms,
                               double total_ms);
-  
+
+  /**
+   * @brief GLib main loop callback for dispatching state events.
+   *
+   * `dispatch()` queues a call to this static method, passing a pointer to a
+   * `DispatchUserData` structure that contains pointers to the `App` instance
+   * and the dispatched `state::events::Event`.
+   *
+   * This method calls `state::State::react()` on the `current_state` with
+   * the `state::events::Event`, then deletes the event.
+   */
+  template <typename E> static gboolean handle(gpointer user_data) {
+    g_debug("HANDLE EVENT %s", typeid(E).name());
+    DispatchUserData *dispatch_user_data =
+        static_cast<DispatchUserData *>(user_data);
+    E *event = static_cast<E *>(dispatch_user_data->event);
+    dispatch_user_data->app->current_state->react(event);
+    delete dispatch_user_data;
+    return false;
+  }
+
+  /**
+   * @brief Transit to a new `state::State`.
+   *
+   * Called in `state::State::react()` implementations to move the app to a
+   * the given `new_state`.
+   *
+   * Responsible for calling `state::State::exit()` on the `current_state` and
+   * `state::State::enter()` on the `new_state`.
+   */
+  template <typename S> void transit(S *new_state) {
+    g_message("TRANSIT to %s", S::NAME);
+    current_state->exit();
+    delete current_state;
+    current_state = new_state;
+    current_state->enter();
+  }
 };
 
 } // namespace genie

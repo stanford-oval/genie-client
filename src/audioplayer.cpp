@@ -64,7 +64,7 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
       // times, with the second time over-writing the first, which results
       // in the desired state.
       if (type == GST_STREAM_STATUS_TYPE_ENTER) {
-        obj->app->track_processing_event(PROCESSING_END_TTS);
+        obj->app->track_processing_event(ProcessingEventType::END_TTS);
       }
       break;
     case GST_MESSAGE_EOS:
@@ -109,14 +109,21 @@ void genie::AudioPlayer::on_pad_added(GstElement *element, GstPad *pad,
 
 gboolean genie::AudioPlayer::playSound(enum Sound_t id,
                                        AudioDestination destination) {
-  if (id == SOUND_MATCH) {
-    return playLocation("assets/match.oga", destination);
-  } else if (id == SOUND_NO_MATCH) {
-    return playLocation("assets/no-match.oga", destination);
-  } else if (id == SOUND_NEWS_INTRO) {
-    return playLocation("assets/news-intro.oga", destination);
-  } else if (id == SOUND_ALARM_CLOCK_ELAPSED) {
-    return playLocation("assets/alarm-clock-elapsed.oga", destination);
+  switch (id) {
+    case Sound_t::WAKE:
+      return playLocation(app->config->sound_wake, destination);
+    case Sound_t::NO_INPUT:
+      return playLocation(app->config->sound_no_input, destination);
+    case Sound_t::TOO_MUCH_INPUT:
+      return playLocation(app->config->sound_too_much_input, destination);
+    case Sound_t::NEWS_INTRO:
+      return playLocation(app->config->sound_news_intro, destination);
+    case Sound_t::ALARM_CLOCK_ELAPSED:
+      return playLocation(app->config->sound_alarm_clock_elapsed, destination);
+    case Sound_t::WORKING:
+      return playLocation(app->config->sound_working, destination);
+    case Sound_t::STT_ERROR:
+      return playLocation(app->config->sound_stt_error, destination);
   }
   return false;
 }
@@ -130,7 +137,7 @@ gboolean genie::AudioPlayer::playLocation(const gchar *location,
   if (*location == '/')
     path = g_strdup(location);
   else
-    path = g_build_filename(g_get_current_dir(), location, nullptr);
+    path = g_build_filename(g_get_current_dir(), "assets", location, nullptr);
   gchar *uri = g_strdup_printf("file://%s", path);
 
   gboolean ok = playURI(uri, destination);
@@ -182,8 +189,6 @@ bool genie::AudioPlayer::playURI(const std::string &uri,
 bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
   if (text.empty())
     return false;
-
-  app->track_processing_event(PROCESSING_START_TTS);
 
   GstElement *source, *demuxer, *decoder, *conv, *sink;
   GstBus *bus;

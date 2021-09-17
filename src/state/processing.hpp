@@ -24,15 +24,17 @@
 namespace genie {
 namespace state {
 
-class FollowUp : public State {
+class Processing : public State {
 public:
-  static const constexpr char *NAME = "FollowUp";
-  
-  FollowUp(Machine *machine);
-  
-  void exit() override;
-  
-  void react(events::PlayerStreamEnd *player_stream_end) override;
+  static const constexpr char *NAME = "Processing";
+
+  Processing(App *app) : State{app} {}
+
+  void enter() override;
+
+  void react(events::TextMessage *text_message) override;
+  void react(events::stt::TextResponse *response) override;
+  void react(events::stt::ErrorResponse *response) override;
 };
 
 } // namespace state

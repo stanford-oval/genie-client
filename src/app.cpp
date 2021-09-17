@@ -40,7 +40,7 @@ double time_diff_ms(struct timeval x, struct timeval y) {
 }
 
 genie::App::App() {
-  isProcessing = FALSE;
+  is_processing = FALSE;
 
   // initialize a shared SoupSession to be used by all outgoing connections
   soup_session =
@@ -89,8 +89,8 @@ int genie::App::exec() {
   if (config->dns_controller_enabled)
     dns_controller = std::make_unique<DNSController>();
 
-  state_machine = std::make_unique<state::Machine>(this);
-  state_machine->init<state::Sleeping>();
+  this->current_state = new state::Sleeping(this);
+  this->current_state->enter();
 
   g_debug("start main loop\n");
   g_main_loop_run(main_loop);
@@ -100,14 +100,12 @@ int genie::App::exec() {
 }
 
 gboolean genie::App::sig_handler(gpointer data) {
-  GMainLoop *loop = reinterpret_cast<GMainLoop *>(data);
+  GMainLoop *loop = static_cast<GMainLoop *>(data);
   g_main_loop_quit(loop);
   return G_SOURCE_REMOVE;
 }
 
-void genie::App::duck() {
-  system("amixer -D hw:audiocodec cset name='hd' 128");
-}
+void genie::App::duck() { system("amixer -D hw:audiocodec cset name='hd' 0"); }
 
 void genie::App::unduck() {
   system("amixer -D hw:audiocodec cset name='hd' 255");
@@ -115,7 +113,7 @@ void genie::App::unduck() {
 
 void genie::App::print_processing_entry(const char *name, double duration_ms,
                                         double total_ms) {
-  g_print("%12s: %5.3lf ms (%3d%%)\n", name, duration_ms,
+  g_print("%12s: %8.3lf ms (%3d%%)\n", name, duration_ms,
           (int)((duration_ms / total_ms) * 100));
 }
 
@@ -124,57 +122,50 @@ void genie::App::print_processing_entry(const char *name, double duration_ms,
  *
  * We want to keep a close eye the performance of our
  *
- * @param eventType
+ * @param event_type
  */
-void genie::App::track_processing_event(ProcesingEvent_t eventType) {
+void genie::App::track_processing_event(ProcessingEventType event_type) {
   // Unless we are starting a turn or already in a turn just bail out. This
   // avoids tracking the "Hi..." and any other messages at connect.
-  if (!(eventType == PROCESSING_BEGIN || isProcessing)) {
+  if (!(event_type == ProcessingEventType::START_STT || is_processing)) {
     return;
   }
 
-  switch (eventType) {
-    case PROCESSING_BEGIN:
-      gettimeofday(&tStartProcessing, NULL);
-      isProcessing = TRUE;
+  switch (event_type) {
+    case ProcessingEventType::START_STT:
+      gettimeofday(&start_stt, NULL);
+      is_processing = true;
       break;
-    case PROCESSING_START_STT:
-      gettimeofday(&tStartSTT, NULL);
+    case ProcessingEventType::END_STT:
+      gettimeofday(&end_stt, NULL);
       break;
-    case PROCESSING_END_STT:
-      gettimeofday(&tEndSTT, NULL);
+    case ProcessingEventType::START_GENIE:
+      gettimeofday(&start_genie, NULL);
       break;
-    case PROCESSING_START_GENIE:
-      gettimeofday(&tStartGenie, NULL);
+    case ProcessingEventType::END_GENIE:
+      gettimeofday(&end_genie, NULL);
       break;
-    case PROCESSING_END_GENIE:
-      gettimeofday(&tEndGenie, NULL);
+    case ProcessingEventType::START_TTS:
+      gettimeofday(&start_tts, NULL);
       break;
-    case PROCESSING_START_TTS:
-      gettimeofday(&tStartTTS, NULL);
-      break;
-    case PROCESSING_END_TTS:
-      gettimeofday(&tEndTTS, NULL);
-      break;
-    case PROCESSING_FINISH:
-      int total_ms = time_diff_ms(tStartProcessing, tEndTTS);
+    case ProcessingEventType::END_TTS:
+      gettimeofday(&end_tts, NULL);
+      int total_ms = time_diff_ms(start_stt, end_tts);
 
       g_print("############# Processing Performance #################\n");
-      print_processing_entry(
-          "Pre-STT", time_diff_ms(tStartProcessing, tStartSTT), total_ms);
-      print_processing_entry("STT", time_diff_ms(tStartSTT, tEndSTT), total_ms);
-      print_processing_entry("STT->Genie", time_diff_ms(tEndSTT, tStartGenie),
+      print_processing_entry("STT", time_diff_ms(start_stt, end_stt), total_ms);
+      print_processing_entry("STT->Genie", time_diff_ms(end_stt, start_genie),
                              total_ms);
-      print_processing_entry("Genie", time_diff_ms(tStartGenie, tEndGenie),
+      print_processing_entry("Genie", time_diff_ms(start_genie, end_genie),
                              total_ms);
-      print_processing_entry("Genie->TTS", time_diff_ms(tEndGenie, tStartTTS),
+      print_processing_entry("Genie->TTS", time_diff_ms(end_genie, start_tts),
                              total_ms);
-      print_processing_entry("TTS", time_diff_ms(tStartTTS, tEndTTS), total_ms);
+      print_processing_entry("TTS", time_diff_ms(start_tts, end_tts), total_ms);
       g_print("------------------------------------------------------\n");
       print_processing_entry("Total", total_ms, total_ms);
       g_print("######################################################\n");
 
-      isProcessing = FALSE;
+      is_processing = false;
       break;
   }
 }

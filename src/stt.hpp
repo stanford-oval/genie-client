@@ -40,7 +40,7 @@ public:
   };
 
 private:
-  STT* const m_controller;
+  STT *const m_controller;
 
   State m_state;
   std::queue<AudioFrame> queue;
@@ -50,7 +50,7 @@ private:
   void handle_stt_result(const char *text);
 
 public:
-  STTSession(STT* controller, const char *url);
+  STTSession(STT *controller, const char *url);
   ~STTSession();
 
   static void on_connection(SoupSession *session, GAsyncResult *res,
@@ -59,15 +59,11 @@ public:
                          GBytes *message, gpointer data);
   static void on_close(SoupWebsocketConnection *conn, gpointer data);
 
-  State state() const {
-    return m_state;
-  }
+  State state() const { return m_state; }
 
   void flush_queue();
   void dispatch_frame(AudioFrame frame);
-  gboolean is_connection_open() {
-    return m_state == State::STREAMING;
-  }
+  gboolean is_connection_open() { return m_state == State::STREAMING; }
 
   void send_frame(AudioFrame frame);
   void send_done();
@@ -89,20 +85,22 @@ private:
     CONNECT,
     FIRST_FRAME,
     LAST_FRAME,
-    END_STT,
+    DONE,
   };
 
   void complete_success(STTSession *session, const char *text);
-  void complete_error(STTSession *session, int error_code, const char *error_message);
+  void complete_error(STTSession *session, int error_code,
+                      const char *error_message);
   void record_timing_event(STTSession *session, Event ev);
 
-  App * const m_app;
+  App *const m_app;
   const std::string m_url;
   std::unique_ptr<STTSession> m_current_session;
 
   struct timeval tConnect;
   struct timeval tFirstFrame;
   struct timeval tLastFrame;
+  struct timeval tDone;
 };
 
 } // namespace genie

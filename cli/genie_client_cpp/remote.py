@@ -5,6 +5,7 @@ from tempfile import mkstemp
 from typing import Any, List, Literal, Optional, Union
 import os
 from subprocess import DEVNULL
+import shlex
 
 from clavier import sh, log as logging
 
@@ -153,6 +154,19 @@ class SSHRemote(Remote):
         finally:
             os.remove(path)
 
+    def is_file(self, path: Union[str, Path]) -> bool:
+        return sh.test(
+            "ssh", self._target, f"[[ -f {shlex.quote(str(path))} ]]"
+        )
+
+    def is_dir(self, path: Union[str, Path]) -> bool:
+        return sh.test(
+            "ssh", self._target, f"[[ -d {shlex.quote(str(path))} ]]"
+        )
+
+    def rm(self, path: Union[str, Path]) -> sh.Result:
+        return sh.run("ssh", self._target, "rm", "-rf", path)
+
     def push(self, src: Union[str, Path], dest: Union[str, Path]):
         if isinstance(src, str):
             src = Path(str)
@@ -160,6 +174,14 @@ class SSHRemote(Remote):
             dest = Path(dest)
 
         LOG.info("Pushing...", src=src, dest=dest)
+
+        if src.is_dir():
+            if self.is_dir(dest):
+                LOG.info(
+                    "Removing destination in order to push directory...",
+                    dest=dest
+                )
+                self.rm(dest)
 
         sh.run(
             "scp",

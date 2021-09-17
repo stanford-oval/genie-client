@@ -54,14 +54,14 @@ genie::AudioInput::~AudioInput() {
 }
 
 bool genie::AudioInput::init_pv() {
-  const char *library_path = "assets/libpv_porcupine.so";
-  const char *model_path = "assets/porcupine_params.pv";
-  const char *keyword_path = "assets/keyword.ppn";
-  const float sensitivity = (float)atof("0.7");
+  const char *library_path = app->config->pv_library_path;
+  const char *model_path = app->config->pv_model_path;
+  const char *keyword_path = app->config->pv_keyword_path;
+  const float sensitivity = app->config->pv_sensitivity;
 
   porcupine_library = dlopen(library_path, RTLD_NOW);
   if (!porcupine_library) {
-    g_error("failed to open library\n");
+    g_error("failed to open library: %s", library_path);
     return false;
   }
 
@@ -81,7 +81,9 @@ bool genie::AudioInput::init_pv() {
     return false;
   }
 
-  sample_rate = pv_sample_rate_func();
+  int32_t sample_rate_signed = pv_sample_rate_func();
+  g_assert(sample_rate_signed > 0);
+  sample_rate = (size_t)sample_rate_signed;
 
   pv_status_t (*pv_porcupine_init_func)(const char *, int32_t,
                                         const char *const *, const float *,
@@ -294,10 +296,12 @@ int genie::AudioInput::init() {
   g_message("Calculated done VAD: %d ms -> %d frames",
             app->config->vad_done_speaking_ms, vad_done_frame_count);
 
-  min_woke_frame_count = ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH,
-                                      app->config->vad_min_woke_ms);
-  g_message("Calculated min woke frames: %d ms -> %d frames",
-            app->config->vad_min_woke_ms, min_woke_frame_count);
+  vad_input_detected_noise_frame_count = ms_to_frames(
+      AUDIO_INPUT_VAD_FRAME_LENGTH, app->config->vad_input_detected_noise_ms);
+  g_message("Calculated input detection consecutive noise frame count: %d ms "
+            "-> %d frames",
+            app->config->vad_input_detected_noise_ms,
+            vad_input_detected_noise_frame_count);
 
   GError *thread_error = NULL;
   g_thread_try_new("audioInputThread", (GThreadFunc)loop, this, &thread_error);
@@ -315,34 +319,34 @@ int genie::AudioInput::init() {
 /**
  * @brief Tell the audio input loop (running on it's own thread) to start
  * listening if it wasn't.
- * 
+ *
  * Essentially synthesizes hearing the wake-word, hence the name.
- * 
+ *
  * This method is designed to be _thread-safe_ -- while the audio input loop
  * runs on it's own thread, this method can be called from any thread, allowing
  * listening to be triggered externally.
- * 
- * The method works by changing `this->state` to `State::WAKE` if it was 
+ *
+ * The method works by changing `this->state` to `State::WAKE` if it was
  * `State::WAITING`, which is picked up by the next loop iteration in the
  * audio input thread.
  */
 void genie::AudioInput::wake() {
   State expect = State::WAITING;
   // SEE  https://en.cppreference.com/w/cpp/atomic/atomic/compare_exchange
-  // 
+  //
   // Ok, the way I understand this is:
-  // 
+  //
   // If the value of `this->state` is `expect` -- which is `State::WAITING` --
   // then change it to `State::WOKE`.
-  // 
-  // If the value of `this->state` is _not_ `expect` (`State::WAITING`) then 
+  //
+  // If the value of `this->state` is _not_ `expect` (`State::WAITING`) then
   // write the value of `this->state` over `expect`.
-  // 
-  // Since we only want to change the value of `this->state` _if_ it is 
+  //
+  // Since we only want to change the value of `this->state` _if_ it is
   // `State::WAITING` and don't want to do anything if `this->state` is anything
   // else, this should be all we need -- we don't care that `expect` gets set
   // to something else when `this->state` was not `State::WAITING`.
-  // 
+  //
   state.compare_exchange_strong(expect, State::WOKE);
 }
 
@@ -356,9 +360,10 @@ void genie::AudioInput::wake() {
  * @param ms
  * @return int32_t
  */
-int32_t genie::AudioInput::ms_to_frames(int32_t frame_length, int32_t ms) {
+size_t genie::AudioInput::ms_to_frames(size_t frame_length, size_t ms) {
   //     floor <-  (samples/sec * (     seconds     )) / (samples/frame)
-  return (int32_t)((sample_rate * ((double)ms / 1000)) / frame_length);
+  g_assert(sample_rate > 0);
+  return (size_t)((sample_rate * ((double)ms / 1000)) / frame_length);
 }
 
 genie::AudioFrame genie::AudioInput::read_frame(int32_t frame_length) {
@@ -392,7 +397,8 @@ genie::AudioFrame genie::AudioInput::read_frame(int32_t frame_length) {
 void genie::AudioInput::transition(State to_state) {
   // Reset state variables
   state_woke_frame_count = 0;
-  state_vad_frame_count = 0;
+  state_vad_silent_count = 0;
+  state_vad_noise_count = 0;
 
   switch (to_state) {
     case State::WAITING:
@@ -468,25 +474,39 @@ void genie::AudioInput::loop_woke() {
 
   state_woke_frame_count += 1;
 
-  // We stay "woke" for at minimum `min_woke_frame_count` frames
-  if (state_woke_frame_count < min_woke_frame_count) {
-    return;
+  // Run Voice Activity Detection (VAD) against the frame
+  int vad_result = WebRtcVad_Process(vad_instance, sample_rate, pcm,
+                                     AUDIO_INPUT_VAD_FRAME_LENGTH);
+
+  if (vad_result == VAD_IS_SILENT) {
+    // We picked up silence
+    //
+    // Increment the silent count
+    state_vad_silent_count += 1;
+    // Set the noise count to zero
+    state_vad_noise_count = 0;
+  } else if (vad_result == VAD_NOT_SILENT) {
+    // We picked up silence
+    //
+    // Increment the noise count
+    state_vad_noise_count += 1;
+    // Set the silent count to zero
+    state_vad_silent_count = 0;
+
+    if (state_vad_noise_count >= vad_input_detected_noise_frame_count) {
+      // We have measured the configured amount of consecutive noise frames,
+      // which means we have detected input.
+      //
+      // Transition to `State::LISTENING`
+      transition(State::LISTENING);
+      return;
+    }
   }
 
-  int silence = WebRtcVad_Process(vad_instance, sample_rate, pcm,
-                                  AUDIO_INPUT_VAD_FRAME_LENGTH);
-
-  if (silence == VAD_IS_SILENT) {
-    state_vad_frame_count += 1;
-
-    if (state_vad_frame_count >= vad_start_frame_count) {
-      // We have not detected speech over the start frame count
-      app->dispatch(new state::events::InputNotDetected());
-      transition(State::WAITING);
-    }
-  } else if (silence == VAD_NOT_SILENT) {
-    // We detected speech, transition to listenting state
-    transition(State::LISTENING);
+  if (state_woke_frame_count >= vad_start_frame_count) {
+    // We have not detected speech over the start frame count, give up
+    app->dispatch(new state::events::InputDone(false));
+    transition(State::WAITING);
   }
 }
 
@@ -503,12 +523,12 @@ void genie::AudioInput::loop_listening() {
                                   AUDIO_INPUT_VAD_FRAME_LENGTH);
 
   if (silence == VAD_IS_SILENT) {
-    state_vad_frame_count += 1;
-  } else if (silence == 1) {
-    state_vad_frame_count = 0;
+    state_vad_silent_count += 1;
+  } else if (silence == VAD_NOT_SILENT) {
+    state_vad_silent_count = 0;
   }
-  if (state_vad_frame_count >= vad_done_frame_count) {
-    app->dispatch(new state::events::InputDone());
+  if (state_vad_silent_count >= vad_done_frame_count) {
+    app->dispatch(new state::events::InputDone(true));
     transition(State::WAITING);
   }
 }

@@ -21,8 +21,11 @@
 #include <glib.h>
 #include <string.h>
 
-#include <memory>
 #include "autoptrs.hpp"
+#include <memory>
+
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "genie::Config"
 
 genie::Config::Config() {}
 
@@ -55,8 +58,107 @@ gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
   return value;
 }
 
+/**
+ * @brief Helper to get a _size_ (unsigned integer) from the config file,
+ * returning a `default_value` if there is an error or the retrieved value is
+ * negative.
+ *
+ * Gets an integer, checks it's zero or higher, and casts it
+ */
+size_t genie::Config::get_size(GKeyFile *key_file, const char *section,
+                               const char *key, const size_t default_value) {
+  GError *error = NULL;
+  gint value = g_key_file_get_integer(key_file, section, key, &error);
+  if (error != NULL) {
+    g_warning("Failed to load [%s] %s from config file, using default %d",
+              section, key, default_value);
+    g_error_free(error);
+    return default_value;
+  }
+  if (value < 0) {
+    g_warning("Failed to load [%s] %s from config file. Value must be 0 or "
+              "greater, found %d. Using default %d",
+              section, key, value, default_value);
+    g_error_free(error);
+    return default_value;
+  }
+  return (size_t)value;
+}
+
+/**
+ * @brief Like the `get_size` helper, but also checks that the retrieved value
+ * is within a `min` and `max` (inclusive).
+ */
+size_t genie::Config::get_bounded_size(GKeyFile *key_file, const char *section,
+                                       const char *key,
+                                       const size_t default_value,
+                                       const size_t min, const size_t max) {
+  g_assert(min <= max);
+  g_assert(default_value >= min);
+  g_assert(default_value <= max);
+
+  size_t value = get_size(key_file, section, key, default_value);
+
+  if (value < min) {
+    g_warning("CONFIG [%s] %s must be %d or greater, found %d. "
+              "Setting to default (%d).",
+              section, key, min, value, default_value);
+    return default_value;
+  }
+
+  if (value > max) {
+    g_warning("CONFIG [%s] %s must be %d or less, found %d. "
+              "Setting to default (%d).",
+              section, key, max, value, default_value);
+    return default_value;
+  }
+
+  return value;
+}
+
+double genie::Config::get_double(GKeyFile *key_file, const char *section,
+                                 const char *key, const double default_value) {
+  GError *error = NULL;
+  double value = g_key_file_get_double(key_file, section, key, &error);
+  if (error != NULL) {
+    g_warning("Failed to load [%s] %s from config file, using default %f",
+              section, key, default_value);
+    g_error_free(error);
+    return default_value;
+  }
+  return value;
+}
+
+double genie::Config::get_bounded_double(GKeyFile *key_file,
+                                         const char *section, const char *key,
+                                         const double default_value,
+                                         const double min, const double max) {
+  g_assert(min <= max);
+  g_assert(default_value >= min);
+  g_assert(default_value <= max);
+
+  double value = get_double(key_file, section, key, default_value);
+
+  if (value < min) {
+    g_warning("CONFIG [%s] %s must be %f or greater, found %f. "
+              "Setting to default (%f).",
+              section, key, min, value, default_value);
+    return default_value;
+  }
+
+  if (value > max) {
+    g_warning("CONFIG [%s] %s must be %f or less, found %f. "
+              "Setting to default (%f).",
+              section, key, max, value, default_value);
+    return default_value;
+  }
+
+  return value;
+}
+
 void genie::Config::load() {
-  std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>> auto_key_file(g_key_file_new());
+  std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
+      auto_key_file(g_key_file_new());
   GKeyFile *key_file = auto_key_file.get();
   GError *error = NULL;
 
@@ -64,7 +166,7 @@ void genie::Config::load() {
                                  (GKeyFileFlags)(G_KEY_FILE_KEEP_COMMENTS |
                                                  G_KEY_FILE_KEEP_TRANSLATIONS),
                                  &error)) {
-    g_print("config load error: %s\n", error->message);
+    g_critical("config load error: %s\n", error->message);
     g_error_free(error);
     return;
   }
@@ -100,6 +202,9 @@ void genie::Config::load() {
   } else {
     g_debug("conversationId: %s\n", conversationId);
   }
+
+  // Audio
+  // =========================================================================
 
   error = NULL;
   audioInputDevice = g_key_file_get_string(key_file, "audio", "input", &error);
@@ -176,70 +281,62 @@ void genie::Config::load() {
     audio_backend = g_strdup("alsa");
   }
 
-  error = NULL;
-  vad_start_speaking_ms =
-      g_key_file_get_integer(key_file, "vad", "start_speaking_ms", &error);
-  if (error) {
-    g_error_free(error);
-    vad_start_speaking_ms = DEFAULT_VAD_START_SPEAKING_MS;
-  }
-  if (vad_start_speaking_ms < VAD_MIN_MS) {
-    g_warning("CONFIG [vad] start_speaking_ms must be %d or greater, "
-              "found %d. Setting to default (%d).",
-              VAD_MIN_MS, vad_start_speaking_ms, DEFAULT_VAD_START_SPEAKING_MS);
-    vad_start_speaking_ms = DEFAULT_VAD_START_SPEAKING_MS;
-  }
-  if (vad_start_speaking_ms > VAD_MAX_MS) {
-    g_warning("CONFIG [vad] start_speaking_ms must be %d or less, "
-              "found %d. Setting to default (%d).",
-              VAD_MAX_MS, vad_start_speaking_ms, DEFAULT_VAD_START_SPEAKING_MS);
-    vad_start_speaking_ms = DEFAULT_VAD_START_SPEAKING_MS;
-  }
-
-  error = NULL;
-  vad_done_speaking_ms =
-      g_key_file_get_integer(key_file, "vad", "done_speaking_ms", &error);
-  if (error) {
-    g_error_free(error);
-    vad_done_speaking_ms = DEFAULT_VAD_DONE_SPEAKING_MS;
-  }
-  if (vad_done_speaking_ms < VAD_MIN_MS) {
-    g_warning("CONFIG [vad] done_speaking_ms must be %d or greater, "
-              "found %d. Setting to default (%d).",
-              VAD_MIN_MS, vad_done_speaking_ms, DEFAULT_VAD_DONE_SPEAKING_MS);
-    vad_done_speaking_ms = DEFAULT_VAD_DONE_SPEAKING_MS;
-  }
-  if (vad_done_speaking_ms > VAD_MAX_MS) {
-    g_warning("CONFIG [vad] done_speaking_ms must be %d or less, "
-              "found %d. Setting to default (%d).",
-              VAD_MAX_MS, vad_done_speaking_ms, DEFAULT_VAD_DONE_SPEAKING_MS);
-    vad_done_speaking_ms = DEFAULT_VAD_DONE_SPEAKING_MS;
-  }
-
-  error = NULL;
-  vad_min_woke_ms =
-      g_key_file_get_integer(key_file, "vad", "min_woke_ms", &error);
-  if (error) {
-    g_error_free(error);
-    vad_min_woke_ms = DEFAULT_MIN_WOKE_MS;
-  }
-  if (vad_min_woke_ms < VAD_MIN_MS) {
-    g_warning("CONFIG [vad] min_woke_ms must be %d or greater, "
-              "found %d. Setting to default (%d).",
-              VAD_MIN_MS, vad_min_woke_ms, DEFAULT_VAD_DONE_SPEAKING_MS);
-    vad_min_woke_ms = DEFAULT_MIN_WOKE_MS;
-  }
-  if (vad_min_woke_ms > VAD_MAX_MS) {
-    g_warning("CONFIG [vad] min_woke_ms must be %d or less, "
-              "found %d. Setting to default (%d).",
-              VAD_MAX_MS, vad_min_woke_ms, DEFAULT_VAD_DONE_SPEAKING_MS);
-    vad_min_woke_ms = DEFAULT_MIN_WOKE_MS;
-  }
-
   audio_output_device =
       get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
 
-  dns_controller_enabled = g_key_file_get_boolean(key_file, "system", "dns", nullptr);
+  // Picovoice
+  // =========================================================================
+
+  pv_library_path =
+      get_string(key_file, "picovoice", "library", DEFAULT_PV_LIBRARY_PATH);
+
+  pv_model_path =
+      get_string(key_file, "picovoice", "model", DEFAULT_PV_MODEL_PATH);
+
+  pv_keyword_path =
+      get_string(key_file, "picovoice", "keyword", DEFAULT_PV_KEYWORD_PATH);
+
+  pv_sensitivity = (float)get_bounded_double(
+      key_file, "picovoice", "sensitivity", DEFAULT_PV_SENSITIVITY, 0, 1);
+
+  // Sounds
+  // =========================================================================
+
+  sound_wake = get_string(key_file, "sound", "wake", DEFAULT_SOUND_WAKE);
+  sound_no_input =
+      get_string(key_file, "sound", "no_input", DEFAULT_SOUND_NO_INPUT);
+  sound_too_much_input = get_string(key_file, "sound", "too_much_input",
+                                    DEFAULT_SOUND_TOO_MUCH_INPUT);
+  sound_news_intro =
+      get_string(key_file, "sound", "news_intro", DEFAULT_SOUND_NEWS_INTRO);
+  sound_alarm_clock_elapsed =
+      get_string(key_file, "sound", "alarm_clock_elapsed",
+                 DEFAULT_SOUND_ALARM_CLOCK_ELAPSED);
+  sound_working =
+      get_string(key_file, "sound", "working", DEFAULT_SOUND_WORKING);
+  sound_stt_error =
+      get_string(key_file, "sound", "stt_error", DEFAULT_SOUND_STT_ERROR);
+
+  // System
+  // =========================================================================
+
+  dns_controller_enabled =
+      g_key_file_get_boolean(key_file, "system", "dns", nullptr);
 
   leds_path = g_key_file_get_string(key_file, "system", "leds", nullptr);
+
+  // Voice Activity Detection (VAD)
+  // =========================================================================
+
+  vad_start_speaking_ms =
+      get_bounded_size(key_file, "vad", "start_speaking_ms",
+                       DEFAULT_VAD_START_SPEAKING_MS, VAD_MIN_MS, VAD_MAX_MS);
+
+  vad_done_speaking_ms =
+      get_bounded_size(key_file, "vad", "done_speaking_ms",
+                       DEFAULT_VAD_DONE_SPEAKING_MS, VAD_MIN_MS, VAD_MAX_MS);
+
+  vad_input_detected_noise_ms = get_bounded_size(
+      key_file, "vad", "input_detected_noise_ms",
+      DEFAULT_VAD_INPUT_DETECTED_NOISE_MS, VAD_MIN_MS, VAD_MAX_MS);
 }
