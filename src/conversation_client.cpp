@@ -33,7 +33,7 @@
 
 bool genie::ConversationClient::is_connected() {
   if (!m_connection) {
-    g_message("GENIE websocket connection is NULL\n");
+    g_message("GENIE websocket connection is NULL");
     return false;
   }
 
@@ -41,7 +41,7 @@ bool genie::ConversationClient::is_connected() {
       soup_websocket_connection_get_state(m_connection.get());
 
   if (wconnState != SOUP_WEBSOCKET_STATE_OPEN) {
-    g_message("WS connection not open (state %d)\n", wconnState);
+    g_message("Conversation connection not open (state %d)", wconnState);
     return false;
   }
 
@@ -60,7 +60,7 @@ void genie::ConversationClient::send_json_now(JsonBuilder *builder) {
   json_generator_set_root(gen, root);
   gchar *str = json_generator_to_data(gen, NULL);
 
-  PROF_PRINT("[SERVER WS] sending: %s\n", str);
+  g_message("Sending: %s", str);
   soup_websocket_connection_send_text(m_connection.get(), str);
 
   json_node_free(root);
@@ -122,13 +122,13 @@ void genie::ConversationClient::handleConversationID(JsonReader *reader) {
     g_free(conversationId);
   }
   conversationId = g_strdup(text);
-  g_message("Set conversation id: %s\n", conversationId);
+  g_message("Set conversation id: %s", conversationId);
 }
 
 void genie::ConversationClient::handleText(gint64 id, JsonReader *reader) {
   if (id <= lastSaidTextID) {
     g_message("Skipping message ID=%" G_GINT64_FORMAT
-              ", already said ID=%" G_GINT64_FORMAT "\n",
+              ", already said ID=%" G_GINT64_FORMAT,
               id, lastSaidTextID);
     return;
   }
@@ -148,17 +148,16 @@ void genie::ConversationClient::handleSound(gint64 id, JsonReader *reader) {
   json_reader_end_member(reader);
 
   if (strcmp(name, "news-intro") == 0) {
-    g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s\n", id,
+    g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s", id,
             name);
     app->dispatch(new state::events::SoundMessage(Sound_t::NEWS_INTRO));
   } else if (strcmp(name, "alarm-clock-elapsed") == 0) {
-    g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s\n", id,
+    g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s", id,
             name);
     app->dispatch(
         new state::events::SoundMessage(Sound_t::ALARM_CLOCK_ELAPSED));
   } else {
-    g_warning("Sound not recognized id=%" G_GINT64_FORMAT " name=%s\n", id,
-              name);
+    g_warning("Sound not recognized id=%" G_GINT64_FORMAT " name=%s", id, name);
   }
 }
 
@@ -166,7 +165,7 @@ void genie::ConversationClient::handleAudio(gint64 id, JsonReader *reader) {
   json_reader_read_member(reader, "url");
   const gchar *url = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
-  g_debug("Dispatching type=audio id=%" G_GINT64_FORMAT " url=%s\n", id, url);
+  g_debug("Dispatching type=audio id=%" G_GINT64_FORMAT " url=%s", id, url);
   app->dispatch(new state::events::AudioMessage(url));
 }
 
@@ -175,7 +174,7 @@ void genie::ConversationClient::handleError(JsonReader *reader) {
   const gchar *error = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
 
-  g_warning("Handling type=error error=%s\n", error);
+  g_warning("Handling type=error error=%s", error);
 }
 
 void genie::ConversationClient::handleAskSpecial(JsonReader *reader) {
@@ -248,7 +247,7 @@ void genie::ConversationClient::on_message(SoupWebsocketConnection *conn,
                                            gint data_type, GBytes *message,
                                            gpointer data) {
   if (data_type != SOUP_WEBSOCKET_DATA_TEXT) {
-    g_warning("Invalid message data type: %d\n", data_type);
+    g_warning("Invalid message data type: %d", data_type);
     return;
   }
 
@@ -257,7 +256,7 @@ void genie::ConversationClient::on_message(SoupWebsocketConnection *conn,
   const gchar *ptr;
 
   ptr = (const gchar *)g_bytes_get_data(message, &sz);
-  g_message("Received message: %s\n", ptr);
+  g_message("Received message: %s", ptr);
 
   JsonParser *parser = json_parser_new();
   json_parser_load_from_data(parser, ptr, -1, NULL);
@@ -304,8 +303,7 @@ void genie::ConversationClient::on_message(SoupWebsocketConnection *conn,
                strcmp(type, "choice") == 0) {
       g_debug("Ignored message id=%" G_GINT64_FORMAT " type=%s", id, type);
     } else {
-      g_warning("Unhandled message id=%" G_GINT64_FORMAT " type=%s\n", id,
-                type);
+      g_warning("Unhandled message id=%" G_GINT64_FORMAT " type=%s", id, type);
     }
   }
 
@@ -321,7 +319,7 @@ void genie::ConversationClient::on_close(SoupWebsocketConnection *conn,
   const char *close_data = soup_websocket_connection_get_close_data(conn);
 
   gushort code = soup_websocket_connection_get_close_code(conn);
-  g_print("Genie WebSocket connection closed: %d %s\n", code, close_data);
+  g_warning("Genie WebSocket connection closed: %d %s", code, close_data);
 
   obj->connect();
 }
@@ -336,7 +334,7 @@ void genie::ConversationClient::on_connection(SoupSession *session,
       soup_session_websocket_connect_finish(session, res, &error),
       adopt_mode::owned);
   if (error) {
-    g_warning("Failed to open websocket connection to Genie: %s\n",
+    g_warning("Failed to open websocket connection to Genie: %s",
               error->message);
     g_error_free(error);
     return;
