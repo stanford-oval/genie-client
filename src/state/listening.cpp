@@ -20,6 +20,7 @@
 #include "app.hpp"
 #include "audioinput.hpp"
 #include "audioplayer.hpp"
+#include "leds.hpp"
 #include "stt.hpp"
 
 #undef G_LOG_DOMAIN
@@ -30,6 +31,7 @@ namespace state {
 
 void Listening::enter() {
   g_message("ENTER state Listening\n");
+  app->leds->set_active(true);
   app->stt->begin_session();
   app->audio_input->wake();
   app->duck();
