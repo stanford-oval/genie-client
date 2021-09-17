@@ -26,7 +26,7 @@ namespace conversation {
 
 class BaseAudioRequest {
 public:
-  virtual ~BaseAudioRequest() = default;
+  virtual ~BaseAudioRequest();
 
 protected:
   BaseAudioRequest(Client *client, int64_t req) : client(client), req(req) {}
@@ -36,6 +36,7 @@ protected:
   void reject(const char *error_code, const char *error_message);
 
 private:
+  bool handled = false;
   Client *const client;
   const int64_t req;
 };

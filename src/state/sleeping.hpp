@@ -31,6 +31,8 @@ public:
   Sleeping(App *app) : State{app} {}
 
   void enter() override;
+  void react(events::audio::PrepareEvent *prepare) override;
+  void react(events::audio::PlayURLsEvent *play_urls) override;
 };
 
 } // namespace state

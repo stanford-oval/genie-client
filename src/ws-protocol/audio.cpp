@@ -237,6 +237,14 @@ void genie::conversation::AudioProtocol::handle_set_mute(int64_t req,
       new state::events::audio::SetMuteEvent(std::move(request), mute));
 }
 
+genie::conversation::BaseAudioRequest::~BaseAudioRequest() {
+  if (!handled) {
+    g_critical("Audio protocol request was destroyed without being handled, "
+               "this will hang the server");
+    reject("EIO", "state tracking error: request destroyed prematurely");
+  }
+}
+
 genie::auto_gobject_ptr<JsonBuilder>
 genie::conversation::BaseAudioRequest::make_response() {
   auto_gobject_ptr<JsonBuilder> builder(json_builder_new(), adopt_mode::owned);
@@ -256,6 +264,7 @@ void genie::conversation::BaseAudioRequest::send_response(
     auto_gobject_ptr<JsonBuilder> builder) {
   json_builder_end_object(builder.get()); // end the overall response object
   client->send_json(std::move(builder));
+  handled = true;
 }
 
 void genie::conversation::BaseAudioRequest::reject(const char *error_code,

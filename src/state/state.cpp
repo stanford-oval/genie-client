@@ -60,17 +60,23 @@ void State::react(events::TextMessage *text_message) {
 }
 
 void State::react(events::AudioMessage *audio_message) {
+  // TODO this should be deferred to the sleeping state
+
   g_message("Received AudioMessage, playing URL: %s\n",
             audio_message->url.c_str());
-  app->audio_player->playURI(audio_message->url.c_str(),
-                             AudioDestination::MUSIC);
+  app->audio_player->play_url(audio_message->url.c_str(),
+                              AudioDestination::MUSIC);
 }
 
 void State::react(events::SoundMessage *sound_message) {
+  // TODO this should look at the "exclusive" flag, and
+  // either handle it immediately (queued with other text)
+  // or defer to the sleeping state (queued with other music)
+
   g_message("Received SoundMessage, playing sound ID: %d\n",
             (int)sound_message->sound_id);
   app->audio_player->playSound(sound_message->sound_id,
-                               AudioDestination::MUSIC);
+                               AudioDestination::ALERT);
 }
 
 void State::react(events::AskSpecialMessage *ask_special_message) {}
@@ -114,17 +120,19 @@ void State::react(events::audio::CheckSpotifyEvent *check_spotify) {
 }
 
 void State::react(events::audio::PrepareEvent *prepare) {
-  // TODO queue this
-  prepare->resolve();
+  // defer this event to the next state
+  app->defer(prepare);
 }
 
 void State::react(events::audio::PlayURLsEvent *play_urls) {
-  // TODO queue this
-  play_urls->resolve();
+  g_message("Reacting to PlayURLsEvent in %s state, deferring", NAME);
+
+  // defer this event to the next state
+  app->defer(play_urls);
 }
 
 void State::react(events::audio::StopEvent *stop) {
-  // TODO queue this
+  app->audio_player->stop();
   stop->resolve();
 }
 
@@ -134,6 +142,7 @@ void State::react(events::audio::SetMuteEvent *set_mute) {
 }
 
 void State::react(events::audio::SetVolumeEvent *set_volume) {
+  app->audio_player->set_volume(set_volume->volume);
   set_volume->resolve();
 }
 
