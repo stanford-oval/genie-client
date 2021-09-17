@@ -225,7 +225,7 @@ int genie::AudioInput::init() {
     return -2;
   }
 
-  g_print("Initialized wakeword engine, frame length %d, sample rate %d\n",
+  g_print("Initialized wakeword engine, frame length %d, sample rate %zd\n",
           pv_frame_length, sample_rate);
 
   if (WebRtcVad_Init(vad_instance)) {
@@ -240,23 +240,23 @@ int genie::AudioInput::init() {
   }
 
   if (WebRtcVad_ValidRateAndFrameLength(sample_rate, pv_frame_length)) {
-    g_debug("invalid rate %d or framelength %d", sample_rate, pv_frame_length);
+    g_debug("invalid rate %zd or framelength %d", sample_rate, pv_frame_length);
   }
 
   vad_start_frame_count = ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH,
                                        app->config->vad_start_speaking_ms);
-  g_message("Calculated start VAD: %d ms -> %d frames",
+  g_message("Calculated start VAD: %zd ms -> %zd frames",
             app->config->vad_start_speaking_ms, vad_start_frame_count);
 
   vad_done_frame_count = ms_to_frames(AUDIO_INPUT_VAD_FRAME_LENGTH,
                                       app->config->vad_done_speaking_ms);
-  g_message("Calculated done VAD: %d ms -> %d frames",
+  g_message("Calculated done VAD: %zd ms -> %zd frames",
             app->config->vad_done_speaking_ms, vad_done_frame_count);
 
   vad_input_detected_noise_frame_count = ms_to_frames(
       AUDIO_INPUT_VAD_FRAME_LENGTH, app->config->vad_input_detected_noise_ms);
-  g_message("Calculated input detection consecutive noise frame count: %d ms "
-            "-> %d frames",
+  g_message("Calculated input detection consecutive noise frame count: %zd ms "
+            "-> %zd frames",
             app->config->vad_input_detected_noise_ms,
             vad_input_detected_noise_frame_count);
 
@@ -399,7 +399,7 @@ void genie::AudioInput::loop_waiting() {
 
   app->dispatch(new state::events::Wake());
 
-  g_debug("Sending prior %d frames\n", frame_buffer.size());
+  g_debug("Sending prior %zd frames\n", frame_buffer.size());
 
   while (!frame_buffer.empty()) {
     app->dispatch(

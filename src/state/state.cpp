@@ -60,14 +60,15 @@ void State::react(events::TextMessage *text_message) {
 }
 
 void State::react(events::AudioMessage *audio_message) {
-  g_message("Received AudioMessage, playing URL: %s\n", audio_message->url);
+  g_message("Received AudioMessage, playing URL: %s\n",
+            audio_message->url.c_str());
   app->audio_player->playURI(audio_message->url.c_str(),
                              AudioDestination::MUSIC);
 }
 
 void State::react(events::SoundMessage *sound_message) {
   g_message("Received SoundMessage, playing sound ID: %d\n",
-            sound_message->sound_id);
+            (int)sound_message->sound_id);
   app->audio_player->playSound(sound_message->sound_id,
                                AudioDestination::MUSIC);
 }
@@ -90,7 +91,7 @@ void State::react(events::TogglePlayback *) {
 void State::react(events::PlayerStreamEnd *player_stream_end) {
   g_message("Received PlayerStreamEnd with type=%d ref_id=%" G_GINT64_FORMAT
             ", ignoring.",
-            player_stream_end->type, player_stream_end->ref_id);
+            (int)player_stream_end->type, player_stream_end->ref_id);
 }
 
 // Speech-To-Text (STT)
