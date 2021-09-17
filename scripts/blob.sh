@@ -66,11 +66,11 @@ cp -p /usr/local/libexec/gstreamer-1.0/gst-plugin-scanner ${DESTDIR}/gstreamer-1
 findDeps /usr/lib/${SEARCH_ARCH}/gio/modules/libgiognutls.so
 cp -p /usr/lib/${SEARCH_ARCH}/gio/modules/libgiognutls.so ${DESTDIR}/gio/modules/
 
-findDeps /usr/bin/pulseaudio
+findDeps /usr/local/bin/pulseaudio
 pulse_modules="libalsa-util libprotocol-native module-native-protocol-unix module-alsa-sink module-alsa-source module-null-sink module-always-sink module-null-sink module-echo-cancel"
 for p in ${pulse_modules} ; do
-	cp -p /usr/local/lib/${SEARCH_ARCH}/pulseaudio/modules/${p}.so ${DESTDIR}/pulseaudio
-	findDeps /usr/local/lib/${SEARCH_ARCH}/pulseaudio/modules/${p}.so
+	cp -p /usr/local/lib/${SEARCH_ARCH}/pulse-15.0/modules/${p}.so ${DESTDIR}/pulseaudio
+	findDeps /usr/local/lib/${SEARCH_ARCH}/pulse-15.0/modules/${p}.so
 done
 mkdir -p /out/src
 cp -p /usr/local/bin/pulseaudio /out/src/
