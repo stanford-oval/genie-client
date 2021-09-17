@@ -31,6 +31,32 @@
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::ConversationClient"
 
+#include <iostream>
+#include <ctime>
+#include <unistd.h>
+
+using namespace std;
+
+std::string gen_random(const int len) {
+    
+    std::string tmp_s;
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+    
+    srand( (unsigned) time(NULL) * getpid());
+
+    tmp_s.reserve(len);
+
+    for (int i = 0; i < len; ++i) 
+        tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+    
+    
+    return tmp_s;
+    
+}
+
 bool genie::ConversationClient::is_connected() {
   if (!m_connection) {
     g_message("GENIE websocket connection is NULL\n");
@@ -114,15 +140,13 @@ void genie::ConversationClient::send_thingtalk(const char *data) {
 }
 
 void genie::ConversationClient::handleConversationID(JsonReader *reader) {
-  json_reader_read_member(reader, "id");
-  const gchar *text = json_reader_get_string_value(reader);
-  json_reader_end_member(reader);
+  const gchar *text = gen_random(12);
 
   if (conversationId) {
     g_free(conversationId);
   }
   conversationId = g_strdup(text);
-  g_message("Set conversation id: %s\n", conversationId);
+  g_message("Set conversation id: %s", conversationId);
 }
 
 void genie::ConversationClient::handleText(gint64 id, JsonReader *reader) {
