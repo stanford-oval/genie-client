@@ -75,8 +75,8 @@ void genie::conversation::ConversationProtocol::handleConversationID(
   json_reader_end_member(reader);
   g_debug("Received conversation id: %s\n", text);
 
-  // nothing else to do, we already know our conversation ID from the
-  // configuration
+  // mark that this connection is now ready to receive messages
+  client->mark_ready();
 }
 
 void genie::conversation::ConversationProtocol::handleText(gint64 id,

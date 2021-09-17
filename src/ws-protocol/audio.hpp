@@ -45,7 +45,8 @@ class AudioProtocol : public ProtocolParser {
 public:
   AudioProtocol(Client *client) : client(client), app(client->app) {}
 
-  void connected() override;
+  void connected() override {}
+  void ready() override;
 
   void handle_message(JsonReader *reader) override;
 

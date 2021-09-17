@@ -36,6 +36,8 @@ public:
 
   virtual void connected() = 0;
 
+  virtual void ready() = 0;
+
   virtual void handle_message(JsonReader *reader) = 0;
 };
 
@@ -57,6 +59,7 @@ protected:
   void send_json(auto_gobject_ptr<JsonBuilder> builder);
   bool is_connected();
   const char *conversation_id() { return app->config->conversationId; }
+  void mark_ready();
 
   App *const app;
 
@@ -76,6 +79,7 @@ private:
   const gchar *accessToken;
   auto_gobject_ptr<SoupWebsocketConnection> m_connection;
   std::deque<auto_gobject_ptr<JsonBuilder>> m_outgoing_queue;
+  bool ready;
 
   std::unique_ptr<ProtocolParser> main_parser;
   std::unordered_map<std::string, std::unique_ptr<ProtocolParser>> ext_parsers;

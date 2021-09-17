@@ -48,6 +48,10 @@ bool genie::conversation::Client::is_connected() {
     return false;
   }
 
+  if (!ready) {
+    g_debug("Connection is not ready yet to receive messages yet");
+  }
+
   return true;
 }
 
@@ -191,6 +195,7 @@ void genie::conversation::Client::on_close(SoupWebsocketConnection *conn,
   gushort code = soup_websocket_connection_get_close_code(conn);
   g_print("Genie WebSocket connection closed: %d %s\n", code, close_data);
 
+  obj->ready = false;
   obj->connect();
 }
 
@@ -218,15 +223,19 @@ void genie::conversation::Client::on_connection(SoupSession *session,
                    G_CALLBACK(genie::conversation::Client::on_message), data);
   g_signal_connect(self->m_connection.get(), "closed",
                    G_CALLBACK(genie::conversation::Client::on_close), data);
-
-  self->main_parser->connected();
-  for (const auto &it : self->ext_parsers)
-    it.second->connected();
-
-  self->maybe_flush_queue();
 }
 
-genie::conversation::Client::Client(App *appInstance) : app(appInstance) {
+void genie::conversation::Client::mark_ready() {
+  main_parser->ready();
+  for (const auto &it : ext_parsers)
+    it.second->ready();
+
+  ready = true;
+  maybe_flush_queue();
+}
+
+genie::conversation::Client::Client(App *appInstance)
+    : app(appInstance), ready(false) {
   accessToken = g_strdup(app->config->genieAccessToken);
   url = g_strdup(app->config->genieURL);
   main_parser.reset(new ConversationProtocol(this));

@@ -55,7 +55,7 @@ public:
 
 } // namespace genie
 
-void genie::conversation::AudioProtocol::connected() {
+void genie::conversation::AudioProtocol::ready() {
   const char *caps[] = {nullptr};
   client->request_subprotocol("audio", caps);
 }

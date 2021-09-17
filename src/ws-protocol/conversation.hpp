@@ -29,6 +29,8 @@ public:
 
   void connected() override {}
 
+  void ready() override {}
+
   void handle_message(JsonReader *msg) override;
 
 private:
