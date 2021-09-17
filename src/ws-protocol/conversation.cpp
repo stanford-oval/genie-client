@@ -160,7 +160,7 @@ void genie::conversation::ConversationProtocol::handlePing(JsonReader *reader) {
   json_builder_begin_object(builder.get());
 
   json_builder_set_member_name(builder.get(), "type");
-  json_builder_add_string_value(builder.get(), "pong");
+  json_builder_add_string_value(builder.get(), "ping");
 
   json_builder_end_object(builder.get());
 
