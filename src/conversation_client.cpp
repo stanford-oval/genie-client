@@ -139,8 +139,7 @@ void genie::ConversationClient::send_thingtalk(const char *data) {
   queue_json(builder);
 }
 
-void genie::ConversationClient::handleConversationID(JsonReader *reader) {
-  
+void genie::ConversationClient::handleConversationID() {
 
   if (conversationId) {
     g_free(conversationId);
