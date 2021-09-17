@@ -46,6 +46,7 @@ public:
   gchar *audioOutputDeviceAlerts;
   gchar *audioOutputFIFO;
   gchar *audioVoice;
+  gchar *audio_backend;
   gchar *leds_path;
   gint vad_start_speaking_ms;
   gint vad_done_speaking_ms;
