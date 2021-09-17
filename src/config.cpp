@@ -291,6 +291,9 @@ void genie::Config::load() {
   pv_sensitivity = (float)get_bounded_double(
       key_file, "picovoice", "sensitivity", DEFAULT_PV_SENSITIVITY, 0, 1);
 
+  pv_wake_word_pattern = get_string(key_file, "picovoice", "wake_word_pattern",
+                                    DEFAULT_PV_WAKE_WORD_PATTERN);
+
   // Sounds
   // =========================================================================
 
