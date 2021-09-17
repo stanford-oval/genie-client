@@ -20,7 +20,8 @@
 
 #include <cstring>
 
-void genie::conversation::ConversationProtocol::handle_message(JsonReader *reader) {
+void genie::conversation::ConversationProtocol::handle_message(
+    JsonReader *reader) {
   json_reader_read_member(reader, "type");
   const char *type = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
@@ -67,16 +68,19 @@ void genie::conversation::ConversationProtocol::handle_message(JsonReader *reade
   }
 }
 
-void genie::conversation::ConversationProtocol::handleConversationID(JsonReader *reader) {
+void genie::conversation::ConversationProtocol::handleConversationID(
+    JsonReader *reader) {
   json_reader_read_member(reader, "id");
   const gchar *text = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
   g_debug("Received conversation id: %s\n", text);
 
-  // nothing else to do, we already know our conversation ID from the configuration
+  // nothing else to do, we already know our conversation ID from the
+  // configuration
 }
 
-void genie::conversation::ConversationProtocol::handleText(gint64 id, JsonReader *reader) {
+void genie::conversation::ConversationProtocol::handleText(gint64 id,
+                                                           JsonReader *reader) {
   if (id <= last_said_text_id) {
     g_message("Skipping message ID=%" G_GINT64_FORMAT
               ", already said ID=%" G_GINT64_FORMAT "\n",
@@ -93,7 +97,8 @@ void genie::conversation::ConversationProtocol::handleText(gint64 id, JsonReader
   last_said_text_id = id;
 }
 
-void genie::conversation::ConversationProtocol::handleSound(gint64 id, JsonReader *reader) {
+void genie::conversation::ConversationProtocol::handleSound(
+    gint64 id, JsonReader *reader) {
   json_reader_read_member(reader, "name");
   const gchar *name = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
@@ -113,7 +118,8 @@ void genie::conversation::ConversationProtocol::handleSound(gint64 id, JsonReade
   }
 }
 
-void genie::conversation::ConversationProtocol::handleAudio(gint64 id, JsonReader *reader) {
+void genie::conversation::ConversationProtocol::handleAudio(
+    gint64 id, JsonReader *reader) {
   json_reader_read_member(reader, "url");
   const gchar *url = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
@@ -121,7 +127,8 @@ void genie::conversation::ConversationProtocol::handleAudio(gint64 id, JsonReade
   app->dispatch(new state::events::AudioMessage(url));
 }
 
-void genie::conversation::ConversationProtocol::handleError(JsonReader *reader) {
+void genie::conversation::ConversationProtocol::handleError(
+    JsonReader *reader) {
   json_reader_read_member(reader, "error");
   const gchar *error = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
@@ -129,7 +136,8 @@ void genie::conversation::ConversationProtocol::handleError(JsonReader *reader) 
   g_warning("Handling type=error error=%s\n", error);
 }
 
-void genie::conversation::ConversationProtocol::handleAskSpecial(JsonReader *reader) {
+void genie::conversation::ConversationProtocol::handleAskSpecial(
+    JsonReader *reader) {
   // Agent state -- asking a follow up or not
   json_reader_read_member(reader, "ask");
   const gchar *ask = json_reader_get_string_value(reader);
@@ -159,7 +167,8 @@ void genie::conversation::ConversationProtocol::handlePing(JsonReader *reader) {
   client->send_json(builder);
 }
 
-void genie::conversation::ConversationProtocol::handleNewDevice(JsonReader *reader) {
+void genie::conversation::ConversationProtocol::handleNewDevice(
+    JsonReader *reader) {
   json_reader_read_member(reader, "state");
 
   json_reader_read_member(reader, "kind");

@@ -30,8 +30,6 @@ namespace state {
 // Event Handling Methods
 // ===========================================================================
 
-void State::react(events::Event *event) {}
-
 void State::react(events::Wake *) {
   // Normally when we wake we start listening. The exception is the Listen
   // state itself.
@@ -104,6 +102,38 @@ void State::react(events::stt::TextResponse *response) {
 
 void State::react(events::stt::ErrorResponse *response) {
   g_warning("FIXME Received events::stt::ErrorResponse in state %s", NAME);
+}
+
+// Audio Control Protocol
+
+void State::react(events::audio::CheckSpotifyEvent *check_spotify) {
+  app->spotifyd->set_credentials(check_spotify->username,
+                                 check_spotify->access_token);
+  check_spotify->resolve(std::make_pair(true, ""));
+}
+
+void State::react(events::audio::PrepareEvent *prepare) {
+  // TODO queue this
+  prepare->resolve();
+}
+
+void State::react(events::audio::PlayURLsEvent *play_urls) {
+  // TODO queue this
+  play_urls->resolve();
+}
+
+void State::react(events::audio::StopEvent *stop) {
+  // TODO queue this
+  stop->resolve();
+}
+
+void State::react(events::audio::SetMuteEvent *set_mute) {
+  // TODO implement
+  set_mute->resolve();
+}
+
+void State::react(events::audio::SetVolumeEvent *set_volume) {
+  set_volume->resolve();
 }
 
 } // namespace state

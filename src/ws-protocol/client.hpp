@@ -41,6 +41,8 @@ public:
 
 class Client {
   friend class ConversationProtocol;
+  friend class AudioProtocol;
+  friend class BaseAudioRequest;
 
 public:
   Client(App *appInstance);
@@ -49,13 +51,12 @@ public:
   int init();
   void send_command(const std::string text);
   void send_thingtalk(const char *data);
+  void request_subprotocol(const char *extension, const char *const *caps);
 
 protected:
   void send_json(auto_gobject_ptr<JsonBuilder> builder);
   bool is_connected();
-  const char* conversation_id() {
-    return app->config->conversationId;
-  }
+  const char *conversation_id() { return app->config->conversationId; }
 
   App *const app;
 

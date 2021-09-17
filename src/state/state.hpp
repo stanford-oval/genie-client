@@ -40,7 +40,9 @@ public:
   virtual void enter(){};
   virtual void exit(){};
 
-  virtual void react(events::Event *event);
+  // note: you must not define a react for the base Event class
+  // otherwise you won't get any error when you add new event classes
+  // and forget to declare them here
   virtual void react(events::Wake *);
   virtual void react(events::InputFrame *input_frame);
   virtual void react(events::InputDone *);
@@ -56,6 +58,12 @@ public:
   virtual void react(events::PlayerStreamEnd *player_stream_end);
   virtual void react(events::stt::TextResponse *response);
   virtual void react(events::stt::ErrorResponse *response);
+  virtual void react(events::audio::CheckSpotifyEvent *check_spotify);
+  virtual void react(events::audio::PrepareEvent *prepare);
+  virtual void react(events::audio::PlayURLsEvent *play_urls);
+  virtual void react(events::audio::StopEvent *stop);
+  virtual void react(events::audio::SetMuteEvent *set_mute);
+  virtual void react(events::audio::SetVolumeEvent *set_volume);
 };
 
 } // namespace state

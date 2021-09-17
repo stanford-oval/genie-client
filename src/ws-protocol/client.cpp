@@ -27,6 +27,7 @@
 #include "../audioplayer.hpp"
 #include "../spotifyd.hpp"
 
+#include "audio.hpp"
 #include "client.hpp"
 #include "conversation.hpp"
 
@@ -115,6 +116,30 @@ void genie::conversation::Client::send_thingtalk(const char *data) {
   send_json(builder);
 }
 
+void genie::conversation::Client::request_subprotocol(const char *extension,
+                                                      const char *const *caps) {
+  auto_gobject_ptr<JsonBuilder> builder(json_builder_new(), adopt_mode::owned);
+
+  json_builder_begin_object(builder.get());
+
+  json_builder_set_member_name(builder.get(), "type");
+  json_builder_add_string_value(builder.get(), "req-subproto");
+
+  json_builder_set_member_name(builder.get(), "proto");
+  json_builder_add_string_value(builder.get(), extension);
+
+  json_builder_set_member_name(builder.get(), "caps");
+  json_builder_begin_array(builder.get());
+  for (int i = 0; caps[i]; i++) {
+    json_builder_add_string_value(builder.get(), caps[i]);
+  }
+  json_builder_end_array(builder.get());
+
+  json_builder_end_object(builder.get());
+
+  send_json(builder);
+}
+
 void genie::conversation::Client::on_message(SoupWebsocketConnection *conn,
                                              gint data_type, GBytes *message,
                                              gpointer data) {
@@ -194,6 +219,10 @@ void genie::conversation::Client::on_connection(SoupSession *session,
   g_signal_connect(self->m_connection.get(), "closed",
                    G_CALLBACK(genie::conversation::Client::on_close), data);
 
+  self->main_parser->connected();
+  for (const auto &it : self->ext_parsers)
+    it.second->connected();
+
   self->maybe_flush_queue();
 }
 
@@ -201,6 +230,7 @@ genie::conversation::Client::Client(App *appInstance) : app(appInstance) {
   accessToken = g_strdup(app->config->genieAccessToken);
   url = g_strdup(app->config->genieURL);
   main_parser.reset(new ConversationProtocol(this));
+  ext_parsers.emplace("audio", new AudioProtocol(this));
 }
 
 genie::conversation::Client::~Client() {}
