@@ -1,0 +1,20 @@
+### Load native unix protocol
+load-module module-native-protocol-unix
+
+### Automatically suspend sinks/sources that become idle for too long
+#load-module module-suspend-on-idle
+
+### Make sure we always have a sink around, even if it is a null sink.
+load-module module-null-sink
+load-module module-always-sink
+
+### Configure sinks/sources
+load-module module-alsa-sink device=hw:0,0
+load-module module-alsa-source device=hw:audiocodec,0
+
+### AEC
+load-module module-echo-cancel source_name=echosrc sink_name=echosink channels=1 rate=16000 aec_method=webrtc aec_args="analog_gain_control=0 digital_gain_control=1"
+
+### Set default devices
+set-default-sink echosink
+set-default-source echosrc
