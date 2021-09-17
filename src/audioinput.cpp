@@ -382,6 +382,7 @@ genie::AudioFrame genie::AudioInput::read_frame(int32_t frame_length) {
       g_critical("pa_simple_read() failed with '%s'", pa_strerror(error));
       return AudioFrame(0);
     }
+    read_frames /= sizeof(int16_t);
   }
 
   if (read_frames != frame_length) {
