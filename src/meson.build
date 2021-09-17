@@ -10,7 +10,7 @@ _onlySharedDeps = [ 'gstreamer-1.0', 'alsa' ]
 _alwaysSharedDeps = [ 'gio-2.0' ]
 
 _linkArgs = []
-_incDirs = []
+_incDirs = include_directories('../deps/spdlog/include')
 _deps = []
 
 _deps += cpp.find_library('dl')

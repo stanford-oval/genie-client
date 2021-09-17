@@ -17,11 +17,13 @@
 // limitations under the License.
 
 #include "app.hpp"
+#include "spdlog/spdlog.h"
 
 int main(/*int argc, char *argv[]*/) {
   using namespace genie;
 
   App app;
 
+  spdlog::info("Welcome to spdlog!");
   return app.exec();
 }
