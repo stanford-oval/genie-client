@@ -40,7 +40,7 @@ The compiled binary is located in ./build/src/genie
 
 ### Step 4: Configure
 
-The default config.ini is optimized for a specific hardward. To customize for development use, edit config.ini and set:
+The default config.ini is optimized for a specific hardware. To customize for development use, edit config.ini and set:
 
 - `sink`: set this to the GStreamer element to use for audio output; on a normal Linux installation, this should be commented out
 - `input`: set this to the ALSA input device to use for input; use `arecord -L` to list available devices. This must be a real ALSA device, it cannot be `pulse` or `pipewire`

@@ -62,8 +62,7 @@ void genie::conversation::ConversationProtocol::handle_message(
                strcmp(type, "choice") == 0) {
       g_debug("Ignored message id=%" G_GINT64_FORMAT " type=%s", id, type);
     } else {
-      g_warning("Unhandled message id=%" G_GINT64_FORMAT " type=%s\n", id,
-                type);
+      g_warning("Unhandled message id=%" G_GINT64_FORMAT " type=%s", id, type);
     }
   }
 }
@@ -73,7 +72,7 @@ void genie::conversation::ConversationProtocol::handleConversationID(
   json_reader_read_member(reader, "id");
   const gchar *text = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
-  g_debug("Received conversation id: %s\n", text);
+  g_debug("Received conversation id: %s", text);
 
   // mark that this connection is now ready to receive messages
   client->mark_ready();
@@ -83,7 +82,7 @@ void genie::conversation::ConversationProtocol::handleText(gint64 id,
                                                            JsonReader *reader) {
   if (id <= last_said_text_id) {
     g_message("Skipping message ID=%" G_GINT64_FORMAT
-              ", already said ID=%" G_GINT64_FORMAT "\n",
+              ", already said ID=%" G_GINT64_FORMAT,
               id, last_said_text_id);
     return;
   }
@@ -104,17 +103,16 @@ void genie::conversation::ConversationProtocol::handleSound(
   json_reader_end_member(reader);
 
   if (strcmp(name, "news-intro") == 0) {
-    g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s\n", id,
+    g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s", id,
             name);
     app->dispatch(new state::events::SoundMessage(Sound_t::NEWS_INTRO));
   } else if (strcmp(name, "alarm-clock-elapsed") == 0) {
-    g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s\n", id,
+    g_debug("Dispatching sound message id=%" G_GINT64_FORMAT " name=%s", id,
             name);
     app->dispatch(
         new state::events::SoundMessage(Sound_t::ALARM_CLOCK_ELAPSED));
   } else {
-    g_warning("Sound not recognized id=%" G_GINT64_FORMAT " name=%s\n", id,
-              name);
+    g_warning("Sound not recognized id=%" G_GINT64_FORMAT " name=%s", id, name);
   }
 }
 
@@ -123,7 +121,7 @@ void genie::conversation::ConversationProtocol::handleAudio(
   json_reader_read_member(reader, "url");
   const gchar *url = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
-  g_debug("Dispatching type=audio id=%" G_GINT64_FORMAT " url=%s\n", id, url);
+  g_debug("Dispatching type=audio id=%" G_GINT64_FORMAT " url=%s", id, url);
   app->dispatch(new state::events::AudioMessage(url));
 }
 
@@ -133,7 +131,7 @@ void genie::conversation::ConversationProtocol::handleError(
   const gchar *error = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
 
-  g_warning("Handling type=error error=%s\n", error);
+  g_warning("Handling type=error error=%s", error);
 }
 
 void genie::conversation::ConversationProtocol::handleAskSpecial(

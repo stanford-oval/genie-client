@@ -36,7 +36,7 @@
 
 bool genie::conversation::Client::is_connected() {
   if (!m_connection) {
-    g_message("GENIE websocket connection is NULL\n");
+    g_message("GENIE websocket connection is NULL");
     return false;
   }
 
@@ -44,7 +44,7 @@ bool genie::conversation::Client::is_connected() {
       soup_websocket_connection_get_state(m_connection.get());
 
   if (wconnState != SOUP_WEBSOCKET_STATE_OPEN) {
-    g_message("WS connection not open (state %d)\n", wconnState);
+    g_message("WS connection not open (state %d)", wconnState);
     return false;
   }
 
@@ -67,7 +67,7 @@ void genie::conversation::Client::send_json_now(JsonBuilder *builder) {
   json_generator_set_root(gen, root);
   gchar *str = json_generator_to_data(gen, NULL);
 
-  PROF_PRINT("[SERVER WS] sending: %s\n", str);
+  PROF_PRINT("[SERVER WS] sending: %s", str);
   soup_websocket_connection_send_text(m_connection.get(), str);
 
   json_node_free(root);
@@ -148,7 +148,7 @@ void genie::conversation::Client::on_message(SoupWebsocketConnection *conn,
                                              gint data_type, GBytes *message,
                                              gpointer data) {
   if (data_type != SOUP_WEBSOCKET_DATA_TEXT) {
-    g_warning("Invalid message data type: %d\n", data_type);
+    g_warning("Invalid message data type: %d", data_type);
     return;
   }
 
@@ -157,7 +157,7 @@ void genie::conversation::Client::on_message(SoupWebsocketConnection *conn,
   const gchar *ptr;
 
   ptr = (const gchar *)g_bytes_get_data(message, &sz);
-  g_message("Received message: %s\n", ptr);
+  g_message("Received message: %s", ptr);
 
   auto_gobject_ptr<JsonParser> parser(json_parser_new(), adopt_mode::owned);
   json_parser_load_from_data(parser.get(), ptr, -1, NULL);
@@ -193,7 +193,7 @@ void genie::conversation::Client::on_close(SoupWebsocketConnection *conn,
   const char *close_data = soup_websocket_connection_get_close_data(conn);
 
   gushort code = soup_websocket_connection_get_close_code(conn);
-  g_print("Genie WebSocket connection closed: %d %s\n", code, close_data);
+  g_warning("Genie WebSocket connection closed: %d %s", code, close_data);
 
   obj->ready = false;
   obj->connect();
@@ -209,7 +209,7 @@ void genie::conversation::Client::on_connection(SoupSession *session,
       soup_session_websocket_connect_finish(session, res, &error),
       adopt_mode::owned);
   if (error) {
-    g_warning("Failed to open websocket connection to Genie: %s\n",
+    g_warning("Failed to open websocket connection to Genie: %s",
               error->message);
     g_error_free(error);
     return;
