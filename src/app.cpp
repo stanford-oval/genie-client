@@ -23,12 +23,12 @@
 #include "audioinput.hpp"
 #include "audioplayer.hpp"
 #include "config.hpp"
-#include "ws-protocol/client.hpp"
 #include "dns_controller.hpp"
 #include "evinput.hpp"
 #include "leds.hpp"
 #include "spotifyd.hpp"
 #include "stt.hpp"
+#include "ws-protocol/client.hpp"
 
 double time_diff(struct timeval x, struct timeval y) {
   return (((double)y.tv_sec * 1000000 + (double)y.tv_usec) -
@@ -167,5 +167,23 @@ void genie::App::track_processing_event(ProcessingEventType event_type) {
 
       is_processing = false;
       break;
+  }
+}
+
+void genie::App::replay_deferred_events() {
+  // steal all the deferred events
+  // this is necessary because handling the event
+  // might queue more deferred events
+  std::queue<DeferredEvent> copy;
+  std::swap(copy, deferred_events);
+
+  // replay the events
+  while (!copy.empty()) {
+    auto &defer = copy.front();
+    current_event = defer.event;
+    defer.dispatch(current_state);
+    delete current_event;
+    current_event = nullptr;
+    copy.pop();
   }
 }
