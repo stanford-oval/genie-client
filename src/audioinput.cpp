@@ -52,10 +52,10 @@ genie::AudioInput::~AudioInput() {
 int genie::AudioInput::init() {
   gchar *input_audio_device = app->config->audioInputDevice;
 
-  const char *library_path = "assets/libpv_porcupine.so";
-  const char *model_path = "assets/porcupine_params.pv";
-  const char *keyword_path = "assets/keyword.ppn";
-  const float sensitivity = (float)atof("0.7");
+  const char *library_path = app->config->pv_library_path;
+  const char *model_path = app->config->pv_model_path;
+  const char *keyword_path = app->config->pv_keyword_path;
+  const float sensitivity = app->config->pv_sensitivity;
 
   if (!input_audio_device) {
     g_error("no input audio device");
@@ -64,7 +64,7 @@ int genie::AudioInput::init() {
 
   porcupine_library = dlopen(library_path, RTLD_NOW);
   if (!porcupine_library) {
-    g_error("failed to open library\n");
+    g_error("failed to open library: %s", library_path);
     return -1;
   }
 

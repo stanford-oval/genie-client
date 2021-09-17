@@ -31,8 +31,18 @@ public:
   static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 640;
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
 
+  // Porcupine Defaults
+  // -------------------------------------------------------------------------
+
+  static const constexpr char *DEFAULT_PV_LIBRARY_PATH =
+      "assets/libpv_porcupine.so";
+  static const constexpr char *DEFAULT_PV_MODEL_PATH =
+      "assets/porcupine_params.pv";
+  static const constexpr char *DEFAULT_PV_KEYWORD_PATH = "assets/keyword.ppn";
+  static const constexpr float DEFAULT_PV_SENSITIVITY = 0.7f;
+
   // Sound Defaults
-  // ---------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
 
   static const constexpr char *DEFAULT_SOUND_WAKE = "match.oga";
   static const constexpr char *DEFAULT_SOUND_NO_INPUT = "no-match.oga";
@@ -77,12 +87,13 @@ public:
    */
   gchar *audio_output_device;
 
-  // Voice Activity Detection (VAD)
+  // Picovoice (Wake-Word Detection)
   // -------------------------------------------------------------------------
 
-  size_t vad_start_speaking_ms;
-  size_t vad_done_speaking_ms;
-  size_t vad_input_detected_noise_ms;
+  gchar *pv_library_path;
+  gchar *pv_model_path;
+  gchar *pv_keyword_path;
+  float pv_sensitivity;
 
   // Sounds
   // -------------------------------------------------------------------------
@@ -101,6 +112,13 @@ public:
   gchar *leds_path;
   bool dns_controller_enabled;
 
+  // Voice Activity Detection (VAD)
+  // -------------------------------------------------------------------------
+
+  size_t vad_start_speaking_ms;
+  size_t vad_done_speaking_ms;
+  size_t vad_input_detected_noise_ms;
+
 protected:
 private:
   gchar *get_string(GKeyFile *key_file, const char *section, const char *key,
@@ -110,6 +128,11 @@ private:
   size_t get_bounded_size(GKeyFile *key_file, const char *section,
                           const char *key, const size_t default_value,
                           const size_t min, const size_t max);
+  double get_double(GKeyFile *key_file, const char *section, const char *key,
+                    const double default_value);
+  double get_bounded_double(GKeyFile *key_file, const char *section,
+                            const char *key, const double default_value,
+                            const double min, const double max);
 };
 
 } // namespace genie

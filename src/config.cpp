@@ -115,6 +115,46 @@ size_t genie::Config::get_bounded_size(GKeyFile *key_file, const char *section,
   return value;
 }
 
+double genie::Config::get_double(GKeyFile *key_file, const char *section,
+                                 const char *key, const double default_value) {
+  GError *error = NULL;
+  double value = g_key_file_get_double(key_file, section, key, &error);
+  if (error != NULL) {
+    g_warning("Failed to load [%s] %s from config file, using default %f",
+              section, key, default_value);
+    g_error_free(error);
+    return default_value;
+  }
+  return value;
+}
+
+double genie::Config::get_bounded_double(GKeyFile *key_file,
+                                         const char *section, const char *key,
+                                         const double default_value,
+                                         const double min, const double max) {
+  g_assert(min <= max);
+  g_assert(default_value >= min);
+  g_assert(default_value <= max);
+
+  double value = get_double(key_file, section, key, default_value);
+
+  if (value < min) {
+    g_warning("CONFIG [%s] %s must be %f or greater, found %f. "
+              "Setting to default (%f).",
+              section, key, min, value, default_value);
+    return default_value;
+  }
+
+  if (value > max) {
+    g_warning("CONFIG [%s] %s must be %f or less, found %f. "
+              "Setting to default (%f).",
+              section, key, max, value, default_value);
+    return default_value;
+  }
+
+  return value;
+}
+
 void genie::Config::load() {
   std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
       auto_key_file(g_key_file_new());
@@ -236,28 +276,20 @@ void genie::Config::load() {
   audio_output_device =
       get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
 
-  // Voice Activity Detection (VAD)
+  // Picovoice
   // =========================================================================
 
-  vad_start_speaking_ms =
-      get_bounded_size(key_file, "vad", "start_speaking_ms",
-                       DEFAULT_VAD_START_SPEAKING_MS, VAD_MIN_MS, VAD_MAX_MS);
+  pv_library_path =
+      get_string(key_file, "picovoice", "library", DEFAULT_PV_LIBRARY_PATH);
 
-  vad_done_speaking_ms =
-      get_bounded_size(key_file, "vad", "done_speaking_ms",
-                       DEFAULT_VAD_DONE_SPEAKING_MS, VAD_MIN_MS, VAD_MAX_MS);
+  pv_model_path =
+      get_string(key_file, "picovoice", "model", DEFAULT_PV_MODEL_PATH);
 
-  vad_input_detected_noise_ms = get_bounded_size(
-      key_file, "vad", "input_detected_noise_ms",
-      DEFAULT_VAD_INPUT_DETECTED_NOISE_MS, VAD_MIN_MS, VAD_MAX_MS);
+  pv_keyword_path =
+      get_string(key_file, "picovoice", "keyword", DEFAULT_PV_KEYWORD_PATH);
 
-  // System
-  // =========================================================================
-
-  dns_controller_enabled =
-      g_key_file_get_boolean(key_file, "system", "dns", nullptr);
-
-  leds_path = g_key_file_get_string(key_file, "system", "leds", nullptr);
+  pv_sensitivity = (float)get_bounded_double(
+      key_file, "picovoice", "sensitivity", DEFAULT_PV_SENSITIVITY, 0, 1);
 
   // Sounds
   // =========================================================================
@@ -276,4 +308,27 @@ void genie::Config::load() {
       get_string(key_file, "sound", "working", DEFAULT_SOUND_WORKING);
   sound_stt_error =
       get_string(key_file, "sound", "stt_error", DEFAULT_SOUND_STT_ERROR);
+
+  // System
+  // =========================================================================
+
+  dns_controller_enabled =
+      g_key_file_get_boolean(key_file, "system", "dns", nullptr);
+
+  leds_path = g_key_file_get_string(key_file, "system", "leds", nullptr);
+
+  // Voice Activity Detection (VAD)
+  // =========================================================================
+
+  vad_start_speaking_ms =
+      get_bounded_size(key_file, "vad", "start_speaking_ms",
+                       DEFAULT_VAD_START_SPEAKING_MS, VAD_MIN_MS, VAD_MAX_MS);
+
+  vad_done_speaking_ms =
+      get_bounded_size(key_file, "vad", "done_speaking_ms",
+                       DEFAULT_VAD_DONE_SPEAKING_MS, VAD_MIN_MS, VAD_MAX_MS);
+
+  vad_input_detected_noise_ms = get_bounded_size(
+      key_file, "vad", "input_detected_noise_ms",
+      DEFAULT_VAD_INPUT_DETECTED_NOISE_MS, VAD_MIN_MS, VAD_MAX_MS);
 }
