@@ -20,7 +20,9 @@
 
 #include "audio.hpp"
 #include <glib.h>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace genie {
 namespace state {
@@ -28,6 +30,53 @@ namespace events {
 
 struct Event {
   virtual ~Event() = default;
+};
+
+template <typename Value> struct Request {
+  virtual ~Request() = default;
+
+  virtual void resolve(const Value &) = 0;
+  virtual void reject(const char *error_code, const char *error_message) = 0;
+};
+
+template <> struct Request<void> {
+  virtual ~Request() = default;
+
+  virtual void resolve() = 0;
+  virtual void reject(const char *error_code, const char *error_message) = 0;
+};
+
+template <typename Value> struct DummyRequest : public Request<Value> {
+  void resolve(const Value &) {}
+  void reject(const char *error_code, const char *error_message) {}
+};
+
+template <typename Value> struct RequestEvent : public Event {
+  RequestEvent(Request<Value> *req) : request(req) {}
+  RequestEvent(std::unique_ptr<Request<Value>> &&req)
+      : request(std::move(req)) {}
+
+  void resolve(const Value &v) { request->resolve(v); }
+  void reject(const char *error_code, const char *error_message) {
+    request->reject(error_code, error_message);
+  }
+
+private:
+  std::unique_ptr<Request<Value>> request;
+};
+
+template <> struct RequestEvent<void> : public Event {
+  RequestEvent(Request<void> *req) : request(req) {}
+  RequestEvent(std::unique_ptr<Request<void>> &&req)
+      : request(std::move(req)) {}
+
+  void resolve() { request->resolve(); }
+  void reject(const char *error_code, const char *error_message) {
+    request->reject(error_code, error_message);
+  }
+
+private:
+  std::unique_ptr<Request<void>> request;
 };
 
 // Audio Input Events
@@ -136,6 +185,56 @@ struct ErrorResponse : Event {
 };
 
 } // namespace stt
+
+// Audio Control Protocol Events
+
+namespace audio {
+
+using CheckResponse = std::pair<bool, std::string>;
+
+struct CheckSpotifyEvent : public RequestEvent<CheckResponse> {
+  CheckSpotifyEvent(std::unique_ptr<Request<CheckResponse>> &&req,
+                    const char *username, const char *access_token)
+      : RequestEvent<CheckResponse>(std::move(req)), username(username),
+        access_token(access_token) {}
+
+  const std::string username;
+  const std::string access_token;
+};
+
+struct PrepareEvent : public RequestEvent<void> {
+  PrepareEvent(std::unique_ptr<Request<void>> &&req)
+      : RequestEvent<void>(std::move(req)) {}
+};
+
+struct StopEvent : public RequestEvent<void> {
+  StopEvent(std::unique_ptr<Request<void>> &&req)
+      : RequestEvent<void>(std::move(req)) {}
+};
+
+struct PlayURLsEvent : public RequestEvent<void> {
+  PlayURLsEvent(std::unique_ptr<Request<void>> &&req,
+                std::vector<std::string> urls)
+      : RequestEvent<void>(std::move(req)), urls(std::move(urls)) {}
+
+  const std::vector<std::string> urls;
+};
+
+struct SetVolumeEvent : public RequestEvent<void> {
+  SetVolumeEvent(std::unique_ptr<Request<void>> &&req, int volume)
+      : RequestEvent<void>(std::move(req)), volume(volume) {}
+
+  const int volume;
+};
+
+struct SetMuteEvent : public RequestEvent<void> {
+  SetMuteEvent(std::unique_ptr<Request<void>> &&req, bool mute)
+      : RequestEvent<void>(std::move(req)), mute(mute) {}
+
+  const bool mute;
+};
+
+} // namespace audio
 
 } // namespace events
 } // namespace state

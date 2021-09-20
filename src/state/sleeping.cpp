@@ -18,6 +18,7 @@
 
 #include "state/sleeping.hpp"
 #include "app.hpp"
+#include "audioplayer.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::Sleeping"
@@ -28,6 +29,22 @@ namespace state {
 void Sleeping::enter() {
   g_message("ENTER state Sleeping\n");
   app->unduck();
+}
+
+void Sleeping::react(events::audio::PrepareEvent *prepare) {
+  app->audio_player->clean_queue();
+  prepare->resolve();
+}
+
+void Sleeping::react(events::audio::PlayURLsEvent *play_urls) {
+  g_message("Reacting to PlayURLsEvent in sleeping state, about to play...");
+
+  app->audio_player->clean_queue();
+
+  for (const auto &url : play_urls->urls)
+    app->audio_player->play_url(url);
+
+  play_urls->resolve();
 }
 
 } // namespace state

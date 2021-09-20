@@ -30,8 +30,6 @@ namespace state {
 // Event Handling Methods
 // ===========================================================================
 
-void State::react(events::Event *event) {}
-
 void State::react(events::Wake *) {
   // Normally when we wake we start listening. The exception is the Listen
   // state itself.
@@ -62,16 +60,23 @@ void State::react(events::TextMessage *text_message) {
 }
 
 void State::react(events::AudioMessage *audio_message) {
-  g_message("Received AudioMessage, playing URL: %s\n", audio_message->url);
-  app->audio_player->playURI(audio_message->url.c_str(),
-                             AudioDestination::MUSIC);
+  // TODO this should be deferred to the sleeping state
+
+  g_message("Received AudioMessage, playing URL: %s\n",
+            audio_message->url.c_str());
+  app->audio_player->play_url(audio_message->url.c_str(),
+                              AudioDestination::MUSIC);
 }
 
 void State::react(events::SoundMessage *sound_message) {
+  // TODO this should look at the "exclusive" flag, and
+  // either handle it immediately (queued with other text)
+  // or defer to the sleeping state (queued with other music)
+
   g_message("Received SoundMessage, playing sound ID: %d\n",
-            sound_message->sound_id);
+            (int)sound_message->sound_id);
   app->audio_player->playSound(sound_message->sound_id,
-                               AudioDestination::MUSIC);
+                               AudioDestination::ALERT);
 }
 
 void State::react(events::AskSpecialMessage *ask_special_message) {}
@@ -92,7 +97,7 @@ void State::react(events::TogglePlayback *) {
 void State::react(events::PlayerStreamEnd *player_stream_end) {
   g_message("Received PlayerStreamEnd with type=%d ref_id=%" G_GINT64_FORMAT
             ", ignoring.",
-            player_stream_end->type, player_stream_end->ref_id);
+            (int)player_stream_end->type, player_stream_end->ref_id);
 }
 
 // Speech-To-Text (STT)
@@ -104,6 +109,41 @@ void State::react(events::stt::TextResponse *response) {
 
 void State::react(events::stt::ErrorResponse *response) {
   g_warning("FIXME Received events::stt::ErrorResponse in state %s", NAME);
+}
+
+// Audio Control Protocol
+
+void State::react(events::audio::CheckSpotifyEvent *check_spotify) {
+  app->spotifyd->set_credentials(check_spotify->username,
+                                 check_spotify->access_token);
+  check_spotify->resolve(std::make_pair(true, ""));
+}
+
+void State::react(events::audio::PrepareEvent *prepare) {
+  // defer this event to the next state
+  app->defer(prepare);
+}
+
+void State::react(events::audio::PlayURLsEvent *play_urls) {
+  g_message("Reacting to PlayURLsEvent in %s state, deferring", NAME);
+
+  // defer this event to the next state
+  app->defer(play_urls);
+}
+
+void State::react(events::audio::StopEvent *stop) {
+  app->audio_player->stop();
+  stop->resolve();
+}
+
+void State::react(events::audio::SetMuteEvent *set_mute) {
+  // TODO implement
+  set_mute->resolve();
+}
+
+void State::react(events::audio::SetVolumeEvent *set_volume) {
+  app->audio_player->set_volume(set_volume->volume);
+  set_volume->resolve();
 }
 
 } // namespace state

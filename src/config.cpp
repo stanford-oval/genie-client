@@ -21,7 +21,7 @@
 #include <glib.h>
 #include <string.h>
 
-#include "autoptrs.hpp"
+#include "utils/autoptrs.hpp"
 #include <memory>
 
 #undef G_LOG_DOMAIN
@@ -67,16 +67,16 @@ gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
 size_t genie::Config::get_size(GKeyFile *key_file, const char *section,
                                const char *key, const size_t default_value) {
   GError *error = NULL;
-  gint value = g_key_file_get_integer(key_file, section, key, &error);
+  ssize_t value = g_key_file_get_integer(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default %d",
+    g_warning("Failed to load [%s] %s from config file, using default %zd",
               section, key, default_value);
     g_error_free(error);
     return default_value;
   }
   if (value < 0) {
     g_warning("Failed to load [%s] %s from config file. Value must be 0 or "
-              "greater, found %d. Using default %d",
+              "greater, found %zd. Using default %zd",
               section, key, value, default_value);
     g_error_free(error);
     return default_value;
@@ -96,18 +96,18 @@ size_t genie::Config::get_bounded_size(GKeyFile *key_file, const char *section,
   g_assert(default_value >= min);
   g_assert(default_value <= max);
 
-  size_t value = get_size(key_file, section, key, default_value);
+  ssize_t value = get_size(key_file, section, key, default_value);
 
-  if (value < min) {
-    g_warning("CONFIG [%s] %s must be %d or greater, found %d. "
-              "Setting to default (%d).",
+  if (value < (ssize_t)min) {
+    g_warning("CONFIG [%s] %s must be %zd or greater, found %zd. "
+              "Setting to default (%zd).",
               section, key, min, value, default_value);
     return default_value;
   }
 
-  if (value > max) {
-    g_warning("CONFIG [%s] %s must be %d or less, found %d. "
-              "Setting to default (%d).",
+  if (value > (ssize_t)max) {
+    g_warning("CONFIG [%s] %s must be %zd or less, found %zd. "
+              "Setting to default (%zd).",
               section, key, max, value, default_value);
     return default_value;
   }
