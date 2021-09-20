@@ -19,7 +19,7 @@
 #include "state/processing.hpp"
 #include "app.hpp"
 #include "audioplayer.hpp"
-#include "conversation_client.hpp"
+#include "ws-protocol/client.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::Processing"

@@ -21,13 +21,12 @@
 
 #include "stt.hpp"
 
+#include <cstring>
 #include <glib-object.h>
 #include <glib-unix.h>
 #include <glib.h>
 #include <json-glib/json-glib.h>
 #include <libsoup/soup.h>
-
-#include <cstring>
 #include <sstream>
 #include <string>
 
@@ -42,7 +41,10 @@ static std::string get_ws_url(genie::App *app) {
   return ws_url.str();
 }
 
-genie::STT::STT(App *app) : m_app(app), m_url(get_ws_url(app)) {}
+genie::STT::STT(App *app) : m_app(app), m_url(get_ws_url(app)) {
+  wake_word_pattern = std::regex(app->config->pv_wake_word_pattern,
+                                 std::regex_constants::icase);
+}
 
 void genie::STT::complete_success(STTSession *session, const char *text) {
   if (session != m_current_session.get())
@@ -180,29 +182,14 @@ void genie::STTSession::on_connection(SoupSession *session, GAsyncResult *res,
 }
 
 void genie::STTSession::handle_stt_result(const char *text) {
-  bool wakeword_found = false;
-  if (!strncasecmp(text, "computer,", 9) ||
-      !strncasecmp(text, "computer.", 9)) {
-    text += 9;
-    wakeword_found = true;
-  } else if (!strncasecmp(text, "computer", 8)) {
-    text += 8;
-    wakeword_found = true;
-  }
+  std::string mangled =
+      std::regex_replace(text, m_controller->wake_word_pattern, "");
 
-  if (wakeword_found) {
-    gchar *dtext = g_strchug(g_strdup(text));
-
-    if (strlen(dtext) > 0) {
-      PROF_PRINT("STT mangled: %s\n", dtext);
-      m_controller->complete_success(this, dtext);
-    } else {
-      m_controller->complete_error(this, 400, "wakeword only");
-    }
-
-    g_free(dtext);
+  if (mangled.empty()) {
+    m_controller->complete_error(this, 400, "wakeword only");
   } else {
-    m_controller->complete_success(this, text);
+    g_message("Manged: %s", mangled.c_str());
+    m_controller->complete_success(this, mangled.c_str());
   }
 }
 

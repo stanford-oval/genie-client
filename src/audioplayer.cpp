@@ -140,7 +140,7 @@ gboolean genie::AudioPlayer::playLocation(const gchar *location,
     path = g_build_filename(g_get_current_dir(), "assets", location, nullptr);
   gchar *uri = g_strdup_printf("file://%s", path);
 
-  gboolean ok = playURI(uri, destination);
+  gboolean ok = play_url(uri, destination);
 
   g_free(uri);
   g_free(path);
@@ -163,10 +163,12 @@ static const gchar *getAudioOutput(const genie::Config &config,
   }
 }
 
-bool genie::AudioPlayer::playURI(const std::string &uri,
-                                 AudioDestination destination, gint64 ref_id) {
+bool genie::AudioPlayer::play_url(const std::string &uri,
+                                  AudioDestination destination, gint64 ref_id) {
   if (uri.empty())
     return false;
+
+  g_message("Queueing %s for playback", uri.c_str());
 
   auto sink = auto_gst_ptr<GstElement>(
       gst_element_factory_make(app->config->audioSink, "audio-output"),
@@ -324,6 +326,28 @@ genie::AudioPlayer::get_mixer_element(snd_mixer_t *handle,
   snd_mixer_selem_id_set_index(sid, 0);
   snd_mixer_selem_id_set_name(sid, selem_name);
   return snd_mixer_find_selem(handle, sid);
+}
+
+void genie::AudioPlayer::set_volume(long volume) {
+  int err = 0;
+  snd_mixer_t *handle = NULL;
+  snd_mixer_selem_id_t *sid;
+
+  snd_mixer_open(&handle, 0);
+  snd_mixer_attach(handle, app->config->audio_output_device);
+  snd_mixer_selem_register(handle, NULL, NULL);
+  snd_mixer_load(handle);
+
+  snd_mixer_selem_id_alloca(&sid);
+  snd_mixer_selem_id_set_index(sid, 0);
+  snd_mixer_selem_id_set_name(sid, "LINEOUT volume");
+  snd_mixer_elem_t *elem = snd_mixer_find_selem(handle, sid);
+
+  snd_mixer_selem_set_playback_volume_all(elem, volume);
+
+  g_message("Updated playback volume to %ld", volume);
+
+  snd_mixer_close(handle);
 }
 
 int genie::AudioPlayer::adjust_playback_volume(long delta) {

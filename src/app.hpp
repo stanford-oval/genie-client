@@ -20,11 +20,12 @@
 
 #include "config.h"
 
-#include "autoptrs.hpp"
 #include "config.hpp"
+#include "utils/autoptrs.hpp"
 #include <glib.h>
 #include <libsoup/soup.h>
 #include <memory>
+#include <queue>
 #include <sys/time.h>
 
 #include "audio.hpp"
@@ -67,10 +68,13 @@ class Leds;
 class Spotifyd;
 class STT;
 class TTS;
-class ConversationClient;
 class DNSController;
+namespace conversation {
+class Client;
+}
 
 enum class ProcessingEventType {
+  BEGIN,
   START_STT,
   END_STT,
   START_GENIE,
@@ -126,6 +130,18 @@ public:
 
   SoupSession *get_soup_session() { return soup_session.get(); }
 
+  /**
+   * Defer the handling of this event until the next state.
+   */
+  template <typename E> void defer(E *event) {
+    if (event != current_event) {
+      g_critical("only the currently handled event can be deferred");
+      return;
+    }
+    current_event = nullptr;
+    deferred_events.emplace(event);
+  }
+
 private:
   // =========================================================================
 
@@ -161,7 +177,7 @@ private:
 
   std::unique_ptr<AudioInput> audio_input;
   std::unique_ptr<AudioPlayer> audio_player;
-  std::unique_ptr<ConversationClient> conversation_client;
+  std::unique_ptr<conversation::Client> conversation_client;
   std::unique_ptr<DNSController> dns_controller;
   std::unique_ptr<EVInput> ev_input;
   std::unique_ptr<Leds> leds;
@@ -181,12 +197,71 @@ private:
   // ### State Variables ###
 
   state::State *current_state;
+  state::events::Event *current_event = nullptr;
+
+  /**
+   * Event that was deferred by the current state.
+   *
+   * When an event occurs, a state can decide to defer handling of the event
+   * to the next state. Deferred events are replayed upon the next state
+   * transition.
+   */
+  struct DeferredEvent {
+    template <typename T>
+    DeferredEvent(T *event) : event(event), handler(generic_handler<T>) {}
+    DeferredEvent(const DeferredEvent &) = delete;
+    DeferredEvent(DeferredEvent &&other) = delete;
+    DeferredEvent &operator=(const DeferredEvent &) = delete;
+    DeferredEvent &operator=(DeferredEvent &&other) = delete;
+    ~DeferredEvent() {
+      if (event) {
+        g_warning("Deferred event %s was destroyed before it was ever handled",
+                  typeid(event).name());
+        delete event;
+      }
+    }
+
+    void dispatch(state::State *state) {
+      if (this->event == nullptr) {
+        g_critical("Attempting to dispatch a destroyed deferred event");
+        return;
+      }
+
+      // move the pointer out of here immediately so we can move it down,
+      // to ensure the destructor won't accidentally double free
+      auto event = this->event;
+      this->event = nullptr;
+      handler(state, event);
+    }
+
+    /**
+     * The event that was deferred.
+     */
+    state::events::Event *event;
+
+  private:
+    template <typename T>
+    static void generic_handler(state::State *state,
+                                state::events::Event *event) {
+      state->react(static_cast<T *>(event));
+    }
+
+    /**
+     * A handler to redispatch the event.
+     * This exists to ensure the correct overload is selected
+     * based on the type of event.
+     */
+    void (*handler)(state::State *state, state::events::Event *event);
+  };
+
+  std::queue<DeferredEvent> deferred_events;
 
   // Private Instance Methods
   // =========================================================================
 
   void print_processing_entry(const char *name, double duration_ms,
                               double total_ms);
+  void replay_deferred_events();
 
   /**
    * @brief GLib main loop callback for dispatching state events.
@@ -202,8 +277,14 @@ private:
     g_debug("HANDLE EVENT %s", typeid(E).name());
     DispatchUserData *dispatch_user_data =
         static_cast<DispatchUserData *>(user_data);
+    App *self = dispatch_user_data->app;
     E *event = static_cast<E *>(dispatch_user_data->event);
-    dispatch_user_data->app->current_state->react(event);
+    // steal the event so we won't free it and the state can defer it
+    self->current_event = event;
+    dispatch_user_data->event = nullptr;
+    self->current_state->react(event);
+    delete self->current_event;
+    self->current_event = nullptr;
     delete dispatch_user_data;
     return false;
   }
@@ -223,6 +304,7 @@ private:
     delete current_state;
     current_state = new_state;
     current_state->enter();
+    replay_deferred_events();
   }
 };
 

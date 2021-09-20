@@ -19,7 +19,7 @@
 #pragma once
 
 #include "app.hpp"
-#include "autoptrs.hpp"
+#include "utils/autoptrs.hpp"
 
 #include <alsa/asoundlib.h>
 #include <gst/gst.h>
@@ -55,9 +55,9 @@ public:
   ~AudioPlayer();
   gboolean playSound(enum Sound_t id,
                      AudioDestination destination = AudioDestination::ALERT);
-  bool playURI(const std::string &uri,
-               AudioDestination destination = AudioDestination::MUSIC,
-               gint64 ref_id = -1);
+  bool play_url(const std::string &url,
+                AudioDestination destination = AudioDestination::MUSIC,
+                gint64 ref_id = -1);
   gboolean playLocation(const gchar *location,
                         AudioDestination destination = AudioDestination::MUSIC);
   bool say(const std::string &text, gint64 ref_id = -1);
@@ -65,6 +65,7 @@ public:
   gboolean stop();
   gboolean resume();
   long get_volume();
+  void set_volume(long volume);
   int adjust_playback_volume(long delta);
   int increment_playback_volume();
   int decrement_playback_volume();

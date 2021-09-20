@@ -18,30 +18,53 @@
 
 #pragma once
 
-#include "app.hpp"
-#include "autoptrs.hpp"
+#include "../app.hpp"
+#include "../utils/autoptrs.hpp"
 #include <deque>
 #include <json-glib/json-glib.h>
 #include <libsoup/soup.h>
 #include <string>
+#include <unordered_map>
 
 namespace genie {
 
-class ConversationClient {
+namespace conversation {
+
+class ProtocolParser {
 public:
-  ConversationClient(App *appInstance);
-  ~ConversationClient();
+  virtual ~ProtocolParser() = default;
+
+  virtual void connected() = 0;
+
+  virtual void ready() = 0;
+
+  virtual void handle_message(JsonReader *reader) = 0;
+};
+
+class Client {
+  friend class ConversationProtocol;
+  friend class AudioProtocol;
+  friend class BaseAudioRequest;
+
+public:
+  Client(App *appInstance);
+  ~Client();
 
   int init();
   void send_command(const std::string text);
   void send_thingtalk(const char *data);
+  void request_subprotocol(const char *extension, const char *const *caps);
 
 protected:
-  void connect();
+  void send_json(auto_gobject_ptr<JsonBuilder> builder);
+  bool is_connected();
+  const char *conversation_id() { return app->config->conversationId; }
+  void mark_ready();
+
+  App *const app;
 
 private:
-  bool is_connected();
-  void queue_json(auto_gobject_ptr<JsonBuilder> builder);
+  void connect();
   void maybe_flush_queue();
   void send_json_now(JsonBuilder *builder);
 
@@ -52,27 +75,18 @@ private:
                          GBytes *message, gpointer data);
   static void on_close(SoupWebsocketConnection *conn, gpointer data);
 
-  // Message handlers
-  void handleConversationID(JsonReader *reader);
-  void handleText(gint64 id, JsonReader *reader);
-  void handleSound(gint64 id, JsonReader *reader);
-  void handleAudio(gint64 id, JsonReader *reader);
-  void handleError(JsonReader *reader);
-  void handlePing(JsonReader *reader);
-  void handleAskSpecial(JsonReader *reader);
-  void handleNewDevice(JsonReader *reader);
-
-  App *app;
-  gchar *conversationId;
   gchar *url;
   const gchar *accessToken;
-  int seq;
   auto_gobject_ptr<SoupWebsocketConnection> m_connection;
   std::deque<auto_gobject_ptr<JsonBuilder>> m_outgoing_queue;
+  bool ready;
+
+  std::unique_ptr<ProtocolParser> main_parser;
+  std::unordered_map<std::string, std::unique_ptr<ProtocolParser>> ext_parsers;
 
   struct timeval tStart;
-  gint64 lastSaidTextID;
-  gint64 ask_special_text_id;
 };
+
+} // namespace conversation
 
 } // namespace genie

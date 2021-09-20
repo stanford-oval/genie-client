@@ -22,8 +22,9 @@
 #include <libsoup/soup.h>
 
 #include "app.hpp"
-#include "autoptrs.hpp"
+#include "utils/autoptrs.hpp"
 #include <queue>
+#include <regex>
 
 namespace genie {
 
@@ -73,7 +74,7 @@ class STT {
   friend class STTSession;
 
 public:
-  STT(App *appInstance);
+  STT(App *app);
 
   void begin_session();
   void send_frame(AudioFrame frame);
@@ -96,6 +97,8 @@ private:
   App *const m_app;
   const std::string m_url;
   std::unique_ptr<STTSession> m_current_session;
+
+  std::regex wake_word_pattern;
 
   struct timeval tConnect;
   struct timeval tFirstFrame;

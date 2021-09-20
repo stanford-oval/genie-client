@@ -31,7 +31,7 @@ public:
   static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 640;
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
 
-  // Porcupine Defaults
+  // Picovoice Defaults
   // -------------------------------------------------------------------------
 
   static const constexpr char *DEFAULT_PV_LIBRARY_PATH =
@@ -40,6 +40,8 @@ public:
       "assets/porcupine_params.pv";
   static const constexpr char *DEFAULT_PV_KEYWORD_PATH = "assets/keyword.ppn";
   static const constexpr float DEFAULT_PV_SENSITIVITY = 0.7f;
+  static const constexpr char *DEFAULT_PV_WAKE_WORD_PATTERN =
+      "^computer[.,!?]?";
 
   // Sound Defaults
   // -------------------------------------------------------------------------
@@ -95,6 +97,7 @@ public:
   gchar *pv_model_path;
   gchar *pv_keyword_path;
   float pv_sensitivity;
+  gchar *pv_wake_word_pattern;
 
   // Sounds
   // -------------------------------------------------------------------------
