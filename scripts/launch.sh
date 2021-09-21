@@ -16,4 +16,9 @@ export GST_PLUGIN_PATH=/opt/genie/lib/gstreamer-1.0
 export GST_PLUGIN_SCANNER=/opt/genie/lib/gstreamer-1.0/gst-plugin-scanner
 export XDG_CONFIG_HOME=/data
 ./pulseaudio --start -v -F /opt/genie/.system.pa -p /opt/genie/lib/pulseaudio --exit-idle-time=-1 --log-target=file:/tmp/pa.log
-./genie
+
+if test "$1" = "--gdb" ; then
+	exec ./gdbserver 0.0.0.0:${GDB_PORT:-1234} ./genie
+else
+	exec ./genie
+fi

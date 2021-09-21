@@ -21,6 +21,7 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             out.config = out.root / "config.ini"
             out.exe = out.root / "src" / "genie"
             out.pulseaudio = out.root / "src" / "pulseaudio"
+            out.gdbserver = out.root / "gdbserver"
 
         with paths.configure("scripts") as scripts:
             scripts.root = paths.repo / "scripts"
@@ -44,6 +45,7 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             paths.launch = Path("/opt/duer/dcslaunch.sh")
             paths.exe = paths.install / "genie"
             paths.pulseaudio = paths.install / "pulseaudio"
+            paths.gdbserver = paths.install / "gdbserver"
             paths.pulseaudio_config = paths.install / ".system.pa"
 
             paths.wifi_config = Path("/data/wifi/wpa_supplicant.conf")

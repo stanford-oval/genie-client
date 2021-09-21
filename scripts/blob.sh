@@ -75,6 +75,8 @@ done
 mkdir -p /out/src
 cp -p /usr/local/bin/pulseaudio /out/src/
 
+cp -p /usr/bin/gdbserver /out/
+
 deps=$(echo $deps | sort | uniq)
 
 echo "copying deps ..."
