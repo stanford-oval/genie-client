@@ -94,6 +94,12 @@ void State::react(events::TogglePlayback *) {
   g_warning("TODO Playback toggled in state %s", NAME);
 }
 
+void State::react(events::PlayerStreamEnter *player_stream_enter) {
+  g_message("Received PlayerStreamEnter with type=%d ref_id=%" G_GINT64_FORMAT
+            ", ignoring.",
+            (int)player_stream_enter->type, player_stream_enter->ref_id);
+}
+
 void State::react(events::PlayerStreamEnd *player_stream_end) {
   g_message("Received PlayerStreamEnd with type=%d ref_id=%" G_GINT64_FORMAT
             ", ignoring.",

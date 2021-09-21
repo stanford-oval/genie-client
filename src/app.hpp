@@ -74,13 +74,13 @@ class Client;
 }
 
 enum class ProcessingEventType {
-  BEGIN,
   START_STT,
   END_STT,
   START_GENIE,
   END_GENIE,
   START_TTS,
   END_TTS,
+  DONE,
 };
 
 class App {

@@ -150,6 +150,8 @@ void genie::App::track_processing_event(ProcessingEventType event_type) {
       break;
     case ProcessingEventType::END_TTS:
       gettimeofday(&end_tts, NULL);
+      break;
+    case ProcessingEventType::DONE:
       int total_ms = time_diff_ms(start_stt, end_tts);
 
       g_print("############# Processing Performance #################\n");
