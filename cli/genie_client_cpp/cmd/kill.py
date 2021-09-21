@@ -40,7 +40,7 @@ def kill_process(remote: Remote, pattern: re.Pattern):
                 "Killing process",
                 ps_entry=ps_entry,
             )
-            remote.run("kill", ps_entry.pid)
+            remote.run("kill", "-9", ps_entry.pid)
             kills += 1
     if kills == 0:
         LOG.info(f"Killed {kills} processes for {pattern.pattern}")

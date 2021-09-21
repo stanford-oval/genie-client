@@ -20,12 +20,14 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             out.lib = out.root / "lib"
             out.config = out.root / "config.ini"
             out.exe = out.root / "src" / "genie"
+            out.pulseaudio = out.root / "src" / "pulseaudio"
 
         with paths.configure("scripts") as scripts:
             scripts.root = paths.repo / "scripts"
             scripts.launch = scripts.root / "launch.sh"
             scripts.asoundrc = scripts.root / "asoundrc"
             scripts.dockerfile = scripts.root / "Dockerfile"
+            scripts.pulseaudio_config = scripts.root / "pulse-system.pa"
 
         with paths.configure("src") as src:
             src.root = paths.repo / "src"
@@ -41,6 +43,8 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             paths.config = paths.install / "config.ini"
             paths.launch = Path("/opt/duer/dcslaunch.sh")
             paths.exe = paths.install / "genie"
+            paths.pulseaudio = paths.install / "pulseaudio"
+            paths.pulseaudio_config = paths.install / ".system.pa"
 
             paths.wifi_config = Path("/data/wifi/wpa_supplicant.conf")
             paths.dns_config = Path("/data/wifi/resolv.conf")

@@ -8,7 +8,7 @@ class PSEntry:
 
     pid: int
     user: str
-    virtual_memory_KiB: int
+    virtual_memory: str
     process_state: str
     command: str
 
@@ -18,13 +18,13 @@ class PSEntry:
         if match is None:
             raise ValueError(f"Failed to parse `ps` line: {repr(line)}")
 
-        pid, user, virtual_memory_KiB, process_state, command = \
+        pid, user, virtual_memory, process_state, command = \
             match.groups()
 
         return cls(
             pid=int(pid),
             user=user,
-            virtual_memory_KiB=int(virtual_memory_KiB),
+            virtual_memory=virtual_memory,
             process_state=process_state,
             command=command,
         )
