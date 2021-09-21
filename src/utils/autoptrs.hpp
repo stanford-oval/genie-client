@@ -58,12 +58,14 @@ public:
   auto_gobject_ptr<T> &operator=(const auto_gobject_ptr<T> &other) {
     if (other.m_instance)
       g_object_ref(other.m_instance);
-    this->~auto_gobject_ptr();
+    if (m_instance)
+      g_object_unref(m_instance);
     m_instance = other.m_instance;
     return *this;
   };
   auto_gobject_ptr<T> &operator=(nullptr_t ptr) {
-    this->~auto_gobject_ptr();
+    if (m_instance)
+      g_object_unref(m_instance);
     m_instance = nullptr;
     return *this;
   }
@@ -105,12 +107,14 @@ public:
   auto_gst_ptr<T> &operator=(const auto_gst_ptr<T> &other) {
     if (other.m_instance)
       gst_object_ref(other.m_instance);
-    this->~auto_gst_ptr();
+    if (m_instance)
+      gst_object_unref(m_instance);
     m_instance = other.m_instance;
     return *this;
-  };
+  }
   auto_gst_ptr<T> &operator=(nullptr_t ptr) {
-    this->~auto_gobject_ptr();
+    if (m_instance)
+      gst_object_unref(m_instance);
     m_instance = nullptr;
     return *this;
   }
