@@ -14,7 +14,6 @@ export LD_LIBRARY_PATH=/opt/genie/lib/:/lib:/usr/lib
 export GST_REGISTRY_UPDATE=no
 export GST_PLUGIN_PATH=/opt/genie/lib/gstreamer-1.0
 export GST_PLUGIN_SCANNER=/opt/genie/lib/gstreamer-1.0/gst-plugin-scanner
-if [ -z "$(pidof pulseaudio)" ]; then
-	./pulseaudio -D -v -F /opt/genie/.system.pa -p /opt/genie/lib/pulseaudio --exit-idle-time=-1 --log-target=file:/tmp/pa.log
-fi
+export XDG_CONFIG_HOME=/data
+./pulseaudio --start -v -F /opt/genie/.system.pa -p /opt/genie/lib/pulseaudio --exit-idle-time=-1 --log-target=file:/tmp/pa.log
 ./genie
