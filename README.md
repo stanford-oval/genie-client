@@ -16,7 +16,7 @@ You can make a local build for development a standard Linux distro using [`meson
 
 Install the dependencies from your package manager. On Fedora, this is:
 ```bash
-sudo dnf -y install meson gcc-c++ 'pkgconfig(alsa)' 'pkgconfig(glib-2.0)' 'pkgconfig(libsoup-2.4)' 'pkgconfig(json-glib-1.0)' 'pkgconfig(libevdev)' 'pkgconfig(gstreamer-1.0)' gstreamer1-plugins-base gstreamer1-plugins-good
+sudo dnf -y install meson gcc-c++ 'pkgconfig(alsa)' 'pkgconfig(glib-2.0)' 'pkgconfig(libsoup-2.4)' 'pkgconfig(json-glib-1.0)' 'pkgconfig(libevdev)' 'pkgconfig(gstreamer-1.0)' gstreamer1-plugins-base gstreamer1-plugins-good cmake speex-devel speexdsp-devel
 ```
 
 ### Step 2: Picovoice
