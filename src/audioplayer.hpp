@@ -24,6 +24,8 @@
 #include <alsa/asoundlib.h>
 #include <gst/gst.h>
 #include <string>
+#include <memory>
+#include <queue>
 
 namespace genie {
 
@@ -40,6 +42,9 @@ struct AudioTask {
       : pipeline(pipeline), bus_watch_id(bus_watch_id), type(type),
         ref_id(ref_id) {}
 
+  AudioTask(const AudioTask&) = delete;
+  AudioTask(AudioTask&&) = delete;
+
   ~AudioTask() {
     gst_element_set_state(pipeline.get(), GST_STATE_NULL);
     if (bus_watch_id)
@@ -52,7 +57,6 @@ enum class AudioDestination { VOICE, MUSIC, ALERT };
 class AudioPlayer {
 public:
   AudioPlayer(App *appInstance);
-  ~AudioPlayer();
   gboolean playSound(enum Sound_t id,
                      AudioDestination destination = AudioDestination::ALERT);
   bool play_url(const std::string &url,
@@ -77,8 +81,8 @@ private:
   static gboolean bus_call_queue(GstBus *bus, GstMessage *msg, gpointer data);
   static void on_pad_added(GstElement *element, GstPad *pad, gpointer data);
   gboolean playing;
-  GQueue *playerQueue;
-  AudioTask *playingTask;
+  std::queue<std::unique_ptr<AudioTask>> player_queue;
+  std::unique_ptr<AudioTask> playing_task;
   App *app;
   snd_mixer_elem_t *get_mixer_element(snd_mixer_t *handle,
                                       const char *selem_name);

@@ -29,8 +29,6 @@
 
 genie::AudioPlayer::AudioPlayer(App *appInstance) {
   app = appInstance;
-  playerQueue = g_queue_new();
-  playingTask = NULL;
   playing = false;
 
   gst_init(NULL, NULL);
@@ -38,8 +36,6 @@ genie::AudioPlayer::AudioPlayer(App *appInstance) {
   gst_init_static_plugins();
 #endif
 }
-
-genie::AudioPlayer::~AudioPlayer() { g_queue_free(playerQueue); }
 
 gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
                                             gpointer data) {
@@ -70,9 +66,8 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
     case GST_MESSAGE_EOS:
       g_debug("End of stream");
       obj->app->dispatch(new state::events::PlayerStreamEnd(
-          obj->playingTask->type, obj->playingTask->ref_id));
-      delete obj->playingTask;
-      obj->playingTask = NULL;
+          obj->playing_task->type, obj->playing_task->ref_id));
+      obj->playing_task = nullptr;
       obj->playing = false;
       obj->dispatch_queue();
       break;
@@ -85,8 +80,7 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
       g_printerr("Error: %s\n", error->message);
       g_error_free(error);
 
-      delete obj->playingTask;
-      obj->playingTask = NULL;
+      obj->playing_task = nullptr;
       obj->playing = false;
       obj->dispatch_queue();
       break;
@@ -252,14 +246,15 @@ bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
 }
 
 void genie::AudioPlayer::dispatch_queue() {
-  if (!playing && !g_queue_is_empty(playerQueue)) {
-    AudioTask *t = (AudioTask *)g_queue_pop_head(playerQueue);
-    playingTask = t;
+  if (!playing && !player_queue.empty()) {
+    std::unique_ptr<AudioTask>& task = player_queue.front();
+    playing_task = std::move(task);
+    player_queue.pop();
 
     // PROF_PRINT("gst pipeline started\n");
-    gettimeofday(&playingTask->tStart, NULL);
+    gettimeofday(&playing_task->tStart, NULL);
 
-    gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PLAYING);
+    gst_element_set_state(playing_task->pipeline.get(), GST_STATE_PLAYING);
     playing = true;
   }
 }
@@ -271,19 +266,15 @@ gboolean genie::AudioPlayer::add_queue(const auto_gst_ptr<GstElement> &p,
       gst_bus_add_watch(bus, genie::AudioPlayer::bus_call_queue, this);
   gst_object_unref(bus);
 
-  AudioTask *t = new AudioTask(p, bus_watch_id, type, ref_id);
-  g_queue_push_tail(playerQueue, t);
+  auto task = std::make_unique<AudioTask>(p, bus_watch_id, type, ref_id);
+  player_queue.push(std::move(task));
   return true;
 }
 
 gboolean genie::AudioPlayer::clean_queue() {
-  if (playingTask) {
-    delete playingTask;
-    playingTask = nullptr;
-  }
-  while (!g_queue_is_empty(playerQueue)) {
-    AudioTask *t = (AudioTask *)g_queue_pop_head(playerQueue);
-    delete t;
+  playing_task.reset();
+  while (!player_queue.empty()) {
+    player_queue.pop();
   }
   playing = false;
   return true;
@@ -292,9 +283,9 @@ gboolean genie::AudioPlayer::clean_queue() {
 gboolean genie::AudioPlayer::stop() {
   if (!playing)
     return true;
-  if (playingTask && playingTask->pipeline) {
+  if (playing_task && playing_task->pipeline) {
     g_print("Stop playing current pipeline\n");
-    gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PAUSED);
+    gst_element_set_state(playing_task->pipeline.get(), GST_STATE_PAUSED);
     playing = false;
   }
   clean_queue();
@@ -304,9 +295,9 @@ gboolean genie::AudioPlayer::stop() {
 gboolean genie::AudioPlayer::resume() {
   if (playing)
     return true;
-  if (playingTask && playingTask->pipeline) {
+  if (playing_task && playing_task->pipeline) {
     g_print("Resume current pipeline\n");
-    gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PLAYING);
+    gst_element_set_state(playing_task->pipeline.get(), GST_STATE_PLAYING);
     playing = true;
   }
   return true;
