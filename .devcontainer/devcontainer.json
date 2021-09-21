@@ -34,6 +34,9 @@
 		"asabil.meson",
 	],
 	
+	"workspaceMount": "source=${localWorkspaceFolder},target=/src,type=bind,consistency=delegated",
+	"workspaceFolder": "/src",
+	
 	// This did _not_ work... seemed to have build using it, but then brought up
 	// an x86 container for the workspace..?
 	// "initializeCommand": [
