@@ -19,7 +19,6 @@ case ${ARCH} in
 	;;
 esac
 
-DESTDIR="/out/lib"
 export LD_LIBRARY_PATH="/usr/local/lib/${SEARCH_ARCH}"
 
 deps=""
@@ -39,6 +38,7 @@ findDeps() {
 			if [ ${?} -eq 0 ]; then
 				echo "blocklist dependency ${a}"
 				isBL=1
+				break
 			fi
 		done
 
@@ -54,44 +54,61 @@ findDeps() {
 
 findDeps build/src/genie
 
+DESTDIR="/out/lib"
 mkdir -p ${DESTDIR} ${DESTDIR}/gio/modules ${DESTDIR}/gstreamer-1.0 ${DESTDIR}/pulseaudio
 
 plugins="coreelements autodetect alsa pulseaudio playback wavparse audioparsers ogg mpg123 id3demux icydemux typefindfunctions soup vorbis volume audioconvert audioresample"
 for p in ${plugins} ; do
-	cp -p /usr/local/lib/${SEARCH_ARCH}/gstreamer-1.0/libgst${p}.so ${DESTDIR}/gstreamer-1.0/
+	deps+="/usr/local/lib/${SEARCH_ARCH}/gstreamer-1.0/libgst${p}.so "
 	findDeps /usr/local/lib/${SEARCH_ARCH}/gstreamer-1.0/libgst${p}.so
 done
 cp -p /usr/local/libexec/gstreamer-1.0/gst-plugin-scanner ${DESTDIR}/gstreamer-1.0/
+strip ${DESTDIR}/gstreamer-1.0/gst-plugin-scanner
 
+deps+="/usr/lib/${SEARCH_ARCH}/gio/modules/libgiognutls.so "
 findDeps /usr/lib/${SEARCH_ARCH}/gio/modules/libgiognutls.so
-cp -p /usr/lib/${SEARCH_ARCH}/gio/modules/libgiognutls.so ${DESTDIR}/gio/modules/
 
 findDeps /usr/local/bin/pulseaudio
 pulse_modules="libalsa-util libprotocol-native module-native-protocol-unix module-alsa-sink module-alsa-source module-null-sink module-always-sink module-null-sink module-echo-cancel"
 for p in ${pulse_modules} ; do
 	cp -p /usr/local/lib/${SEARCH_ARCH}/pulse-15.0/modules/${p}.so ${DESTDIR}/pulseaudio
+	strip ${DESTDIR}/pulseaudio/${p}.so
 	findDeps /usr/local/lib/${SEARCH_ARCH}/pulse-15.0/modules/${p}.so
 done
-mkdir -p /out/src
-cp -p /usr/local/bin/pulseaudio /out/src/
-
-cp -p /usr/bin/gdbserver /out/
 
 deps=$(echo $deps | sort | uniq)
 
 echo "copying deps ..."
+rm -fr /out/debug/.build-id
+cp -rp /usr/lib/debug/.build-id /out/debug/.build-id
 for a in ${deps}; do
-	echo "copying ${a}"
-	cp -p ${a} ${DESTDIR}/
+	dest=$(echo "${a}" | sed -E -e "s|/usr/local/lib/${SEARCH_ARCH}/pulse-15.0/modules|${DESTDIR}/pulseaudio|g" -e  "s|(/usr(/local)?)?/lib/${SEARCH_ARCH}|${DESTDIR}|g")
+	echo "copying ${a} into ${dest}"
+	build_id=$(file -L "${a}" | grep -E -o 'BuildID\[sha1\]=[a-f0-9]+' | cut -d'=' -f2)
+	if test -n "$build_id" ; then
+		first_two=$(echo $build_id | grep -E -o '^..')
+		rest=$(echo $build_id | sed -E 's/^..//g')
+		mkdir -p /out/debug/.build-id/$first_two
+		if test -f /out/debug/.build-id/$first_two/$rest.debug ; then
+			echo "debugging information already present"
+		else
+			echo "saving debug information into /out/debug/.build-id/$first_two/$rest.debug"
+			objcopy --only-keep-debug "${a}" /out/debug/.build-id/$first_two/$rest.debug
+		fi
+	else
+		echo "missing build id information"
+	fi
+
+	cp -p -T ${a} ${dest}
+	strip ${dest}
 done
-chmod +x ${DESTDIR}/*
 
-# strip dependencies
-echo "stripping deps ..."
-find ${DESTDIR} -type f -exec strip {} \;
+cp -p /usr/local/bin/pulseaudio /out/
+strip /out/pulseaudio
+cp -p /usr/bin/gdbserver /out/
+strip /out/gdbserver
 
-mkdir -p /out/src
-cp -p build/src/genie /out/src/
+cp -p build/src/genie /out/
 
 mkdir -p /out/assets
 cp -p assets/* /out/assets/

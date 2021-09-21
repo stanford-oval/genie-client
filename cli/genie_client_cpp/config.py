@@ -19,8 +19,8 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             out.assets = out.root / "assets"
             out.lib = out.root / "lib"
             out.config = out.root / "config.ini"
-            out.exe = out.root / "src" / "genie"
-            out.pulseaudio = out.root / "src" / "pulseaudio"
+            out.exe = out.root / "genie"
+            out.pulseaudio = out.root / "pulseaudio"
             out.gdbserver = out.root / "gdbserver"
 
         with paths.configure("scripts") as scripts:
