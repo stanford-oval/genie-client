@@ -22,7 +22,8 @@ esac
 export LD_LIBRARY_PATH="/usr/local/lib/${SEARCH_ARCH}"
 
 deps=""
-blocklistDeps="libicudata.* libasound.* libxml2.* libpthread.so.0 libc.so.6 libm.so.6 librt.so.1 libdl.so.2 libresolv.so.2"
+# blocklistDeps="libicudata.* libasound.* libxml2.* libpthread.so.0 libc.so.6 libm.so.6 librt.so.1 libdl.so.2 libresolv.so.2"
+blocklistDeps="libicudata.* libasound.* libxml2.*"
 
 findDeps() {
 	local src="${1}"
@@ -55,6 +56,7 @@ findDeps() {
 findDeps build/src/genie
 
 DESTDIR="/out/lib"
+rm -rf "${DESTDIR}"
 mkdir -p ${DESTDIR} ${DESTDIR}/gio/modules ${DESTDIR}/gstreamer-1.0 ${DESTDIR}/pulseaudio
 
 plugins="coreelements autodetect alsa pulseaudio playback wavparse audioparsers ogg mpg123 id3demux icydemux typefindfunctions soup vorbis volume audioconvert audioresample"
@@ -102,6 +104,8 @@ for a in ${deps}; do
 	cp -p -T ${a} ${dest}
 	strip ${dest}
 done
+
+cp /lib/arm-linux-gnueabihf/libnss_* /out/lib/
 
 cp -p /usr/local/bin/pulseaudio /out/
 strip /out/pulseaudio
