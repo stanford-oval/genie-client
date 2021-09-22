@@ -12,7 +12,8 @@ LOG = logging.getLogger(__name__)
 COMMAND_PATTERNS = (
     re.compile(r".*\s/opt/duer/dcslaunch.sh$"),
     re.compile(r".*/genie$"),
-    re.compile(r"^/tmp/spotifyd\s.*")
+    re.compile(r"^/tmp/spotifyd\s.*"),
+    re.compile(r".*/pulseaudio\s.*"),
 )
 
 def add_to(subparsers):
