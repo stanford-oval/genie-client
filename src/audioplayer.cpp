@@ -82,7 +82,8 @@ void genie::AudioPlayer::init_say_pipeline() {
       gst_element_factory_make("souphttpsrc", "http-source"),
       adopt_mode::ref_sink);
   auto decoder = gst_element_factory_make("wavparse", "wav-parser");
-  auto sink = gst_element_factory_make(app->config->audioSink, "audio-output");
+  auto sink =
+      gst_element_factory_make(app->config->audioSink, "audio-output-say");
 
   if (!pipeline || !soupsrc || !decoder || !sink) {
     g_error("Gst element could not be created\n");
@@ -107,7 +108,7 @@ void genie::AudioPlayer::init_say_pipeline() {
 
 void genie::AudioPlayer::init_url_pipeline() {
   auto sink = auto_gobject_ptr<GstElement>(
-      gst_element_factory_make(app->config->audioSink, "audio-output"),
+      gst_element_factory_make(app->config->audioSink, "audio-output-url"),
       adopt_mode::ref_sink);
   const char *output_device =
       get_audio_output(*app->config, AudioDestination::MUSIC /* FIXME */);
