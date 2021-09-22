@@ -41,6 +41,7 @@ genie::Config::~Config() {
   g_free(audioOutputDeviceAlerts);
   g_free(audioVoice);
   g_free(audio_output_device);
+  g_free(audio_backend);
   g_free(leds_path);
 }
 
@@ -271,6 +272,13 @@ void genie::Config::load() {
   if (error) {
     g_error_free(error);
     audioVoice = g_strdup("female");
+  }
+
+  error = NULL;
+  audio_backend = g_key_file_get_string(key_file, "audio", "backend", &error);
+  if (error) {
+    g_error_free(error);
+    audio_backend = g_strdup("alsa");
   }
 
   audio_output_device =

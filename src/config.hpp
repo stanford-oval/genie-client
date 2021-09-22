@@ -83,6 +83,7 @@ public:
   gchar *audioOutputDeviceAlerts;
   gchar *audioOutputFIFO;
   gchar *audioVoice;
+  gchar *audio_backend;
 
   /**
    * @brief The general/main audio output device; used to control volume.

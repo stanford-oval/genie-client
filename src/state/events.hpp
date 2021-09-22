@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "audio.hpp"
+#include "../audio.hpp"
 #include <glib.h>
 #include <memory>
 #include <string>

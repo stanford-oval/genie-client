@@ -16,7 +16,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <alsa/asoundlib.h>
 #include <dlfcn.h>
 #include <glib.h>
 #include <signal.h>
@@ -44,28 +43,26 @@ genie::AudioInput::~AudioInput() {
   running = false;
   WebRtcVad_Free(vad_instance);
   free(pcm);
-  snd_pcm_close(alsa_handle);
+  if (alsa_handle != NULL) {
+    snd_pcm_close(alsa_handle);
+  }
+  if (pulse_handle != NULL) {
+    pa_simple_free(pulse_handle);
+  }
   pv_porcupine_delete_func(porcupine);
   dlclose(porcupine_library);
 }
 
-int genie::AudioInput::init() {
-  gchar *input_audio_device = app->config->audioInputDevice;
-
+bool genie::AudioInput::init_pv() {
   const char *library_path = app->config->pv_library_path;
   const char *model_path = app->config->pv_model_path;
   const char *keyword_path = app->config->pv_keyword_path;
   const float sensitivity = app->config->pv_sensitivity;
 
-  if (!input_audio_device) {
-    g_error("no input audio device");
-    return -1;
-  }
-
   porcupine_library = dlopen(library_path, RTLD_NOW);
   if (!porcupine_library) {
     g_error("failed to open library: %s", library_path);
-    return -1;
+    return false;
   }
 
   char *error = NULL;
@@ -74,15 +71,19 @@ int genie::AudioInput::init() {
       porcupine_library, "pv_status_to_string");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_status_to_string' with '%s'.\n", error);
-    return -2;
+    return false;
   }
 
   int32_t (*pv_sample_rate_func)() =
       (int32_t(*)())dlsym(porcupine_library, "pv_sample_rate");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_sample_rate' with '%s'.\n", error);
-    return -2;
+    return false;
   }
+
+  int32_t sample_rate_signed = pv_sample_rate_func();
+  g_assert(sample_rate_signed > 0);
+  sample_rate = (size_t)sample_rate_signed;
 
   pv_status_t (*pv_porcupine_init_func)(const char *, int32_t,
                                         const char *const *, const float *,
@@ -92,14 +93,14 @@ int genie::AudioInput::init() {
                                                "pv_porcupine_init");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_init' with '%s'.\n", error);
-    return -2;
+    return false;
   }
 
   pv_porcupine_delete_func = (void (*)(pv_porcupine_t *))dlsym(
       porcupine_library, "pv_porcupine_delete");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_delete' with '%s'.\n", error);
-    return -2;
+    return false;
   }
 
   pv_porcupine_process_func =
@@ -107,15 +108,17 @@ int genie::AudioInput::init() {
           porcupine_library, "pv_porcupine_process");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_process' with '%s'.\n", error);
-    return -2;
+    return false;
   }
 
   int32_t (*pv_porcupine_frame_length_func)() =
       (int32_t(*)())dlsym(porcupine_library, "pv_porcupine_frame_length");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_frame_length' with '%s'.\n", error);
-    return -2;
+    return false;
   }
+
+  pv_frame_length = pv_porcupine_frame_length_func();
 
   porcupine = NULL;
   pv_status_t status = pv_porcupine_init_func(model_path, 1, &keyword_path,
@@ -123,15 +126,19 @@ int genie::AudioInput::init() {
   if (status != PV_STATUS_SUCCESS) {
     g_error("'pv_porcupine_init' failed with '%s'\n",
             pv_status_to_string_func(status));
-    return -2;
+    return false;
   }
 
+  return true;
+}
+
+bool genie::AudioInput::init_alsa(gchar *input_audio_device) {
   alsa_handle = NULL;
   int error_code =
       snd_pcm_open(&alsa_handle, input_audio_device, SND_PCM_STREAM_CAPTURE, 0);
   if (error_code != 0) {
     g_error("'snd_pcm_open' failed with '%s'\n", snd_strerror(error_code));
-    return -2;
+    return false;
   }
 
   snd_pcm_hw_params_t *hardware_params = NULL;
@@ -139,14 +146,14 @@ int genie::AudioInput::init() {
   if (error_code != 0) {
     g_error("'snd_pcm_hw_params_malloc' failed with '%s'\n",
             snd_strerror(error_code));
-    return -2;
+    return false;
   }
 
   error_code = snd_pcm_hw_params_any(alsa_handle, hardware_params);
   if (error_code != 0) {
     g_error("'snd_pcm_hw_params_any' failed with '%s'\n",
             snd_strerror(error_code));
-    return -2;
+    return false;
   }
 
   error_code = snd_pcm_hw_params_set_access(alsa_handle, hardware_params,
@@ -154,7 +161,7 @@ int genie::AudioInput::init() {
   if (error_code != 0) {
     g_error("'snd_pcm_hw_params_set_access' failed with '%s'\n",
             snd_strerror(error_code));
-    return -2;
+    return false;
   }
 
   error_code = snd_pcm_hw_params_set_format(alsa_handle, hardware_params,
@@ -162,33 +169,28 @@ int genie::AudioInput::init() {
   if (error_code != 0) {
     g_error("'snd_pcm_hw_params_set_format' failed with '%s'\n",
             snd_strerror(error_code));
-    return -2;
+    return false;
   }
-
-  int32_t sample_rate_signed = pv_sample_rate_func();
-
-  g_assert(sample_rate_signed > 0);
-  sample_rate = (size_t)sample_rate_signed;
 
   error_code =
       snd_pcm_hw_params_set_rate(alsa_handle, hardware_params, sample_rate, 0);
   if (error_code != 0) {
     g_error("'snd_pcm_hw_params_set_rate' failed with '%s'\n",
             snd_strerror(error_code));
-    return -2;
+    return false;
   }
 
   error_code = snd_pcm_hw_params_set_channels(alsa_handle, hardware_params, 1);
   if (error_code != 0) {
     g_error("'snd_pcm_hw_params_set_channels' failed with '%s'\n",
             snd_strerror(error_code));
-    return -2;
+    return false;
   }
 
   error_code = snd_pcm_hw_params(alsa_handle, hardware_params);
   if (error_code != 0) {
     g_error("'snd_pcm_hw_params' failed with '%s'\n", snd_strerror(error_code));
-    return -2;
+    return false;
   }
 
   snd_pcm_hw_params_free(hardware_params);
@@ -196,10 +198,49 @@ int genie::AudioInput::init() {
   error_code = snd_pcm_prepare(alsa_handle);
   if (error_code != 0) {
     g_error("'snd_pcm_prepare' failed with '%s'\n", snd_strerror(error_code));
-    return -2;
+    return false;
   }
 
-  pv_frame_length = pv_porcupine_frame_length_func();
+  return true;
+}
+
+bool genie::AudioInput::init_pulse() {
+  const pa_sample_spec config{/* format */ PA_SAMPLE_S16LE,
+                              /* rate */ sample_rate,
+                              /* channels */ 1};
+
+  int error;
+  if (!(pulse_handle = pa_simple_new(NULL, "Genie", PA_STREAM_RECORD, NULL,
+                                     "record", &config, NULL, NULL, &error))) {
+    g_error("pa_simple_new() failed: %s\n", pa_strerror(error));
+    return false;
+  }
+
+  return true;
+}
+
+int genie::AudioInput::init() {
+  if (!app->config->audioInputDevice) {
+    g_error("no input audio device");
+    return -1;
+  }
+
+  if (!init_pv()) {
+    return -1;
+  }
+
+  if (strcmp(app->config->audio_backend, "alsa") == 0) {
+    if (!init_alsa(app->config->audioInputDevice)) {
+      return -1;
+    }
+  } else if (strcmp(app->config->audio_backend, "pulse") == 0) {
+    if (!init_pulse()) {
+      return -1;
+    }
+  } else {
+    g_error("invalid audio backend: %s", app->config->audio_backend);
+    return -1;
+  }
 
   pcm = (int16_t *)malloc(
       std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
@@ -324,11 +365,22 @@ size_t genie::AudioInput::ms_to_frames(size_t frame_length, size_t ms) {
 }
 
 genie::AudioFrame genie::AudioInput::read_frame(int32_t frame_length) {
-  const int read_frames = snd_pcm_readi(alsa_handle, pcm, frame_length);
+  int read_frames = 0;
+  int error;
 
-  if (read_frames < 0) {
-    g_critical("'snd_pcm_readi' failed with '%s'", snd_strerror(read_frames));
-    return AudioFrame(0);
+  if (alsa_handle != NULL) {
+    read_frames = snd_pcm_readi(alsa_handle, pcm, frame_length);
+    if (read_frames < 0) {
+      g_critical("'snd_pcm_readi' failed with '%s'", snd_strerror(read_frames));
+      return AudioFrame(0);
+    }
+  } else if (pulse_handle != NULL) {
+    read_frames = frame_length * sizeof(int16_t);
+    if (pa_simple_read(pulse_handle, pcm, read_frames, &error) < 0) {
+      g_critical("pa_simple_read() failed with '%s'", pa_strerror(error));
+      return AudioFrame(0);
+    }
+    read_frames /= sizeof(int16_t);
   }
 
   if (read_frames != frame_length) {

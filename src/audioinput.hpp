@@ -22,11 +22,14 @@
 #include "audioplayer.hpp"
 #include "pv_porcupine.h"
 #include "stt.hpp"
-#include <alsa/asoundlib.h>
 #include <atomic>
 #include <glib.h>
 #include <queue>
 #include <webrtc/webrtc_vad.h>
+
+#include <alsa/asoundlib.h>
+#include <pulse/simple.h>
+#include <pulse/error.h>
 
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>
@@ -60,6 +63,7 @@ protected:
 private:
   bool running;
   snd_pcm_t *alsa_handle = NULL;
+  pa_simple *pulse_handle = NULL;
 
   void *porcupine_library;
   pv_porcupine_t *porcupine;
@@ -94,6 +98,9 @@ private:
   AudioFrame read_frame(int32_t frame_length);
 
   size_t ms_to_frames(size_t frame_length, size_t ms);
+  bool init_pv();
+  bool init_alsa(gchar *input_audio_device);
+  bool init_pulse();
   void loop_waiting();
   void loop_woke();
   void loop_listening();

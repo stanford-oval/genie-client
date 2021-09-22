@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "state/events.hpp"
-#include "state/state.hpp"
+#include "events.hpp"
+#include "state.hpp"
 
 namespace genie {
 namespace state {

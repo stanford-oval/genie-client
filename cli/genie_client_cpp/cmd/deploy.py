@@ -95,6 +95,9 @@ def deploy_all(target: str, log=LOG):
     remote.push(SCRIPT_PATHS.asoundrc, DEPLOY_PATHS.asoundrc)
     remote.push(OUT_PATHS.config, DEPLOY_PATHS.config)
     remote.push(OUT_PATHS.exe, DEPLOY_PATHS.exe)
+    remote.push(OUT_PATHS.pulseaudio, DEPLOY_PATHS.pulseaudio)
+    remote.push(OUT_PATHS.gdbserver, DEPLOY_PATHS.gdbserver)
+    remote.push(SCRIPT_PATHS.pulseaudio_config, DEPLOY_PATHS.pulseaudio_config)
 
 
 @LOG.inject

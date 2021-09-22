@@ -20,30 +20,121 @@
 
 #include <glib.h>
 #include <gst/gst.h>
-#include <json-glib/json-glib.h>
 #include <string.h>
 
 #ifdef STATIC
 #include "gst/gstinitstaticplugins.h"
 #endif
 
-genie::AudioPlayer::AudioPlayer(App *appInstance) {
-  app = appInstance;
-  playerQueue = g_queue_new();
-  playingTask = NULL;
-  playing = false;
+static const gchar *get_audio_output(const genie::Config &config,
+                                     genie::AudioDestination destination) {
+  switch (destination) {
+    case genie::AudioDestination::MUSIC:
+      return config.audioOutputDeviceMusic;
+    case genie::AudioDestination::ALERT:
+      return config.audioOutputDeviceAlerts;
+    case genie::AudioDestination::VOICE:
+      return config.audioOutputDeviceVoice;
+    default:
+      g_warn_if_reached();
+      return config.audioOutputDeviceMusic;
+  }
+}
 
+void genie::URLAudioTask::start() {
+  g_object_set(G_OBJECT(pipeline.get()), "uri", url.c_str(), nullptr);
+
+  // PROF_PRINT("gst pipeline started\n");
+  gettimeofday(&t_start, NULL);
+  gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
+}
+
+void genie::SayAudioTask::start() {
+  auto_gobject_ptr<JsonGenerator> gen(json_generator_new(), adopt_mode::owned);
+  JsonNode *root = json_builder_get_root(json.get());
+  json_generator_set_root(gen.get(), root);
+  gchar *jsonText = json_generator_to_data(gen.get(), NULL);
+
+  g_object_set(G_OBJECT(soupsrc.get()), "post-data", jsonText, NULL);
+
+  g_free(jsonText);
+
+  // PROF_PRINT("gst pipeline started\n");
+  gettimeofday(&t_start, NULL);
+  gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
+}
+
+genie::AudioPlayer::AudioPlayer(App *appInstance)
+    : app(appInstance), playing(false) {
   gst_init(NULL, NULL);
 #ifdef STATIC
   gst_init_static_plugins();
 #endif
+
+  init_say_pipeline();
+  init_url_pipeline();
 }
 
-genie::AudioPlayer::~AudioPlayer() { g_queue_free(playerQueue); }
+void genie::AudioPlayer::init_say_pipeline() {
+  auto pipeline = auto_gobject_ptr<GstElement>(
+      gst_pipeline_new("audio-player-say"), adopt_mode::ref_sink);
+  soupsrc = auto_gobject_ptr<GstElement>(
+      gst_element_factory_make("souphttpsrc", "http-source"),
+      adopt_mode::ref_sink);
+  auto decoder = gst_element_factory_make("wavparse", "wav-parser");
+  auto sink =
+      gst_element_factory_make(app->config->audioSink, "audio-output-say");
+
+  if (!pipeline || !soupsrc || !decoder || !sink) {
+    g_error("Gst element could not be created\n");
+  }
+
+  gchar *location = g_strdup_printf("%s/en-US/voice/tts", app->config->nlURL);
+  g_object_set(G_OBJECT(soupsrc.get()), "location", location, "method", "POST",
+               "content-type", "application/json", NULL);
+  g_free(location);
+
+  const char *output_device =
+      get_audio_output(*app->config, AudioDestination::VOICE);
+  if (output_device) {
+    g_object_set(G_OBJECT(sink), "device", output_device, NULL);
+  }
+
+  gst_bin_add_many(GST_BIN(pipeline.get()), soupsrc.get(), decoder, sink, NULL);
+  gst_element_link_many(soupsrc.get(), decoder, sink, NULL);
+
+  say_pipeline.init(this, pipeline);
+}
+
+void genie::AudioPlayer::init_url_pipeline() {
+  auto sink = auto_gobject_ptr<GstElement>(
+      gst_element_factory_make(app->config->audioSink, "audio-output-url"),
+      adopt_mode::ref_sink);
+  const char *output_device =
+      get_audio_output(*app->config, AudioDestination::MUSIC /* FIXME */);
+  if (output_device)
+    g_object_set(G_OBJECT(sink.get()), "device", output_device, NULL);
+
+  auto pipeline = auto_gobject_ptr<GstElement>(
+      gst_element_factory_make("playbin", "audio-player-url"),
+      adopt_mode::ref_sink);
+  g_object_set(G_OBJECT(pipeline.get()), "audio-sink", sink.get(), nullptr);
+
+  url_pipeline.init(this, pipeline);
+}
+
+void genie::AudioPlayer::PipelineState::init(
+    AudioPlayer *self, const auto_gobject_ptr<GstElement> &pipeline) {
+  this->pipeline = pipeline;
+  auto *bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline.get()));
+  bus_watch_id =
+      gst_bus_add_watch(bus, genie::AudioPlayer::bus_call_queue, self);
+  gst_object_unref(bus);
+}
 
 gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
                                             gpointer data) {
-  AudioPlayer *obj = (AudioPlayer *)data;
+  AudioPlayer *obj = static_cast<AudioPlayer *>(data);
   switch (GST_MESSAGE_TYPE(msg)) {
     case GST_MESSAGE_STREAM_STATUS:
       // PROF_PRINT("Stream status changed\n");
@@ -68,11 +159,11 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
       }
       break;
     case GST_MESSAGE_EOS:
-      g_debug("End of stream");
+      g_message("End of stream");
       obj->app->dispatch(new state::events::PlayerStreamEnd(
-          obj->playingTask->type, obj->playingTask->ref_id));
-      delete obj->playingTask;
-      obj->playingTask = NULL;
+          obj->playing_task->type, obj->playing_task->ref_id));
+      obj->playing_task->stop();
+      obj->playing_task = nullptr;
       obj->playing = false;
       obj->dispatch_queue();
       break;
@@ -85,9 +176,11 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
       g_printerr("Error: %s\n", error->message);
       g_error_free(error);
 
-      delete obj->playingTask;
-      obj->playingTask = NULL;
-      obj->playing = false;
+      if (obj->playing_task) {
+        obj->playing_task->stop();
+        obj->playing_task = nullptr;
+        obj->playing = false;
+      }
       obj->dispatch_queue();
       break;
     }
@@ -98,38 +191,29 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
   return true;
 }
 
-void genie::AudioPlayer::on_pad_added(GstElement *element, GstPad *pad,
-                                      gpointer data) {
-  GstPad *sinkpad;
-  GstElement *decoder = (GstElement *)data;
-  sinkpad = gst_element_get_static_pad(decoder, "sink");
-  gst_pad_link(pad, sinkpad);
-  gst_object_unref(sinkpad);
-}
-
-gboolean genie::AudioPlayer::playSound(enum Sound_t id,
-                                       AudioDestination destination) {
+gboolean genie::AudioPlayer::play_sound(enum Sound_t id,
+                                        AudioDestination destination) {
   switch (id) {
     case Sound_t::WAKE:
-      return playLocation(app->config->sound_wake, destination);
+      return play_location(app->config->sound_wake, destination);
     case Sound_t::NO_INPUT:
-      return playLocation(app->config->sound_no_input, destination);
+      return play_location(app->config->sound_no_input, destination);
     case Sound_t::TOO_MUCH_INPUT:
-      return playLocation(app->config->sound_too_much_input, destination);
+      return play_location(app->config->sound_too_much_input, destination);
     case Sound_t::NEWS_INTRO:
-      return playLocation(app->config->sound_news_intro, destination);
+      return play_location(app->config->sound_news_intro, destination);
     case Sound_t::ALARM_CLOCK_ELAPSED:
-      return playLocation(app->config->sound_alarm_clock_elapsed, destination);
+      return play_location(app->config->sound_alarm_clock_elapsed, destination);
     case Sound_t::WORKING:
-      return playLocation(app->config->sound_working, destination);
+      return play_location(app->config->sound_working, destination);
     case Sound_t::STT_ERROR:
-      return playLocation(app->config->sound_stt_error, destination);
+      return play_location(app->config->sound_stt_error, destination);
   }
   return false;
 }
 
-gboolean genie::AudioPlayer::playLocation(const gchar *location,
-                                          AudioDestination destination) {
+gboolean genie::AudioPlayer::play_location(const gchar *location,
+                                           AudioDestination destination) {
   if (!location || strlen(location) < 1)
     return false;
 
@@ -148,21 +232,6 @@ gboolean genie::AudioPlayer::playLocation(const gchar *location,
   return ok;
 }
 
-static const gchar *getAudioOutput(const genie::Config &config,
-                                   genie::AudioDestination destination) {
-  switch (destination) {
-    case genie::AudioDestination::MUSIC:
-      return config.audioOutputDeviceMusic;
-    case genie::AudioDestination::ALERT:
-      return config.audioOutputDeviceAlerts;
-    case genie::AudioDestination::VOICE:
-      return config.audioOutputDeviceVoice;
-    default:
-      g_warn_if_reached();
-      return config.audioOutputDeviceMusic;
-  }
-}
-
 bool genie::AudioPlayer::play_url(const std::string &uri,
                                   AudioDestination destination, gint64 ref_id) {
   if (uri.empty())
@@ -170,20 +239,8 @@ bool genie::AudioPlayer::play_url(const std::string &uri,
 
   g_message("Queueing %s for playback", uri.c_str());
 
-  auto sink = auto_gst_ptr<GstElement>(
-      gst_element_factory_make(app->config->audioSink, "audio-output"),
-      adopt_mode::ref_sink);
-  const char *output_device = getAudioOutput(*app->config, destination);
-  if (output_device)
-    g_object_set(G_OBJECT(sink.get()), "device", output_device, NULL);
-
-  auto pipeline = auto_gst_ptr<GstElement>(
-      gst_element_factory_make("playbin", "audio-player"),
-      adopt_mode::ref_sink);
-  g_object_set(G_OBJECT(pipeline.get()), "uri", uri.c_str(), "audio-sink",
-               sink.get(), nullptr);
-
-  add_queue(pipeline, AudioTaskType::URI, ref_id);
+  player_queue.push(
+      std::make_unique<URLAudioTask>(url_pipeline.pipeline, uri, ref_id));
   dispatch_queue();
   return true;
 }
@@ -191,26 +248,6 @@ bool genie::AudioPlayer::play_url(const std::string &uri,
 bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
   if (text.empty())
     return false;
-
-  GstElement *source, *demuxer, *decoder, *conv, *sink;
-  GstBus *bus;
-
-  auto pipeline = auto_gst_ptr<GstElement>(gst_pipeline_new("audio-player"),
-                                           adopt_mode::ref_sink);
-  source = gst_element_factory_make("souphttpsrc", "http-source");
-  decoder = gst_element_factory_make("wavparse", "wav-parser");
-  sink = gst_element_factory_make(app->config->audioSink, "audio-output");
-
-  if (!pipeline || !source || !decoder || !sink) {
-    g_printerr("Gst element could not be created\n");
-    return false;
-  }
-
-  gchar *location = g_strdup_printf("%s/en-US/voice/tts", app->config->nlURL);
-  g_object_set(G_OBJECT(source), "location", location, NULL);
-  g_free(location);
-  g_object_set(G_OBJECT(source), "method", "POST", NULL);
-  g_object_set(G_OBJECT(source), "content-type", "application/json", NULL);
 
   JsonBuilder *builder = json_builder_new();
   json_builder_begin_object(builder);
@@ -223,67 +260,31 @@ bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
 
   json_builder_end_object(builder);
 
-  JsonGenerator *gen = json_generator_new();
-  JsonNode *root = json_builder_get_root(builder);
-  json_generator_set_root(gen, root);
-  gchar *jsonText = json_generator_to_data(gen, NULL);
-
-  g_object_set(G_OBJECT(source), "post-data", jsonText, NULL);
-
-  g_free(jsonText);
-  json_node_free(root);
-  g_object_unref(gen);
-  g_object_unref(builder);
-
-  const char *output_device =
-      getAudioOutput(*app->config, AudioDestination::VOICE);
-  if (output_device) {
-    g_object_set(G_OBJECT(sink), "device", output_device, NULL);
-  }
-
-  gst_bin_add_many(GST_BIN(pipeline.get()), source, decoder, sink, NULL);
-
-  gst_element_link_many(source, decoder, sink, NULL);
-
-  add_queue(pipeline, AudioTaskType::SAY, ref_id);
+  player_queue.push(std::make_unique<SayAudioTask>(
+      say_pipeline.pipeline, soupsrc,
+      auto_gobject_ptr<JsonBuilder>(builder, adopt_mode::owned), ref_id));
   dispatch_queue();
 
   return true;
 }
 
 void genie::AudioPlayer::dispatch_queue() {
-  if (!playing && !g_queue_is_empty(playerQueue)) {
-    AudioTask *t = (AudioTask *)g_queue_pop_head(playerQueue);
-    playingTask = t;
+  if (!playing && !player_queue.empty()) {
+    std::unique_ptr<AudioTask> &task = player_queue.front();
+    playing_task = std::move(task);
+    player_queue.pop();
 
-    // PROF_PRINT("gst pipeline started\n");
-    gettimeofday(&playingTask->tStart, NULL);
-
-    gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PLAYING);
+    playing_task->start();
     playing = true;
   }
 }
 
-gboolean genie::AudioPlayer::add_queue(const auto_gst_ptr<GstElement> &p,
-                                       AudioTaskType type, gint64 ref_id) {
-  auto *bus = gst_pipeline_get_bus(GST_PIPELINE(p.get()));
-  auto bus_watch_id =
-      gst_bus_add_watch(bus, genie::AudioPlayer::bus_call_queue, this);
-  gst_object_unref(bus);
-
-  AudioTask *t = new AudioTask(p, bus_watch_id, type, ref_id);
-  g_queue_push_tail(playerQueue, t);
-  return true;
-}
-
 gboolean genie::AudioPlayer::clean_queue() {
-  if (playingTask) {
-    delete playingTask;
-    playingTask = nullptr;
-  }
-  while (!g_queue_is_empty(playerQueue)) {
-    AudioTask *t = (AudioTask *)g_queue_pop_head(playerQueue);
-    delete t;
+  if (playing_task)
+    playing_task->stop();
+  playing_task.reset();
+  while (!player_queue.empty()) {
+    player_queue.pop();
   }
   playing = false;
   return true;
@@ -292,23 +293,7 @@ gboolean genie::AudioPlayer::clean_queue() {
 gboolean genie::AudioPlayer::stop() {
   if (!playing)
     return true;
-  if (playingTask && playingTask->pipeline) {
-    g_print("Stop playing current pipeline\n");
-    gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PAUSED);
-    playing = false;
-  }
   clean_queue();
-  return true;
-}
-
-gboolean genie::AudioPlayer::resume() {
-  if (playing)
-    return true;
-  if (playingTask && playingTask->pipeline) {
-    g_print("Resume current pipeline\n");
-    gst_element_set_state(playingTask->pipeline.get(), GST_STATE_PLAYING);
-    playing = true;
-  }
   return true;
 }
 

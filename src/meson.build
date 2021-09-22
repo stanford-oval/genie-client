@@ -62,6 +62,8 @@ else
   endforeach
 endif
 
+_deps += dependency('libpulse-simple')
+
 _deps += dependency('speex')
 _deps += dependency('speexdsp')
 
