@@ -205,15 +205,13 @@ bool genie::AudioInput::init_alsa(gchar *input_audio_device) {
 }
 
 bool genie::AudioInput::init_pulse() {
-  const pa_sample_spec config = {
-    .format = PA_SAMPLE_S16LE,
-    .rate = sample_rate,
-    .channels = 1
-  };
+  const pa_sample_spec config{/* format */ PA_SAMPLE_S16LE,
+                              /* rate */ sample_rate,
+                              /* channels */ 1};
 
   int error;
-  if (!(pulse_handle = pa_simple_new(NULL, "Genie", PA_STREAM_RECORD, NULL, "record",
-    &config, NULL, NULL, &error))) {
+  if (!(pulse_handle = pa_simple_new(NULL, "Genie", PA_STREAM_RECORD, NULL,
+                                     "record", &config, NULL, NULL, &error))) {
     g_error("pa_simple_new() failed: %s\n", pa_strerror(error));
     return false;
   }
