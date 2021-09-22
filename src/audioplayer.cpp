@@ -176,9 +176,11 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
       g_printerr("Error: %s\n", error->message);
       g_error_free(error);
 
-      obj->playing_task->stop();
-      obj->playing_task = nullptr;
-      obj->playing = false;
+      if (obj->playing_task) {
+        obj->playing_task->stop();
+        obj->playing_task = nullptr;
+        obj->playing = false;
+      }
       obj->dispatch_queue();
       break;
     }

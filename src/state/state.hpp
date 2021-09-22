@@ -18,7 +18,7 @@
 
 #pragma once
 
-#include "state/events.hpp"
+#include "events.hpp"
 
 namespace genie {
 
