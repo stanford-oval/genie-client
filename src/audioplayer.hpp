@@ -34,14 +34,14 @@ enum class AudioDestination { VOICE, MUSIC, ALERT };
 
 class AudioTask {
 protected:
-  auto_gst_ptr<GstElement> pipeline;
+  auto_gobject_ptr<GstElement> pipeline;
   struct timeval t_start;
 
 public:
   AudioTaskType type;
   gint64 ref_id;
 
-  AudioTask(const auto_gst_ptr<GstElement> &pipeline, AudioTaskType type,
+  AudioTask(const auto_gobject_ptr<GstElement> &pipeline, AudioTaskType type,
             gint64 ref_id)
       : pipeline(pipeline), type(type), ref_id(ref_id) {}
   AudioTask(const AudioTask &) = delete;
@@ -57,8 +57,8 @@ class URLAudioTask : public AudioTask {
   std::string url;
 
 public:
-  URLAudioTask(const auto_gst_ptr<GstElement> &pipeline, const std::string &url,
-               gint64 ref_id)
+  URLAudioTask(const auto_gobject_ptr<GstElement> &pipeline,
+               const std::string &url, gint64 ref_id)
       : AudioTask(pipeline, AudioTaskType::URL, ref_id), url(url) {}
 
   void start() override;
@@ -66,11 +66,11 @@ public:
 
 class SayAudioTask : public AudioTask {
   auto_gobject_ptr<JsonBuilder> json;
-  auto_gst_ptr<GstElement> soupsrc;
+  auto_gobject_ptr<GstElement> soupsrc;
 
 public:
-  SayAudioTask(const auto_gst_ptr<GstElement> &pipeline,
-               const auto_gst_ptr<GstElement> &soupsrc,
+  SayAudioTask(const auto_gobject_ptr<GstElement> &pipeline,
+               const auto_gobject_ptr<GstElement> &soupsrc,
                const auto_gobject_ptr<JsonBuilder> &json, gint64 ref_id)
       : AudioTask(pipeline, AudioTaskType::SAY, ref_id), json(json),
         soupsrc(soupsrc) {}
@@ -100,7 +100,7 @@ public:
 
 private:
   struct PipelineState {
-    auto_gst_ptr<GstElement> pipeline;
+    auto_gobject_ptr<GstElement> pipeline;
     guint bus_watch_id = 0;
 
     PipelineState() = default;
@@ -109,9 +109,9 @@ private:
       gst_element_set_state(pipeline.get(), GST_STATE_NULL);
     }
 
-    void init(AudioPlayer *self, const auto_gst_ptr<GstElement> &pipeline);
+    void init(AudioPlayer *self, const auto_gobject_ptr<GstElement> &pipeline);
   } say_pipeline, url_pipeline;
-  auto_gst_ptr<GstElement> soupsrc;
+  auto_gobject_ptr<GstElement> soupsrc;
   App *const app;
   gboolean playing;
 

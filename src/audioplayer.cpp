@@ -76,9 +76,9 @@ genie::AudioPlayer::AudioPlayer(App *appInstance)
 }
 
 void genie::AudioPlayer::init_say_pipeline() {
-  auto pipeline = auto_gst_ptr<GstElement>(gst_pipeline_new("audio-player-say"),
-                                           adopt_mode::ref_sink);
-  soupsrc = auto_gst_ptr<GstElement>(
+  auto pipeline = auto_gobject_ptr<GstElement>(
+      gst_pipeline_new("audio-player-say"), adopt_mode::ref_sink);
+  soupsrc = auto_gobject_ptr<GstElement>(
       gst_element_factory_make("souphttpsrc", "http-source"),
       adopt_mode::ref_sink);
   auto decoder = gst_element_factory_make("wavparse", "wav-parser");
@@ -106,7 +106,7 @@ void genie::AudioPlayer::init_say_pipeline() {
 }
 
 void genie::AudioPlayer::init_url_pipeline() {
-  auto sink = auto_gst_ptr<GstElement>(
+  auto sink = auto_gobject_ptr<GstElement>(
       gst_element_factory_make(app->config->audioSink, "audio-output"),
       adopt_mode::ref_sink);
   const char *output_device =
@@ -114,7 +114,7 @@ void genie::AudioPlayer::init_url_pipeline() {
   if (output_device)
     g_object_set(G_OBJECT(sink.get()), "device", output_device, NULL);
 
-  auto pipeline = auto_gst_ptr<GstElement>(
+  auto pipeline = auto_gobject_ptr<GstElement>(
       gst_element_factory_make("playbin", "audio-player-url"),
       adopt_mode::ref_sink);
   g_object_set(G_OBJECT(pipeline.get()), "audio-sink", sink.get(), nullptr);
@@ -123,7 +123,7 @@ void genie::AudioPlayer::init_url_pipeline() {
 }
 
 void genie::AudioPlayer::PipelineState::init(
-    AudioPlayer *self, const auto_gst_ptr<GstElement> &pipeline) {
+    AudioPlayer *self, const auto_gobject_ptr<GstElement> &pipeline) {
   this->pipeline = pipeline;
   auto *bus = gst_pipeline_get_bus(GST_PIPELINE(pipeline.get()));
   bus_watch_id =
