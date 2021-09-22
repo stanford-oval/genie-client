@@ -52,7 +52,7 @@ enum class Sound_t {
 
 enum class AudioTaskType {
   SAY,
-  URI,
+  URL,
 };
 
 } // namespace genie

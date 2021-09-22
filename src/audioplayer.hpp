@@ -23,51 +23,75 @@
 
 #include <alsa/asoundlib.h>
 #include <gst/gst.h>
-#include <string>
+#include <json-glib/json-glib.h>
 #include <memory>
 #include <queue>
+#include <string>
 
 namespace genie {
 
-struct AudioTask {
+enum class AudioDestination { VOICE, MUSIC, ALERT };
+
+class AudioTask {
+protected:
   auto_gst_ptr<GstElement> pipeline;
-  guint bus_watch_id;
+  struct timeval t_start;
+
+public:
   AudioTaskType type;
   gint64 ref_id;
 
-  struct timeval tStart;
+  AudioTask(const auto_gst_ptr<GstElement> &pipeline, AudioTaskType type,
+            gint64 ref_id)
+      : pipeline(pipeline), type(type), ref_id(ref_id) {}
+  AudioTask(const AudioTask &) = delete;
+  AudioTask(AudioTask &&) = delete;
 
-  AudioTask(const auto_gst_ptr<GstElement> &pipeline, guint bus_watch_id,
-            AudioTaskType type, gint64 ref_id)
-      : pipeline(pipeline), bus_watch_id(bus_watch_id), type(type),
-        ref_id(ref_id) {}
+  void stop() { gst_element_set_state(pipeline.get(), GST_STATE_READY); }
 
-  AudioTask(const AudioTask&) = delete;
-  AudioTask(AudioTask&&) = delete;
-
-  ~AudioTask() {
-    gst_element_set_state(pipeline.get(), GST_STATE_NULL);
-    if (bus_watch_id)
-      g_source_remove(bus_watch_id);
-  }
+  virtual ~AudioTask() = default;
+  virtual void start() = 0;
 };
 
-enum class AudioDestination { VOICE, MUSIC, ALERT };
+class URLAudioTask : public AudioTask {
+  std::string url;
+
+public:
+  URLAudioTask(const auto_gst_ptr<GstElement> &pipeline, const std::string &url,
+               gint64 ref_id)
+      : AudioTask(pipeline, AudioTaskType::URL, ref_id), url(url) {}
+
+  void start() override;
+};
+
+class SayAudioTask : public AudioTask {
+  auto_gobject_ptr<JsonBuilder> json;
+  auto_gst_ptr<GstElement> soupsrc;
+
+public:
+  SayAudioTask(const auto_gst_ptr<GstElement> &pipeline,
+               const auto_gst_ptr<GstElement> &soupsrc,
+               const auto_gobject_ptr<JsonBuilder> &json, gint64 ref_id)
+      : AudioTask(pipeline, AudioTaskType::SAY, ref_id), json(json),
+        soupsrc(soupsrc) {}
+
+  void start() override;
+};
 
 class AudioPlayer {
 public:
   AudioPlayer(App *appInstance);
-  gboolean playSound(enum Sound_t id,
-                     AudioDestination destination = AudioDestination::ALERT);
+  gboolean play_sound(enum Sound_t id,
+                      AudioDestination destination = AudioDestination::ALERT);
   bool play_url(const std::string &url,
                 AudioDestination destination = AudioDestination::MUSIC,
                 gint64 ref_id = -1);
-  gboolean playLocation(const gchar *location,
-                        AudioDestination destination = AudioDestination::MUSIC);
+  gboolean
+  play_location(const gchar *location,
+                AudioDestination destination = AudioDestination::MUSIC);
   bool say(const std::string &text, gint64 ref_id = -1);
   gboolean clean_queue();
   gboolean stop();
-  gboolean resume();
   long get_volume();
   void set_volume(long volume);
   int adjust_playback_volume(long delta);
@@ -75,15 +99,30 @@ public:
   int decrement_playback_volume();
 
 private:
-  void dispatch_queue();
-  gboolean add_queue(const auto_gst_ptr<GstElement> &p, AudioTaskType type,
-                     gint64 ref_id);
-  static gboolean bus_call_queue(GstBus *bus, GstMessage *msg, gpointer data);
-  static void on_pad_added(GstElement *element, GstPad *pad, gpointer data);
+  struct PipelineState {
+    auto_gst_ptr<GstElement> pipeline;
+    guint bus_watch_id = 0;
+
+    PipelineState() = default;
+    ~PipelineState() {
+      g_source_remove(bus_watch_id);
+      gst_element_set_state(pipeline.get(), GST_STATE_NULL);
+    }
+
+    void init(AudioPlayer *self, const auto_gst_ptr<GstElement> &pipeline);
+  } say_pipeline, url_pipeline;
+  auto_gst_ptr<GstElement> soupsrc;
+  App *const app;
   gboolean playing;
+
+  void init_say_pipeline();
+  void init_url_pipeline();
+
+  void dispatch_queue();
+  static gboolean bus_call_queue(GstBus *bus, GstMessage *msg, gpointer data);
   std::queue<std::unique_ptr<AudioTask>> player_queue;
   std::unique_ptr<AudioTask> playing_task;
-  App *app;
+
   snd_mixer_elem_t *get_mixer_element(snd_mixer_t *handle,
                                       const char *selem_name);
 };

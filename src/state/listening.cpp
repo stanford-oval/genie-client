@@ -38,7 +38,7 @@ void Listening::enter() {
   g_message("Stopping audio player...\n");
   app->audio_player->stop();
   g_message("Playing match sound...\n");
-  app->audio_player->playSound(Sound_t::WAKE);
+  app->audio_player->play_sound(Sound_t::WAKE);
   g_message("Connecting STT...\n");
 }
 
@@ -55,7 +55,7 @@ void Listening::react(events::InputDone *input_done) {
   app->stt->send_done();
   app->audio_player->stop();
   if (input_done->vad_detected) {
-    app->audio_player->playSound(Sound_t::WORKING);
+    app->audio_player->play_sound(Sound_t::WORKING);
   }
   app->transit(new Processing(app));
 }
@@ -64,7 +64,7 @@ void Listening::react(events::InputNotDetected *) {
   g_message("Handling InputNotDetected...\n");
   app->stt->abort();
   app->audio_player->stop();
-  app->audio_player->playSound(Sound_t::NO_INPUT);
+  app->audio_player->play_sound(Sound_t::NO_INPUT);
   app->transit(new Sleeping(app));
 }
 
@@ -72,7 +72,7 @@ void Listening::react(events::InputTimeout *) {
   g_message("Handling InputTimeout...\n");
   app->stt->abort();
   app->audio_player->stop();
-  app->audio_player->playSound(Sound_t::TOO_MUCH_INPUT);
+  app->audio_player->play_sound(Sound_t::TOO_MUCH_INPUT);
   app->transit(new Sleeping(app));
 }
 

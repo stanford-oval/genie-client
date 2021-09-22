@@ -75,8 +75,8 @@ void State::react(events::SoundMessage *sound_message) {
 
   g_message("Received SoundMessage, playing sound ID: %d\n",
             (int)sound_message->sound_id);
-  app->audio_player->playSound(sound_message->sound_id,
-                               AudioDestination::ALERT);
+  app->audio_player->play_sound(sound_message->sound_id,
+                                AudioDestination::ALERT);
 }
 
 void State::react(events::AskSpecialMessage *ask_special_message) {}
