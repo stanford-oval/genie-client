@@ -37,8 +37,10 @@ void Listening::enter() {
   app->duck();
   g_message("Stopping audio player...\n");
   app->audio_player->stop();
-  g_message("Playing match sound...\n");
-  app->audio_player->play_sound(Sound_t::WAKE);
+  if (play_wake_sound) {
+    g_message("Playing WAKE sound...\n");
+    app->audio_player->play_sound(Sound_t::WAKE);
+  }
   g_message("Connecting STT...\n");
 }
 

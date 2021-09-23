@@ -49,7 +49,7 @@ void Saying::react(events::AskSpecialMessage *ask_special_message) {
 void Saying::react(events::PlayerStreamEnd *player_stream_end) {
   if (player_stream_end->ref_id == text_id) {
     if (follow_up) {
-      app->transit(new Listening(app));
+      app->transit(new Listening(app, false));
     } else {
       app->transit(new Sleeping(app));
     }
