@@ -105,15 +105,15 @@ int genie::Spotifyd::spawn() {
   }
 
   std::vector<const gchar *> argv{
-      filePath,        "--no-daemon",    "--device-name", deviceName,
-      "--device-type", "speaker",        "--backend",     backend,
-      "--username",    username.c_str(), "--token",       access_token.c_str(),
+      filePath,        "--no-daemon",
+      "--device",      app->config->audioOutputDeviceMusic,
+      "--device-name", deviceName,
+      "--device-type", "speaker",
+      "--backend",     backend,
+      "--username",    username.c_str(),
+      "--token",       access_token.c_str(),
+      nullptr,
   };
-  // if (strcmp(backend, "alsa") == 0 && app->config->audioOutputDeviceMusic) {
-  argv.push_back("--device");
-  argv.push_back(app->config->audioOutputDeviceMusic);
-  // }
-  argv.push_back(nullptr);
 
   g_debug("spawn spotifyd");
   for (int i = 0; argv[i]; i++) {
