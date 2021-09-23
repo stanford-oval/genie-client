@@ -65,17 +65,26 @@ public:
 };
 
 class SayAudioTask : public AudioTask {
-  auto_gobject_ptr<JsonBuilder> json;
   auto_gobject_ptr<GstElement> soupsrc;
+  std::string text;
+  const std::string &base_tts_url;
+  const char *voice;
+  bool soup_has_post_data;
 
 public:
   SayAudioTask(const auto_gobject_ptr<GstElement> &pipeline,
                const auto_gobject_ptr<GstElement> &soupsrc,
-               const auto_gobject_ptr<JsonBuilder> &json, gint64 ref_id)
-      : AudioTask(pipeline, AudioTaskType::SAY, ref_id), json(json),
-        soupsrc(soupsrc) {}
+               const std::string &text, const std::string &base_tts_url,
+               const char *voice, bool soup_has_post_data, gint64 ref_id)
+      : AudioTask(pipeline, AudioTaskType::SAY, ref_id), soupsrc(soupsrc),
+        text(text), base_tts_url(base_tts_url),
+        soup_has_post_data(soup_has_post_data) {}
 
   void start() override;
+
+private:
+  void say_get();
+  void say_post();
 };
 
 class AudioPlayer {
@@ -113,7 +122,9 @@ private:
   } say_pipeline, url_pipeline;
   auto_gobject_ptr<GstElement> soupsrc;
   App *const app;
-  gboolean playing;
+  std::string base_tts_url;
+  bool soup_has_post_data;
+  bool playing;
 
   void init_say_pipeline();
   void init_url_pipeline();
