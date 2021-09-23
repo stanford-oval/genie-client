@@ -27,10 +27,6 @@ RUN ./scripts/build-pulse.sh
 COPY scripts/gst /src/scripts/gst
 RUN ./scripts/gst/build.sh
 
-# custom build of webrtc (only vad)
-COPY scripts/webrtcvad /src/scripts/webrtcvad
-RUN ./scripts/webrtcvad/build.sh
-
 # assets
 COPY assets /src/assets
 COPY scripts/get-assets.sh /src/scripts

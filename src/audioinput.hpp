@@ -22,14 +22,14 @@
 #include "audioplayer.hpp"
 #include "pv_porcupine.h"
 #include "stt.hpp"
+#include "utils/webrtc_vad.h"
 #include <atomic>
 #include <glib.h>
 #include <queue>
-#include <webrtc/webrtc_vad.h>
 
 #include <alsa/asoundlib.h>
-#include <pulse/simple.h>
 #include <pulse/error.h>
+#include <pulse/simple.h>
 
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>

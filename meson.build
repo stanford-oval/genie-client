@@ -51,6 +51,4 @@ add_global_arguments([
   '-Wno-unused',
 ], language : 'c')
 
-#subdir('webrtc')
-#subdir('vad')
 subdir('src')
