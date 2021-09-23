@@ -29,7 +29,7 @@
 
 #include <vector>
 
-#define SPOTIFYD_VERSION "v0.3.3"
+#define SPOTIFYD_VERSION "v0.3.4"
 
 genie::Spotifyd::Spotifyd(App *app) : app(app) {
   cacheDir = "/tmp";
@@ -97,7 +97,8 @@ int genie::Spotifyd::spawn() {
   gchar *filePath = g_strdup_printf("%s/spotifyd", cacheDir);
   const gchar *deviceName = "genie-cpp";
   const gchar *backend;
-  if (arch == "x86_64") {
+  std::string config_backend(app->config->audio_backend);
+  if (config_backend == "pulse") {
     backend = "pulseaudio";
   } else {
     backend = "alsa";
@@ -108,10 +109,10 @@ int genie::Spotifyd::spawn() {
       "--device-type", "speaker",        "--backend",     backend,
       "--username",    username.c_str(), "--token",       access_token.c_str(),
   };
-  if (strcmp(backend, "alsa") == 0 && app->config->audioOutputDeviceMusic) {
-    argv.push_back("--device");
-    argv.push_back(app->config->audioOutputDeviceMusic);
-  }
+  // if (strcmp(backend, "alsa") == 0 && app->config->audioOutputDeviceMusic) {
+  argv.push_back("--device");
+  argv.push_back(app->config->audioOutputDeviceMusic);
+  // }
   argv.push_back(nullptr);
 
   g_debug("spawn spotifyd");
