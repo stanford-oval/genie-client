@@ -50,18 +50,47 @@ void genie::URLAudioTask::start() {
 }
 
 void genie::SayAudioTask::start() {
+  if (soup_has_post_data)
+    say_post();
+  else
+    say_get();
+
+  // PROF_PRINT("gst pipeline started\n");
+  gettimeofday(&t_start, NULL);
+  gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
+}
+
+void genie::SayAudioTask::say_post() {
+  auto_gobject_ptr<JsonBuilder> builder(json_builder_new(), adopt_mode::owned);
+  json_builder_begin_object(builder.get());
+
+  json_builder_set_member_name(builder.get(), "text");
+  json_builder_add_string_value(builder.get(), text.c_str());
+
+  json_builder_set_member_name(builder.get(), "gender");
+  json_builder_add_string_value(builder.get(), voice);
+
+  json_builder_end_object(builder.get());
+
   auto_gobject_ptr<JsonGenerator> gen(json_generator_new(), adopt_mode::owned);
-  JsonNode *root = json_builder_get_root(json.get());
+  JsonNode *root = json_builder_get_root(builder.get());
   json_generator_set_root(gen.get(), root);
   gchar *jsonText = json_generator_to_data(gen.get(), NULL);
 
   g_object_set(G_OBJECT(soupsrc.get()), "post-data", jsonText, NULL);
 
   g_free(jsonText);
+}
 
-  // PROF_PRINT("gst pipeline started\n");
-  gettimeofday(&t_start, NULL);
-  gst_element_set_state(pipeline.get(), GST_STATE_PLAYING);
+void genie::SayAudioTask::say_get() {
+  std::unique_ptr<SoupURI, fn_deleter<SoupURI, soup_uri_free>> uri(
+      soup_uri_new(base_tts_url.c_str()));
+  soup_uri_set_query_from_fields(uri.get(), "text", text.c_str(), "voice",
+                                 voice, nullptr);
+
+  gchar *uristr = soup_uri_to_string(uri.get(), false);
+  g_object_set(G_OBJECT(soupsrc.get()), "location", uristr, nullptr);
+  g_free(uristr);
 }
 
 genie::AudioPlayer::AudioPlayer(App *appInstance)
@@ -71,8 +100,21 @@ genie::AudioPlayer::AudioPlayer(App *appInstance)
   gst_init_static_plugins();
 #endif
 
+  gchar *location = g_strdup_printf("%s/en-US/voice/tts", app->config->nlURL);
+  base_tts_url = location;
+  g_free(location);
+
   init_say_pipeline();
   init_url_pipeline();
+}
+
+static bool has_property(genie::auto_gobject_ptr<GObject> obj,
+                         const char *property) {
+  GObjectClass *class_ = G_OBJECT_CLASS(g_type_class_ref(obj.type()));
+  bool has_prop = g_object_class_find_property(class_, property);
+  g_type_class_unref(class_);
+
+  return has_prop;
 }
 
 void genie::AudioPlayer::init_say_pipeline() {
@@ -81,6 +123,10 @@ void genie::AudioPlayer::init_say_pipeline() {
   soupsrc = auto_gobject_ptr<GstElement>(
       gst_element_factory_make("souphttpsrc", "http-source"),
       adopt_mode::ref_sink);
+  soup_has_post_data =
+      has_property(soupsrc.cast<GObject>(G_TYPE_OBJECT), "content-type") &&
+      has_property(soupsrc.cast<GObject>(G_TYPE_OBJECT), "post-data");
+
   auto decoder = gst_element_factory_make("wavparse", "wav-parser");
   auto sink =
       gst_element_factory_make(app->config->audioSink, "audio-output-say");
@@ -89,10 +135,10 @@ void genie::AudioPlayer::init_say_pipeline() {
     g_error("Gst element could not be created\n");
   }
 
-  gchar *location = g_strdup_printf("%s/en-US/voice/tts", app->config->nlURL);
-  g_object_set(G_OBJECT(soupsrc.get()), "location", location, "method", "POST",
-               "content-type", "application/json", NULL);
-  g_free(location);
+  if (soup_has_post_data) {
+    g_object_set(G_OBJECT(soupsrc.get()), "location", base_tts_url.c_str(),
+                 "method", "POST", "content-type", "application/json", NULL);
+  }
 
   const char *output_device =
       get_audio_output(*app->config, AudioDestination::VOICE);
@@ -249,20 +295,9 @@ bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
   if (text.empty())
     return false;
 
-  JsonBuilder *builder = json_builder_new();
-  json_builder_begin_object(builder);
-
-  json_builder_set_member_name(builder, "text");
-  json_builder_add_string_value(builder, text.c_str());
-
-  json_builder_set_member_name(builder, "gender");
-  json_builder_add_string_value(builder, app->config->audioVoice);
-
-  json_builder_end_object(builder);
-
   player_queue.push(std::make_unique<SayAudioTask>(
-      say_pipeline.pipeline, soupsrc,
-      auto_gobject_ptr<JsonBuilder>(builder, adopt_mode::owned), ref_id));
+      say_pipeline.pipeline, soupsrc, text, base_tts_url,
+      app->config->audioVoice, soup_has_post_data, ref_id));
   dispatch_queue();
 
   return true;

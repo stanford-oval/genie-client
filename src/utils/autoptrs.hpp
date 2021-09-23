@@ -85,6 +85,20 @@ public:
     return *this;
   }
 
+  template <typename T2> auto_gobject_ptr<T2> cast(GType to_type) {
+    if (m_instance)
+      return auto_gobject_ptr<T2>(
+          G_TYPE_CHECK_INSTANCE_CAST(m_instance, to_type, T2), adopt_mode::ref);
+    else
+      return auto_gobject_ptr<T2>();
+  }
+  GType type() {
+    if (m_instance)
+      return G_OBJECT_TYPE(m_instance);
+    else
+      return G_TYPE_INVALID;
+  }
+
   T *get() const { return m_instance; };
 
   T &operator->() { return *m_instance; }
