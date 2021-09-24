@@ -29,8 +29,8 @@ public:
   static const constexpr char *NAME = "Listening";
 
   Listening(App *app) : State{app} {}
-  Listening(App *app, bool play_wake_sound)
-      : State{app}, play_wake_sound(play_wake_sound) {}
+  Listening(App *app, bool is_follow_up)
+      : State{app}, is_follow_up(is_follow_up) {}
 
   void enter() override;
 
@@ -41,7 +41,7 @@ public:
   void react(events::InputTimeout *) override;
 
 private:
-  bool play_wake_sound = true;
+  bool is_follow_up = false;
 };
 
 } // namespace state
