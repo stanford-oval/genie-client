@@ -77,6 +77,7 @@ void genie::SayAudioTask::say_post() {
   json_generator_set_root(gen.get(), root);
   gchar *jsonText = json_generator_to_data(gen.get(), NULL);
 
+  g_debug("TTS body: %s", jsonText);
   g_object_set(G_OBJECT(soupsrc.get()), "post-data", jsonText, NULL);
 
   g_free(jsonText);
