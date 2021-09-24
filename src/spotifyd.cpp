@@ -104,6 +104,10 @@ int genie::Spotifyd::spawn() {
     backend = "alsa";
   }
 
+  gchar **envp;
+  envp = g_get_environ();
+  envp = g_environ_setenv(envp, "PULSE_PROP_media.role", "music", TRUE);
+
   std::vector<const gchar *> argv{
       filePath,        "--no-daemon",
       "--device",      app->config->audioOutputDeviceMusic,
@@ -121,15 +125,18 @@ int genie::Spotifyd::spawn() {
   }
 
   GError *gerror = NULL;
-  g_spawn_async_with_pipes(NULL, (gchar **)argv.data(), NULL,
+  g_spawn_async_with_pipes(NULL, (gchar **)argv.data(), envp,
                            G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &child_pid,
                            NULL, NULL, NULL, &gerror);
   if (gerror) {
+    g_strfreev(envp);
+    g_free(filePath);
     g_critical("Spawning spotifyd child failed: %s\n", gerror->message);
     g_error_free(gerror);
     return false;
   }
 
+  g_strfreev(envp);
   g_free(filePath);
 
   g_child_watch_add(child_pid, child_watch_cb, this);
