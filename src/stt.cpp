@@ -63,7 +63,7 @@ void genie::STT::complete_error(STTSession *session, int error_code,
   m_app->dispatch(new ErrorResponse(error_code, error_message));
 }
 
-void genie::STT::begin_session() {
+void genie::STT::begin_session(bool is_follow_up) {
   if (m_current_session) {
     STTSession::State state = m_current_session->state();
     if (state != STTSession::State::CLOSING &&
@@ -76,7 +76,8 @@ void genie::STT::begin_session() {
     m_current_session = nullptr;
   }
 
-  m_current_session = std::make_unique<STTSession>(this, m_url.c_str());
+  m_current_session =
+      std::make_unique<STTSession>(this, m_url.c_str(), is_follow_up);
 }
 
 void genie::STT::send_done() {
@@ -127,8 +128,10 @@ void genie::STT::record_timing_event(STTSession *session,
   }
 }
 
-genie::STTSession::STTSession(STT *controller, const char *url)
-    : m_controller(controller), m_state(State::INITIAL), m_done(false) {
+genie::STTSession::STTSession(STT *controller, const char *url,
+                              bool is_follow_up)
+    : m_controller(controller), is_follow_up(is_follow_up),
+      m_state(State::INITIAL), m_done(false) {
   g_debug("SST connecting...\n");
 
   auto_gobject_ptr<SoupMessage> msg(soup_message_new(SOUP_METHOD_GET, url),
@@ -182,6 +185,13 @@ void genie::STTSession::on_connection(SoupSession *session, GAsyncResult *res,
 }
 
 void genie::STTSession::handle_stt_result(const char *text) {
+  bool has_wake_word = std::regex_search(text, m_controller->wake_word_pattern);
+
+  if (!has_wake_word && !is_follow_up) {
+    m_controller->complete_error(this, 404, "no wakeword");
+    return;
+  }
+
   std::string mangled =
       std::regex_replace(text, m_controller->wake_word_pattern, "");
 
