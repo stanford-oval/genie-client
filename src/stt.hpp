@@ -47,11 +47,12 @@ private:
   std::queue<AudioFrame> queue;
   auto_gobject_ptr<SoupWebsocketConnection> m_connection;
   bool m_done;
+  bool is_follow_up;
 
   void handle_stt_result(const char *text);
 
 public:
-  STTSession(STT *controller, const char *url);
+  STTSession(STT *controller, const char *url, bool is_follow_up);
   ~STTSession();
 
   static void on_connection(SoupSession *session, GAsyncResult *res,
@@ -76,7 +77,7 @@ class STT {
 public:
   STT(App *app);
 
-  void begin_session();
+  void begin_session(bool is_follow_up);
   void send_frame(AudioFrame frame);
   void send_done();
   void abort();
