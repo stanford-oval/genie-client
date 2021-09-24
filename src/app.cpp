@@ -22,6 +22,7 @@
 #include "app.hpp"
 #include "audioinput.hpp"
 #include "audioplayer.hpp"
+#include "audiovolume.hpp"
 #include "config.hpp"
 #include "dns_controller.hpp"
 #include "evinput.hpp"
@@ -64,7 +65,10 @@ int genie::App::exec() {
   config = std::make_unique<Config>();
   config->load();
 
+  g_setenv("PULSE_PROP_media.role", "voice-assistant", TRUE);
   g_setenv("GST_REGISTRY_UPDATE", "no", true);
+
+  audio_volume_controller = std::make_unique<AudioVolumeController>(this);
 
   audio_player = std::make_unique<AudioPlayer>(this);
 
@@ -103,12 +107,6 @@ gboolean genie::App::sig_handler(gpointer data) {
   GMainLoop *loop = static_cast<GMainLoop *>(data);
   g_main_loop_quit(loop);
   return G_SOURCE_REMOVE;
-}
-
-void genie::App::duck() { system("amixer -D hw:audiocodec cset name='hd' 0"); }
-
-void genie::App::unduck() {
-  system("amixer -D hw:audiocodec cset name='hd' 255");
 }
 
 void genie::App::print_processing_entry(const char *name, double duration_ms,
