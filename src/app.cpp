@@ -100,6 +100,8 @@ int genie::App::exec() {
   g_main_loop_run(main_loop);
   g_debug("main loop returned\n");
 
+  audio_input->close();
+
   return 0;
 }
 

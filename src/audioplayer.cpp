@@ -203,7 +203,7 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
       // in the desired state.
       if (type == GST_STREAM_STATUS_TYPE_ENTER) {
         obj->app->dispatch(new state::events::PlayerStreamEnter(
-            obj->playingTask->type, obj->playingTask->ref_id));
+            obj->playing_task->type, obj->playing_task->ref_id));
       }
       break;
     case GST_MESSAGE_EOS:
