@@ -15,6 +15,9 @@ load-module module-alsa-source device=hw:audiocodec,0
 ### AEC
 load-module module-echo-cancel source_name=echosrc sink_name=echosink channels=1 rate=16000 aec_method=webrtc aec_args="analog_gain_control=0 digital_gain_control=1"
 
+### Ducking
+load-module module-role-ducking trigger_roles=voice-assistant ducking_roles=music volume=40% global=true
+
 ### Set default devices
 set-default-sink echosink
 set-default-source echosrc

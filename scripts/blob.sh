@@ -71,7 +71,7 @@ deps+="/usr/lib/${SEARCH_ARCH}/gio/modules/libgiognutls.so "
 findDeps /usr/lib/${SEARCH_ARCH}/gio/modules/libgiognutls.so
 
 findDeps /usr/local/bin/pulseaudio
-pulse_modules="libalsa-util libprotocol-native module-native-protocol-unix module-alsa-sink module-alsa-source module-null-sink module-always-sink module-null-sink module-echo-cancel"
+pulse_modules="libalsa-util libprotocol-native module-native-protocol-unix module-alsa-sink module-alsa-source module-null-sink module-always-sink module-null-sink module-echo-cancel module-role-ducking"
 for p in ${pulse_modules} ; do
 	cp -p /usr/local/lib/${SEARCH_ARCH}/pulse-15.0/modules/${p}.so ${DESTDIR}/pulseaudio
 	strip ${DESTDIR}/pulseaudio/${p}.so
