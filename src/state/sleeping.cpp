@@ -19,6 +19,7 @@
 #include "state/sleeping.hpp"
 #include "app.hpp"
 #include "audioplayer.hpp"
+#include "leds.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::Sleeping"
@@ -28,6 +29,7 @@ namespace state {
 
 void Sleeping::enter() {
   g_message("ENTER state Sleeping\n");
+  app->leds->set_active(false);
   app->unduck();
 }
 
