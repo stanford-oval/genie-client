@@ -22,7 +22,9 @@ class Remote(ABC):
     """
 
     @classmethod
-    def create(cls, target: str):
+    def create(cls, target: Union[str, Remote]):
+        if isinstance(target, cls):
+            return target
         if not isinstance(target, str):
             raise TypeError(
                 f"Expected str, given {type(target)}: {repr(target)}"
