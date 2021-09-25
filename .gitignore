@@ -15,3 +15,6 @@ assets/*
 
 # macOS Finder artifact
 .DS_Store
+
+# IDK where this comes from, appears when using VSCode dev containers 
+null.d
