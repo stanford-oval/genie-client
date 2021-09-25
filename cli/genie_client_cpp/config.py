@@ -33,6 +33,13 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
         with paths.configure("src") as src:
             src.root = paths.repo / "src"
 
+        with paths.configure("container") as container:
+            # When you mount the repo into the build container, where it goes
+            container.repo = "/src"
+            # When you mount the out directory into the build container, where
+            # it goes
+            container.out = "/out"
+
     with client.configure("xiaodu") as xiaodu:
         xiaodu.network_interface = "wlan0"
 
@@ -50,6 +57,9 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
 
             paths.wifi_config = Path("/data/wifi/wpa_supplicant.conf")
             paths.dns_config = Path("/data/wifi/resolv.conf")
+
+    with client.configure("container") as container:
+        container.name = "genie-builder"
 
 with CFG.configure(io.rel, src=__file__) as rel:
     rel.to = CFG.genie_client_cpp.paths.repo
