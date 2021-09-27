@@ -5,7 +5,7 @@ export HOME=/opt/genie
 if [ -z "$(pidof ntpd)" ]; then
 	/usr/bin/start_ntp.sh &
 fi
-amixer -D hw:audiocodec cset name='LINEOUT volume' 8
+amixer -D hw:audiocodec cset name='LINEOUT volume' 3
 amixer -D hw:audiocodec cset name='MIC1 gain volume' 6
 amixer -D hw:audiocodec cset name='MIC2 gain volume' 6
 
@@ -14,7 +14,10 @@ export LD_LIBRARY_PATH=/opt/genie/lib/pulseaudio:/opt/genie/lib/:/lib:/usr/lib
 export GST_REGISTRY_UPDATE=no
 export GST_PLUGIN_PATH=/opt/genie/lib/gstreamer-1.0
 export GST_PLUGIN_SCANNER=/opt/genie/lib/gstreamer-1.0/gst-plugin-scanner
-export XDG_CONFIG_HOME=/data
+export XDG_CONFIG_HOME=/tmp/.config
+
+mkdir -p /tmp/.config
+
 ./pulseaudio --start -v -F /opt/genie/.system.pa -p /opt/genie/lib/pulseaudio --exit-idle-time=-1 --log-target=file:/tmp/pa.log
 
 if test "$1" = "--gdb" ; then
