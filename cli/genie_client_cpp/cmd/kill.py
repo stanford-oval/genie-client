@@ -1,4 +1,5 @@
 import re
+from typing import Union
 
 from clavier import log as logging, CFG
 
@@ -49,7 +50,7 @@ def kill_process(remote: Remote, pattern: re.Pattern):
         LOG.info(f"No processes found for {pattern.pattern}")
 
 @Context.inject_current
-def run(target: str):
+def run(target: Union[str, Remote]):
     LOG.info("Killing client...", target=target)
 
     remote = Remote.create(target)
