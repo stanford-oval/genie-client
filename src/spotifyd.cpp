@@ -29,7 +29,7 @@
 
 #include <vector>
 
-#define SPOTIFYD_VERSION "v0.3.4"
+#define SPOTIFYD_VERSION "0.3.4"
 
 genie::Spotifyd::Spotifyd(App *app) : app(app) {
   cacheDir = "/tmp";
@@ -55,7 +55,7 @@ int genie::Spotifyd::download() {
 
   gchar *cmd = g_strdup_printf(
       "curl "
-      "https://github.com/stanford-oval/spotifyd/releases/download/%s/"
+      "https://github.com/stanford-oval/spotifyd/releases/download/v%s/"
       "spotifyd-linux-%sslim.tar.gz -L | tar -xvz -C %s",
       SPOTIFYD_VERSION, dlArch, cacheDir);
   int rc = system(cmd);
@@ -64,12 +64,47 @@ int genie::Spotifyd::download() {
   return rc;
 }
 
+int genie::Spotifyd::check_version() {
+  FILE *fp;
+  char buf[128];
+
+  gchar *cmd = g_strdup_printf(
+      "%s/spotifyd --version", cacheDir);
+  fp = popen(cmd, "r");
+  if (fp == NULL) {
+    g_free(cmd);
+    return true;
+  }
+  g_free(cmd);
+
+  bool update = false;
+  if (fscanf(fp, "spotifyd %127s", buf) == 1) {
+    if (strlen(buf) <= 0) {
+      g_message("unable to get local spotifyd version, updating...");
+      update = true;
+    } else {
+      if (strcmp(SPOTIFYD_VERSION, buf) != 0) {
+        g_message("spotifyd local version %s, need %s, updating...", buf, SPOTIFYD_VERSION);
+        update = true;
+      }
+    }
+  }
+
+  if (pclose(fp) == -1) {
+    return true;
+  }
+
+  return update;
+}
+
 int genie::Spotifyd::init() {
   gchar *filePath = g_strdup_printf("%s/spotifyd", cacheDir);
   if (!g_file_test(filePath, G_FILE_TEST_IS_EXECUTABLE)) {
     download();
   } else {
-    // TODO: check version / update
+    if (check_version()) {
+      download();
+    }
   }
   g_free(filePath);
 

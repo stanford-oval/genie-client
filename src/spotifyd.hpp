@@ -35,6 +35,7 @@ public:
 protected:
   int spawn();
   int download();
+  int check_version();
   static void child_watch_cb(GPid pid, gint status, gpointer data);
 
 private:
