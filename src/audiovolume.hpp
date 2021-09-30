@@ -16,39 +16,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "state/sleeping.hpp"
-#include "app.hpp"
-#include "audioplayer.hpp"
-#include "audiovolume.hpp"
-#include "leds.hpp"
+#pragma once
 
-#undef G_LOG_DOMAIN
-#define G_LOG_DOMAIN "genie::state::Sleeping"
+#include "app.hpp"
+
+#include <alsa/asoundlib.h>
+#include <pulse/simple.h>
+#include <pulse/error.h>
 
 namespace genie {
-namespace state {
 
-void Sleeping::enter() {
-  g_message("ENTER state Sleeping\n");
-  app->audio_volume_controller->unduck();
-  app->leds->set_active(false);
-}
+class AudioVolumeController {
+public:
+  AudioVolumeController(App *appInstance);
+  ~AudioVolumeController();
+  int init();
+  int duck();
+  int unduck();
 
-void Sleeping::react(events::audio::PrepareEvent *prepare) {
-  app->audio_player->clean_queue();
-  prepare->resolve();
-}
+private:
+  pa_simple *pulse_handle = NULL;
 
-void Sleeping::react(events::audio::PlayURLsEvent *play_urls) {
-  g_message("Reacting to PlayURLsEvent in sleeping state, about to play...");
+  App *app;
+  bool ducked;
+};
 
-  app->audio_player->clean_queue();
-
-  for (const auto &url : play_urls->urls)
-    app->audio_player->play_url(url);
-
-  play_urls->resolve();
-}
-
-} // namespace state
 } // namespace genie

@@ -130,8 +130,8 @@ void genie::STT::record_timing_event(STTSession *session,
 
 genie::STTSession::STTSession(STT *controller, const char *url,
                               bool is_follow_up)
-    : m_controller(controller), is_follow_up(is_follow_up),
-      m_state(State::INITIAL), m_done(false) {
+    : m_controller(controller), m_state(State::INITIAL), m_done(false),
+      is_follow_up(is_follow_up) {
   g_debug("SST connecting...\n");
 
   auto_gobject_ptr<SoupMessage> msg(soup_message_new(SOUP_METHOD_GET, url),

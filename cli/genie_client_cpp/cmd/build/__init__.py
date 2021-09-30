@@ -48,6 +48,8 @@ def add_to(subparsers):
         help="Pass `--progress plain` to `docker build` (real Docker only!)",
     )
 
+    parser.add_children(__name__, __path__)
+
 def run(
     arch: str = DEFAULT_ARCH,
     static: bool = False,

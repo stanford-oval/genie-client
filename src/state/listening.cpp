@@ -20,6 +20,7 @@
 #include "app.hpp"
 #include "audioinput.hpp"
 #include "audioplayer.hpp"
+#include "audiovolume.hpp"
 #include "leds.hpp"
 #include "stt.hpp"
 
@@ -34,7 +35,7 @@ void Listening::enter() {
   app->leds->set_active(true);
   app->stt->begin_session(is_follow_up);
   app->audio_input->wake();
-  app->duck();
+  app->audio_volume_controller->duck();
   g_message("Stopping audio player...\n");
   app->audio_player->stop();
   if (!is_follow_up) {
