@@ -54,10 +54,17 @@ void State::react(events::InputTimeout *) {
   g_warning("FIXME received InputTimeout when not in Listen state, ignoring.");
 }
 
+// Genie Server Message Events
+// ---------------------------------------------------------------------------
+//
+// Dispatched when `genie::conversation::ConversationProtocol` receives a
+// message on the websocket from the Genie server.
+//
+
 void State::react(events::TextMessage *text_message) {
   g_message("Received TextMessage, saying text: %s\n",
             text_message->text.c_str());
-  app->audio_player->say(text_message->text, text_message->id);
+  app->transit(new Saying(app, text_message->id, text_message->text));
 }
 
 void State::react(events::AudioMessage *audio_message) {
