@@ -67,7 +67,7 @@ _deps += dependency('libpulse-simple')
 _deps += dependency('speex')
 _deps += dependency('speexdsp')
 
-_deps += dependency('webrtcvad', static : true)
+_deps += dependency('webrtc-audio-processing')
 
 executable(
   app_command,
