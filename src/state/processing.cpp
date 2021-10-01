@@ -49,7 +49,9 @@ void Processing::react(events::stt::ErrorResponse *response) {
   app->track_processing_event(ProcessingEventType::END_STT);
   g_warning("STT completed with an error (code=%d): %s", response->code,
             response->message.c_str());
-  app->audio_player.get()->play_sound(Sound_t::STT_ERROR);
+  if (response->code != 404) {
+    app->audio_player.get()->play_sound(Sound_t::STT_ERROR);
+  }
   app->transit(new Sleeping(app));
 }
 

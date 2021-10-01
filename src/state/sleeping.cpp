@@ -19,6 +19,8 @@
 #include "state/sleeping.hpp"
 #include "app.hpp"
 #include "audioplayer.hpp"
+#include "audiovolume.hpp"
+#include "leds.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::Sleeping"
@@ -28,7 +30,8 @@ namespace state {
 
 void Sleeping::enter() {
   g_message("ENTER state Sleeping\n");
-  app->unduck();
+  app->audio_volume_controller->unduck();
+  app->leds->set_active(false);
 }
 
 void Sleeping::react(events::audio::PrepareEvent *prepare) {

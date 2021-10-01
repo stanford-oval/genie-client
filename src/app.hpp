@@ -63,6 +63,7 @@ class Config;
 class AudioInput;
 class AudioFIFO;
 class AudioPlayer;
+class AudioVolumeController;
 class EVInput;
 class Leds;
 class Spotifyd;
@@ -110,8 +111,6 @@ public:
 
   int exec();
   void track_processing_event(ProcessingEventType eventType);
-  void duck();
-  void unduck();
 
   /**
    * @brief Dispatch a state `event`. This method is _thread-safe_.
@@ -175,6 +174,7 @@ private:
   // ### Component Instances ###
 
   std::unique_ptr<AudioInput> audio_input;
+  std::unique_ptr<AudioVolumeController> audio_volume_controller;
   std::unique_ptr<AudioPlayer> audio_player;
   std::unique_ptr<conversation::Client> conversation_client;
   std::unique_ptr<DNSController> dns_controller;

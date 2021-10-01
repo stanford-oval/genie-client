@@ -9,11 +9,14 @@ load-module module-null-sink
 load-module module-always-sink
 
 ### Configure sinks/sources
-load-module module-alsa-sink device=hw:0,0
-load-module module-alsa-source device=hw:audiocodec,0
+load-module module-alsa-sink device=hw:0,0 format=s16le rate=48000 channels=2
+load-module module-alsa-source device=hw:audiocodec,0 format=s16le rate=48000 channels=1
 
 ### AEC
-load-module module-echo-cancel source_name=echosrc sink_name=echosink channels=1 rate=16000 aec_method=webrtc aec_args="analog_gain_control=0 digital_gain_control=1"
+load-module module-echo-cancel source_name=echosrc sink_name=echosink channels=2 rate=48000 aec_method=webrtc aec_args="analog_gain_control=0 digital_gain_control=1 intelligibility_enhancer=1"
+
+### Ducking
+load-module module-role-ducking trigger_roles=voice-assistant ducking_roles=music volume=30% global=true
 
 ### Set default devices
 set-default-sink echosink

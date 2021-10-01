@@ -1,8 +1,11 @@
-# !!! ATTENTION you need run like `pip install -r ./requirements.txt`... in
-# !!! other words, from THIS DIRECTORY!
-
-# -e ../../../nrser/clavier
--e .
+# These are the **dev** requirements, and do _not_ include the cli package
+# itself because it triggers the Docker build to re-do layers all the time.
+# 
+# So, for a full-setup (from the repo root):
+# 
+#     pip install -r ./cli/requirements.txt
+#     pip install -e ./cli
+# 
 
 # Building and publishing
 # setuptools

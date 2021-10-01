@@ -77,7 +77,7 @@ public:
                const std::string &text, const std::string &base_tts_url,
                const char *voice, bool soup_has_post_data, gint64 ref_id)
       : AudioTask(pipeline, AudioTaskType::SAY, ref_id), soupsrc(soupsrc),
-        text(text), base_tts_url(base_tts_url),
+        text(text), base_tts_url(base_tts_url), voice(voice),
         soup_has_post_data(soup_has_post_data) {}
 
   void start() override;

@@ -19,32 +19,26 @@
 #pragma once
 
 #include "app.hpp"
-#include <string>
+
+#include <alsa/asoundlib.h>
+#include <pulse/simple.h>
+#include <pulse/error.h>
 
 namespace genie {
 
-class Spotifyd {
+class AudioVolumeController {
 public:
-  Spotifyd(App *app);
-  ~Spotifyd();
+  AudioVolumeController(App *appInstance);
+  ~AudioVolumeController();
   int init();
-  int close();
-  bool set_credentials(const std::string &username,
-                       const std::string &access_token);
-
-protected:
-  int spawn();
-  int download();
-  int check_version();
-  static void child_watch_cb(GPid pid, gint status, gpointer data);
+  int duck();
+  int unduck();
 
 private:
+  pa_simple *pulse_handle = NULL;
+
   App *app;
-  GPid child_pid;
-  const char *cacheDir;
-  std::string username;
-  std::string access_token;
-  std::string arch;
+  bool ducked;
 };
 
 } // namespace genie

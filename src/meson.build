@@ -80,6 +80,7 @@ executable(
   'audiofifo.cpp',
   'pa_ringbuffer.c',
   'audioplayer.cpp',
+  'audiovolume.cpp',
   'stt.cpp',
   'spotifyd.cpp',
   'dns_controller.cpp',

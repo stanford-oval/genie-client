@@ -19,7 +19,6 @@
 #include "state/saying.hpp"
 #include "app.hpp"
 #include "audioplayer.hpp"
-#include "leds.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::Saying"
@@ -28,7 +27,6 @@ namespace genie {
 namespace state {
 
 void Saying::enter() {
-  app->leds->set_active(false);
   app->track_processing_event(ProcessingEventType::START_TTS);
   app->audio_player->say(text, text_id);
 }
@@ -49,7 +47,7 @@ void Saying::react(events::AskSpecialMessage *ask_special_message) {
 void Saying::react(events::PlayerStreamEnd *player_stream_end) {
   if (player_stream_end->ref_id == text_id) {
     if (follow_up) {
-      app->transit(new Listening(app, false));
+      app->transit(new Listening(app, true));
     } else {
       app->transit(new Sleeping(app));
     }

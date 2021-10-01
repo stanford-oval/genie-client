@@ -67,7 +67,7 @@ void genie::conversation::Client::send_json_now(JsonBuilder *builder) {
   json_generator_set_root(gen, root);
   gchar *str = json_generator_to_data(gen, NULL);
 
-  PROF_PRINT("[SERVER WS] sending: %s", str);
+  g_message("Sending: %s", str);
   soup_websocket_connection_send_text(m_connection.get(), str);
 
   json_node_free(root);
