@@ -90,8 +90,9 @@ int genie::App::exec() {
   leds->init();
   leds->set_active(false);
 
-  if (config->dns_controller_enabled)
-    dns_controller = std::make_unique<DNSController>();
+  if (config->dns_controller_enabled) {
+    dns_controller = std::make_unique<DNSController>(config->hacks_dns_server);
+  }
 
   this->current_state = new state::Sleeping(this);
   this->current_state->enter();

@@ -31,6 +31,13 @@ public:
   static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 640;
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
 
+  // Hacks Defaults
+  // ---------------------------------------------------------------------------
+
+  static const bool DEFAULT_HACKS_WAKE_WORD_VERIFICATION = true;
+  static const bool DEFAULT_HACKS_SURPRESS_REPEATED_NOTIFS = false;
+  static const constexpr char *DEFAULT_HACKS_DNS_SERVER = "8.8.8.8";
+
   // Picovoice Defaults
   // -------------------------------------------------------------------------
 
@@ -90,6 +97,44 @@ public:
    */
   gchar *audio_output_device;
 
+  // Hacks
+  // -------------------------------------------------------------------------
+  //
+  // Little tricks and tweaks that can help in some specific situations.
+  //
+
+  /**
+   * @brief Verify presence of wake-word at start of STT response before sending
+   * to Genie server.
+   *
+   * When this setting is `true` Speech-To-Text (STT) responses must match the
+   * `pv_wake_word_pattern` to be sent to the server for processing. STT results
+   * the do _not_ match the pattern are silently discarded.
+   *
+   * When this works well it prevents false positives in wake-word detection
+   * from sending junk to the server. However -- particularly with "Genie"
+   * wake-word variations that we've tested -- the STT produces a wide range of
+   * wake-word transcriptions, making it difficult to craft a pattern that
+   * matches all of them. This results in a non-negligible amount of false
+   * negatives where the client aborts legitimate requests.
+   *
+   * Setting this flag to `false` can help in situations where you're not
+   * concerned about mis-wakes making server requests.
+   */
+  bool hacks_wake_word_verification;
+
+  /**
+   * At the moment (2021-09-30) we have a bug where the server sends
+   * notifications _twice_, which is annoying. This switch enabled client-side
+   * detection and supression of repeated notifications.
+   */
+  bool hacks_surpress_repeated_notifs;
+
+  /**
+   * DNS server for `genie::DNSController`.
+   */
+  char *hacks_dns_server;
+
   // Picovoice (Wake-Word Detection)
   // -------------------------------------------------------------------------
 
@@ -137,6 +182,8 @@ private:
   double get_bounded_double(GKeyFile *key_file, const char *section,
                             const char *key, const double default_value,
                             const double min, const double max);
+  bool get_bool(GKeyFile *key_file, const char *section, const char *key,
+                const bool default_value);
 };
 
 } // namespace genie

@@ -156,6 +156,19 @@ double genie::Config::get_bounded_double(GKeyFile *key_file,
   return value;
 }
 
+bool genie::Config::get_bool(GKeyFile *key_file, const char *section,
+                             const char *key, const bool default_value) {
+  GError *error = NULL;
+  gboolean value = g_key_file_get_boolean(key_file, section, key, &error);
+  if (error != NULL) {
+    g_warning("Failed to load [%s] %s from config file, using default %s",
+              section, key, default_value ? "true" : "false");
+    g_error_free(error);
+    return default_value;
+  }
+  return static_cast<bool>(value);
+}
+
 void genie::Config::load() {
   std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
       auto_key_file(g_key_file_new());
@@ -283,6 +296,20 @@ void genie::Config::load() {
 
   audio_output_device =
       get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
+
+  // Hacks
+  // =========================================================================
+
+  hacks_wake_word_verification =
+      get_bool(key_file, "hacks", "wake_word_verification",
+               DEFAULT_HACKS_WAKE_WORD_VERIFICATION);
+
+  hacks_surpress_repeated_notifs =
+      get_bool(key_file, "hacks", "surpress_repeated_notifs",
+               DEFAULT_HACKS_SURPRESS_REPEATED_NOTIFS);
+
+  hacks_dns_server =
+      get_string(key_file, "hacks", "dns_server", DEFAULT_HACKS_DNS_SERVER);
 
   // Picovoice
   // =========================================================================
