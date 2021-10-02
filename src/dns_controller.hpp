@@ -18,26 +18,29 @@
 
 #pragma once
 
-#include <glib.h>
 #include <gio/gio.h>
+#include <glib.h>
+#include <string>
 
 #include "utils/autoptrs.hpp"
 
 namespace genie {
 
-
 class DNSController {
 private:
-    auto_gobject_ptr<GFileMonitor> m_file_monitor;
-    static void on_changed(GFileMonitor *monitor, GFile *file, GFile *other_file, GFileMonitorEvent event, gpointer self);
-    void update_dns_config();
+  auto_gobject_ptr<GFileMonitor> m_file_monitor;
+  std::string dns_server;
+
+  static void on_changed(GFileMonitor *monitor, GFile *file, GFile *other_file,
+                         GFileMonitorEvent event, gpointer self);
+  void update_dns_config();
 
 public:
-    DNSController();
-    ~DNSController();
+  DNSController(const char *dns_server);
+  ~DNSController();
 
-    DNSController(const DNSController&) = delete;
-    DNSController& operator=(const DNSController&) = delete;
+  DNSController(const DNSController &) = delete;
+  DNSController &operator=(const DNSController &) = delete;
 };
 
-}
+} // namespace genie

@@ -21,8 +21,8 @@
 #include <glib.h>
 #include <string.h>
 
-#include "utils/autoptrs.hpp"
 #include "leds.hpp"
+#include "utils/autoptrs.hpp"
 #include <memory>
 
 #undef G_LOG_DOMAIN
@@ -64,8 +64,9 @@ gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
   return value;
 }
 
-int genie::Config::get_leds_effect_string(GKeyFile *key_file, const char *section,
-                                 const char *key, const char *default_value) {
+int genie::Config::get_leds_effect_string(GKeyFile *key_file,
+                                          const char *section, const char *key,
+                                          const char *default_value) {
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
@@ -93,8 +94,10 @@ int genie::Config::get_leds_effect_string(GKeyFile *key_file, const char *sectio
   return i;
 }
 
-int genie::Config::get_dec_color_from_hex_string(GKeyFile *key_file, const char *section,
-                                 const char *key, const char *default_value) {
+int genie::Config::get_dec_color_from_hex_string(GKeyFile *key_file,
+                                                 const char *section,
+                                                 const char *key,
+                                                 const char *default_value) {
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
@@ -215,6 +218,19 @@ double genie::Config::get_bounded_double(GKeyFile *key_file,
   return value;
 }
 
+bool genie::Config::get_bool(GKeyFile *key_file, const char *section,
+                             const char *key, const bool default_value) {
+  GError *error = NULL;
+  gboolean value = g_key_file_get_boolean(key_file, section, key, &error);
+  if (error != NULL) {
+    g_warning("Failed to load [%s] %s from config file, using default %s",
+              section, key, default_value ? "true" : "false");
+    g_error_free(error);
+    return default_value;
+  }
+  return static_cast<bool>(value);
+}
+
 void genie::Config::load() {
   std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
       auto_key_file(g_key_file_new());
@@ -236,8 +252,8 @@ void genie::Config::load() {
   }
   error = NULL;
 
-  retry_interval =
-    get_size(key_file, "general", "retry_interval", DEFAULT_WS_RETRY_INTERVAL);
+  retry_interval = get_size(key_file, "general", "retry_interval",
+                            DEFAULT_WS_RETRY_INTERVAL);
 
   genie_access_token =
       g_key_file_get_string(key_file, "general", "accessToken", &error);
@@ -270,7 +286,8 @@ void genie::Config::load() {
   // =========================================================================
 
   error = NULL;
-  audio_input_device = g_key_file_get_string(key_file, "audio", "input", &error);
+  audio_input_device =
+      g_key_file_get_string(key_file, "audio", "input", &error);
   if (error) {
     g_warning("Missing audio input device in configuration file");
     audio_input_device = g_strdup("hw:0,0");
@@ -359,8 +376,7 @@ void genie::Config::load() {
   // =========================================================================
 
   error = NULL;
-  audio_ec_enabled =
-      g_key_file_get_boolean(key_file, "ec", "enabled", &error);
+  audio_ec_enabled = g_key_file_get_boolean(key_file, "ec", "enabled", &error);
   if (error) {
     g_error_free(error);
     audio_ec_enabled = false;
@@ -373,6 +389,20 @@ void genie::Config::load() {
     g_error_free(error);
     audio_ec_loopback = false;
   }
+
+  // Hacks
+  // =========================================================================
+
+  hacks_wake_word_verification =
+      get_bool(key_file, "hacks", "wake_word_verification",
+               DEFAULT_HACKS_WAKE_WORD_VERIFICATION);
+
+  hacks_surpress_repeated_notifs =
+      get_bool(key_file, "hacks", "surpress_repeated_notifs",
+               DEFAULT_HACKS_SURPRESS_REPEATED_NOTIFS);
+
+  hacks_dns_server =
+      get_string(key_file, "hacks", "dns_server", DEFAULT_HACKS_DNS_SERVER);
 
   // Picovoice
   // =========================================================================
@@ -429,8 +459,7 @@ void genie::Config::load() {
   // =========================================================================
 
   error = NULL;
-  leds_enabled =
-      g_key_file_get_boolean(key_file, "leds", "enabled", &error);
+  leds_enabled = g_key_file_get_boolean(key_file, "leds", "enabled", &error);
   if (error) {
     leds_enabled = false;
     g_error_free(error);
@@ -473,8 +502,8 @@ void genie::Config::load() {
         key_file, "leds", "saying_effect", DEFAULT_LEDS_SAYING_EFFECT);
     leds_saying_color = get_dec_color_from_hex_string(
         key_file, "leds", "saying_color", DEFAULT_LEDS_SAYING_COLOR);
-    leds_error_effect = get_leds_effect_string(
-        key_file, "leds", "error_effect", DEFAULT_LEDS_ERROR_EFFECT);
+    leds_error_effect = get_leds_effect_string(key_file, "leds", "error_effect",
+                                               DEFAULT_LEDS_ERROR_EFFECT);
     leds_error_color = get_dec_color_from_hex_string(
         key_file, "leds", "error_color", DEFAULT_LEDS_ERROR_COLOR);
     leds_net_error_effect = get_leds_effect_string(
@@ -499,8 +528,7 @@ void genie::Config::load() {
   }
 
   error = NULL;
-  ssl_strict =
-      g_key_file_get_boolean(key_file, "system", "ssl_strict", &error);
+  ssl_strict = g_key_file_get_boolean(key_file, "system", "ssl_strict", &error);
   if (error) {
     ssl_strict = true;
     g_error_free(error);
@@ -509,7 +537,8 @@ void genie::Config::load() {
     g_warning("SSL strict validation disabled");
   }
 
-  ssl_ca_file = g_key_file_get_string(key_file, "system", "ssl_ca_file", nullptr);
+  ssl_ca_file =
+      g_key_file_get_string(key_file, "system", "ssl_ca_file", nullptr);
 
   error = NULL;
   cache_dir = g_key_file_get_string(key_file, "system", "cache_dir", &error);
@@ -520,7 +549,8 @@ void genie::Config::load() {
 
   if (!g_file_test(cache_dir, G_FILE_TEST_IS_DIR)) {
     if (!g_mkdir_with_parents(cache_dir, 0755)) {
-      g_printerr("failed to create cache_dir %s, errno = %d\n", cache_dir, errno);
+      g_printerr("failed to create cache_dir %s, errno = %d\n", cache_dir,
+                 errno);
     }
   }
 

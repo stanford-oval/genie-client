@@ -91,6 +91,35 @@ void genie::conversation::ConversationProtocol::handleText(gint64 id,
   const gchar *text = json_reader_get_string_value(reader);
   json_reader_end_member(reader);
 
+  // Do we have the repeated notification supression hack enabled?
+  if (app->config->hacks_surpress_repeated_notifs) {
+    // We do! See if this is a notification...
+    if (g_str_has_prefix(text, "Notification")) {
+      if (last_notif_text == nullptr) {
+        // We don't have a last notification stored, so store this one
+        last_notif_text = g_strdup(text);
+      } else if (strcmp(text, last_notif_text) == 0) {
+        // The last notification is identical, ignore this one...
+        g_warning("HACK Ignore repeated notification: %s", text);
+        return;
+      } else {
+        // The last notification is _different_. Put this one in it's place and
+        // continue.
+        g_free(last_notif_text);
+        last_notif_text = strdup(text);
+      }
+    } else if (last_notif_text != nullptr) {
+      g_free(last_notif_text);
+      last_notif_text = nullptr;
+    }
+  }
+
+  if (g_str_has_prefix(text, "Notification")) {
+    g_message("Skipping message ID=%" G_GINT64_FORMAT " (Notification)", id,
+              id);
+    return;
+  }
+
   app->dispatch(new state::events::TextMessage(id, text));
   ask_special_text_id = id;
   last_said_text_id = id;

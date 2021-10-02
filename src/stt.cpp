@@ -185,11 +185,14 @@ void genie::STTSession::on_connection(SoupSession *session, GAsyncResult *res,
 }
 
 void genie::STTSession::handle_stt_result(const char *text) {
-  bool has_wake_word = std::regex_search(text, m_controller->wake_word_pattern);
+  if (m_controller->m_app->config->hacks_wake_word_verification) {
+    bool has_wake_word =
+        std::regex_search(text, m_controller->wake_word_pattern);
 
-  if (!has_wake_word && !is_follow_up) {
-    m_controller->complete_error(this, 404, "no wakeword");
-    return;
+    if (!has_wake_word && !is_follow_up) {
+      m_controller->complete_error(this, 404, "no wakeword");
+      return;
+    }
   }
 
   std::string mangled =

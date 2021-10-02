@@ -140,8 +140,9 @@ int genie::App::exec(int argc, char *argv[]) {
   ev_input = std::make_unique<EVInput>(this);
   ev_input->init();
 
-  if (config->dns_controller_enabled)
-    dns_controller = std::make_unique<DNSController>();
+  if (config->dns_controller_enabled) {
+    dns_controller = std::make_unique<DNSController>(config->hacks_dns_server);
+  }
 
   this->current_state = new state::Sleeping(this);
   this->current_state->enter();

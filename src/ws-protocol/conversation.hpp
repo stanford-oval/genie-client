@@ -40,6 +40,7 @@ private:
   int64_t seq = -1;
   int64_t last_said_text_id = -1;
   int64_t ask_special_text_id = -1;
+  gchar *last_notif_text = nullptr;
 
   // Message handlers
   void handleConversationID(JsonReader *reader);
