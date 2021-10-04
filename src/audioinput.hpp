@@ -26,6 +26,7 @@
 #include <atomic>
 #include <glib.h>
 #include <queue>
+#include <thread>
 
 #include <alsa/asoundlib.h>
 #include <pulse/error.h>
@@ -46,6 +47,7 @@ public:
   static const int VAD_NOT_SILENT = 1;
 
   enum class State {
+    CLOSED,
     WAITING,
     WOKE,
     LISTENING,
@@ -57,11 +59,10 @@ public:
   void close();
   void wake();
 
-protected:
-  static void *loop(gpointer data);
-
 private:
-  bool running;
+  // initialized once and never overwritten
+  VadInst *const vad_instance;
+  App *const app;
   snd_pcm_t *alsa_handle = NULL;
   pa_simple *pulse_handle = NULL;
 
@@ -72,6 +73,11 @@ private:
                                            int32_t *);
   const char *(*pv_status_to_string_func)(pv_status_t);
 
+  // thread safe, accessed from both threads
+  std::thread input_thread;
+  std::atomic<State> state;
+
+  // only accessed from the input thread
   int16_t *pcm;
   int16_t *pcmOutput;
   int16_t *pcmFilter;
@@ -82,25 +88,23 @@ private:
   SpeexEchoState *echo_state;
   SpeexPreprocessState *pp_state;
 
-  VadInst *vad_instance;
-  App *app;
-
   size_t vad_start_frame_count;
   size_t vad_done_frame_count;
   size_t vad_input_detected_noise_frame_count;
 
   // Loop state variables
-  std::atomic<State> state;
   size_t state_woke_frame_count;
   size_t state_vad_silent_count;
   size_t state_vad_noise_count;
 
+  // only called from the input thread
   AudioFrame read_frame(int32_t frame_length);
 
   size_t ms_to_frames(size_t frame_length, size_t ms);
   bool init_pv();
   bool init_alsa(gchar *input_audio_device);
   bool init_pulse();
+  void loop();
   void loop_waiting();
   void loop_woke();
   void loop_listening();

@@ -13,6 +13,7 @@ _linkArgs = []
 _incDirs = []
 _deps = []
 
+_deps += dependency('threads')
 _deps += cpp.find_library('dl')
 foreach d : _baseDeps
   _deps += dependency(d)

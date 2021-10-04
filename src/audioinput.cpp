@@ -33,14 +33,11 @@ FILE *fp_output;
 FILE *fp_filter;
 #endif
 
-genie::AudioInput::AudioInput(App *appInstance) {
-  app = appInstance;
-  vad_instance = WebRtcVad_Create();
-  state = State::WAITING;
-}
+genie::AudioInput::AudioInput(App *appInstance)
+    : app(appInstance), vad_instance(WebRtcVad_Create()),
+      state(State::WAITING) {}
 
 genie::AudioInput::~AudioInput() {
-  running = false;
   WebRtcVad_Free(vad_instance);
   free(pcm);
   if (alsa_handle != NULL) {
@@ -51,6 +48,11 @@ genie::AudioInput::~AudioInput() {
   }
   pv_porcupine_delete_func(porcupine);
   dlclose(porcupine_library);
+}
+
+void genie::AudioInput::close() {
+  state.store(State::CLOSED);
+  input_thread.join();
 }
 
 bool genie::AudioInput::init_pv() {
@@ -301,16 +303,7 @@ int genie::AudioInput::init() {
             app->config->vad_input_detected_noise_ms,
             vad_input_detected_noise_frame_count);
 
-  GError *thread_error = NULL;
-  g_thread_try_new("audioInputThread", (GThreadFunc)loop, this, &thread_error);
-  if (thread_error) {
-    g_print("audioInputThread Error: g_thread_try_new() %s\n",
-            thread_error->message);
-    g_error_free(thread_error);
-    return false;
-  }
-  running = true;
-
+  input_thread = std::thread(&AudioInput::loop, this);
   return 0;
 }
 
@@ -532,22 +525,20 @@ void genie::AudioInput::loop_listening() {
   }
 }
 
-void *genie::AudioInput::loop(gpointer data) {
-  AudioInput *obj = reinterpret_cast<AudioInput *>(data);
-
-  while (obj->running) {
-    switch (obj->state) {
+void genie::AudioInput::loop() {
+  for (;;) {
+    switch (state) {
+      case State::CLOSED:
+        return;
       case State::WAITING:
-        obj->loop_waiting();
+        loop_waiting();
         break;
       case State::WOKE:
-        obj->loop_woke();
+        loop_woke();
         break;
       case State::LISTENING:
-        obj->loop_listening();
+        loop_listening();
         break;
     }
   }
-
-  return NULL;
 }
