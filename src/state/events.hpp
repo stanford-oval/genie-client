@@ -158,6 +158,14 @@ struct TogglePlayback : Event {};
 // Audio Player Events
 // ===========================================================================
 
+struct PlayerStreamEnter : Event {
+  AudioTaskType type;
+  gint64 ref_id;
+
+  PlayerStreamEnter(AudioTaskType type, gint64 ref_id)
+      : type(type), ref_id(ref_id) {}
+};
+
 struct PlayerStreamEnd : Event {
   AudioTaskType type;
   gint64 ref_id;

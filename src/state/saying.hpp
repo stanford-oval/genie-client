@@ -34,6 +34,7 @@ public:
   void enter() override;
 
   void react(events::AskSpecialMessage *ask_special_message) override;
+  void react(events::PlayerStreamEnter *player_stream_enter) override;
   void react(events::PlayerStreamEnd *player_stream_end) override;
 
 private:

@@ -44,8 +44,15 @@ void Saying::react(events::AskSpecialMessage *ask_special_message) {
   }
 }
 
+void Saying::react(events::PlayerStreamEnter *player_stream_enter) {
+  if (player_stream_enter->ref_id == text_id) {
+    app->track_processing_event(ProcessingEventType::END_TTS);
+  }
+}
+
 void Saying::react(events::PlayerStreamEnd *player_stream_end) {
   if (player_stream_end->ref_id == text_id) {
+    app->track_processing_event(ProcessingEventType::DONE);
     if (follow_up) {
       app->transit(new Listening(app, true));
     } else {

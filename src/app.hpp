@@ -81,6 +81,7 @@ enum class ProcessingEventType {
   END_GENIE,
   START_TTS,
   END_TTS,
+  DONE,
 };
 
 class App {
