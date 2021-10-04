@@ -208,7 +208,7 @@ bool genie::AudioInput::init_alsa(gchar *input_audio_device) {
 
 bool genie::AudioInput::init_pulse() {
   const pa_sample_spec config{/* format */ PA_SAMPLE_S16LE,
-                              /* rate */ sample_rate,
+                              /* rate */ uint32_t(sample_rate),
                               /* channels */ 1};
 
   int error;
@@ -404,6 +404,10 @@ void genie::AudioInput::transition(State to_state) {
     case State::LISTENING:
       g_message("[AudioInput] -> State::LISTENING");
       state = State::LISTENING;
+      break;
+    case State::CLOSED:
+      g_critical(
+          "Unexpected transition to CLOSED state from inside the input thread");
       break;
   }
 }

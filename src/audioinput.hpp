@@ -61,8 +61,8 @@ public:
 
 private:
   // initialized once and never overwritten
-  VadInst *const vad_instance;
   App *const app;
+  VadInst *const vad_instance;
   snd_pcm_t *alsa_handle = NULL;
   pa_simple *pulse_handle = NULL;
 
