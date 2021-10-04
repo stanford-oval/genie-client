@@ -11,7 +11,7 @@ setuptools.setup(
     ),
     url="https://github.com/stanford-oval/almond-cloud",
     packages=setuptools.find_packages(),
-    python_requires=">=3.6,<4",
+    python_requires=">=3.8,<4",
     install_requires=[
         "splatlog>=0.1.0",
         "clavier>=0.1.2",
