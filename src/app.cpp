@@ -42,17 +42,27 @@ double time_diff_ms(struct timeval x, struct timeval y) {
 
 genie::App::App() {
   is_processing = FALSE;
+}
 
+genie::App::~App() { g_main_loop_unref(main_loop); }
+
+void genie::App::init_soup() {
   // initialize a shared SoupSession to be used by all outgoing connections
-  soup_session =
-      auto_gobject_ptr<SoupSession>(soup_session_new(), adopt_mode::owned);
+  if (config->ssl_ca_file) {
+    soup_session =
+        auto_gobject_ptr<SoupSession>(soup_session_new_with_options(
+                                      "ssl-ca-file", config->ssl_ca_file, NULL),
+                                      adopt_mode::owned);
+  } else {
+    soup_session =
+        auto_gobject_ptr<SoupSession>(soup_session_new(), adopt_mode::owned);
+  }
+
   // enable the wss support
   const gchar *wss_aliases[] = {"wss", NULL};
   g_object_set(soup_session.get(), SOUP_SESSION_HTTPS_ALIASES, wss_aliases,
                NULL);
 }
-
-genie::App::~App() { g_main_loop_unref(main_loop); }
 
 int genie::App::exec() {
   PROF_PRINT("start main loop\n");
@@ -64,6 +74,8 @@ int genie::App::exec() {
 
   config = std::make_unique<Config>();
   config->load();
+
+  init_soup();
 
   g_setenv("PULSE_PROP_media.role", "voice-assistant", TRUE);
   g_setenv("GST_REGISTRY_UPDATE", "no", true);

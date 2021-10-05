@@ -115,6 +115,7 @@ public:
 
   gchar *leds_path;
   bool dns_controller_enabled;
+  gchar *ssl_ca_file;
 
   // Voice Activity Detection (VAD)
   // -------------------------------------------------------------------------

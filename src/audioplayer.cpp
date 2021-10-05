@@ -136,6 +136,11 @@ void genie::AudioPlayer::init_say_pipeline() {
     g_error("Gst element could not be created\n");
   }
 
+  if (app->config->ssl_ca_file) {
+    g_object_set(G_OBJECT(soupsrc.get()), "ssl-ca-file",
+                 app->config->ssl_ca_file, NULL);
+  }
+
   if (soup_has_post_data) {
     g_object_set(G_OBJECT(soupsrc.get()), "location", base_tts_url.c_str(),
                  "method", "POST", "content-type", "application/json", NULL);

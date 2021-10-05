@@ -43,6 +43,7 @@ genie::Config::~Config() {
   g_free(audio_output_device);
   g_free(audio_backend);
   g_free(leds_path);
+  g_free(ssl_ca_file);
 }
 
 gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
@@ -327,6 +328,8 @@ void genie::Config::load() {
       g_key_file_get_boolean(key_file, "system", "dns", nullptr);
 
   leds_path = g_key_file_get_string(key_file, "system", "leds", nullptr);
+
+  ssl_ca_file = g_key_file_get_string(key_file, "system", "ssl_ca_file", nullptr);
 
   // Voice Activity Detection (VAD)
   // =========================================================================
