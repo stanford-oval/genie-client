@@ -25,50 +25,12 @@ pcm.g_hd {
   }
 }
 
-
 pcm.g_alert {
   type plug
   slave.pcm "playroute"
 }
 
 pcm.playroute {
-    type route
-    slave {
-        pcm "dupstream"
-        channels 2 
-    }
-    ttable {
-        0.0 1
-        0.1 1
-    }
-}
-
-pcm.dupstream {
-    type multi
-    slaves.a.pcm "playreal"
-    slaves.a.channels 1
-    slaves.b.pcm "playfifo"
-    slaves.b.channels 1
-    bindings.0 { slave a; channel 0; }
-    bindings.1 { slave b; channel 0; }
-}
-
-pcm.playreal {
-    type plug;
-    slave.pcm plugequal;
-}
-
-pcm.playfifo {
-    type plug
-    slave {
-        format S16_LE
-        rate 16000
-        channels 1
-        pcm {
-            type file
-            slave.pcm null
-            file "/tmp/playback.fifo"
-            format "raw"
-        }
-    }
+  type plug
+  slave.pcm plugequal;
 }
