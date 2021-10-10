@@ -37,6 +37,7 @@ genie::AudioFIFO::~AudioFIFO() {
     close(fd);
   }
   free(ring_buffer.buffer);
+  free(pcm);
 }
 
 int genie::AudioFIFO::init() {

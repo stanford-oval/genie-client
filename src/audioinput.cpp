@@ -464,7 +464,7 @@ genie::AudioFrame genie::AudioInput::read_frame(int32_t frame_length) {
   if (alsa_handle != NULL && channels >= 2) {
     // lossy stereo to mono conversion for the first 2 channels (l/r)
     // extract the playback signal from the 3rd channel
-    for (uint32_t i = 0, j = 0; i < (frame_length * channels);
+    for (int32_t i = 0, j = 0; i < (frame_length * channels);
          i += channels, j++) {
       int16_t left = *(int16_t *)&pcm[i];
       int16_t right = *(int16_t *)&pcm[i + 1];
