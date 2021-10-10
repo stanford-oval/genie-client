@@ -21,7 +21,6 @@
 #include <signal.h>
 #include <stdio.h>
 
-#include "audiofifo.hpp"
 #include "audioinput.hpp"
 #include "pv_porcupine.h"
 
