@@ -101,11 +101,6 @@ public:
   bool say(const std::string &text, gint64 ref_id = -1);
   gboolean clean_queue();
   gboolean stop();
-  long get_volume();
-  void set_volume(long volume);
-  int adjust_playback_volume(long delta);
-  int increment_playback_volume();
-  int decrement_playback_volume();
 
 private:
   struct PipelineState {
@@ -133,9 +128,6 @@ private:
   static gboolean bus_call_queue(GstBus *bus, GstMessage *msg, gpointer data);
   std::queue<std::unique_ptr<AudioTask>> player_queue;
   std::unique_ptr<AudioTask> playing_task;
-
-  snd_mixer_elem_t *get_mixer_element(snd_mixer_t *handle,
-                                      const char *selem_name);
 };
 
 } // namespace genie

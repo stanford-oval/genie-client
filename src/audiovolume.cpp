@@ -64,3 +64,108 @@ int genie::AudioVolumeController::unduck() {
   ducked = false;
   return true;
 }
+
+snd_mixer_elem_t *
+genie::AudioVolumeController::get_mixer_element(snd_mixer_t *handle,
+                                      const char *selem_name) {
+  snd_mixer_selem_id_t *sid;
+
+  snd_mixer_open(&handle, 0);
+  snd_mixer_attach(handle, app->config->audio_output_device);
+  snd_mixer_selem_register(handle, NULL, NULL);
+  snd_mixer_load(handle);
+
+  snd_mixer_selem_id_alloca(&sid);
+  snd_mixer_selem_id_set_index(sid, 0);
+  snd_mixer_selem_id_set_name(sid, selem_name);
+  return snd_mixer_find_selem(handle, sid);
+}
+
+void genie::AudioVolumeController::set_volume(long volume) {
+  int err = 0;
+  snd_mixer_t *handle = NULL;
+  snd_mixer_selem_id_t *sid;
+
+  snd_mixer_open(&handle, 0);
+  snd_mixer_attach(handle, app->config->audio_output_device);
+  snd_mixer_selem_register(handle, NULL, NULL);
+  snd_mixer_load(handle);
+
+  snd_mixer_selem_id_alloca(&sid);
+  snd_mixer_selem_id_set_index(sid, 0);
+  snd_mixer_selem_id_set_name(sid, "LINEOUT volume");
+  snd_mixer_elem_t *elem = snd_mixer_find_selem(handle, sid);
+
+  snd_mixer_selem_set_playback_volume_all(elem, volume);
+
+  g_message("Updated playback volume to %ld", volume);
+
+  snd_mixer_close(handle);
+}
+
+int genie::AudioVolumeController::adjust_playback_volume(long delta) {
+  long min, max, current, updated;
+  int err = 0;
+  snd_mixer_t *handle = NULL;
+  snd_mixer_selem_id_t *sid;
+
+  snd_mixer_open(&handle, 0);
+  snd_mixer_attach(handle, app->config->audio_output_device);
+  snd_mixer_selem_register(handle, NULL, NULL);
+  snd_mixer_load(handle);
+
+  snd_mixer_selem_id_alloca(&sid);
+  snd_mixer_selem_id_set_index(sid, 0);
+  snd_mixer_selem_id_set_name(sid, "LINEOUT volume");
+  snd_mixer_elem_t *elem = snd_mixer_find_selem(handle, sid);
+
+  err = snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+  if (err != 0) {
+    g_warning("Error getting playback volume range, code=%d", err);
+    snd_mixer_close(handle);
+    return err;
+  }
+
+  err =
+      snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_MONO, &current);
+  if (err != 0) {
+    g_warning("Error getting current playback volume, code=%d", err);
+    snd_mixer_close(handle);
+    return err;
+  }
+
+  updated = current + delta;
+
+  if (updated > max) {
+    g_message(
+        "Can not adjust playback volume to %ld, max is %ld. Capping at max",
+        updated, max);
+    updated = max;
+  } else if (updated < min) {
+    g_message(
+        "Can not adjust playback volume to %ld; min is %ld. Capping at min",
+        updated, min);
+    updated = min;
+  }
+
+  if (updated == current) {
+    g_message("Volume already at %ld", current);
+    snd_mixer_close(handle);
+    return 0;
+  }
+
+  snd_mixer_selem_set_playback_volume_all(elem, updated);
+
+  g_message("Updated playback volume to %ld", updated);
+
+  snd_mixer_close(handle);
+  return 0;
+}
+
+int genie::AudioVolumeController::increment_playback_volume() {
+  return adjust_playback_volume(1);
+}
+
+int genie::AudioVolumeController::decrement_playback_volume() {
+  return adjust_playback_volume(-1);
+}
