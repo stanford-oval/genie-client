@@ -19,6 +19,7 @@
 #include "state/state.hpp"
 #include "app.hpp"
 #include "audioplayer.hpp"
+#include "audiovolume.hpp"
 #include "spotifyd.hpp"
 
 #undef G_LOG_DOMAIN
@@ -87,7 +88,7 @@ void State::react(events::SpotifyCredentials *spotify_credentials) {
 }
 
 void State::react(events::AdjustVolume *adjust_volume) {
-  app->audio_player->adjust_playback_volume(adjust_volume->delta);
+  app->audio_volume_controller->adjust_playback_volume(adjust_volume->delta);
 }
 
 void State::react(events::TogglePlayback *) {
@@ -148,7 +149,7 @@ void State::react(events::audio::SetMuteEvent *set_mute) {
 }
 
 void State::react(events::audio::SetVolumeEvent *set_volume) {
-  app->audio_player->set_volume(set_volume->volume);
+  app->audio_volume_controller->set_volume(set_volume->volume);
   set_volume->resolve();
 }
 

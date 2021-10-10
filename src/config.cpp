@@ -43,6 +43,7 @@ genie::Config::~Config() {
   g_free(audio_output_device);
   g_free(audio_backend);
   g_free(leds_path);
+  g_free(ssl_ca_file);
 }
 
 gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
@@ -284,6 +285,33 @@ void genie::Config::load() {
   audio_output_device =
       get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
 
+  error = NULL;
+  audio_input_stereo2mono =
+      g_key_file_get_boolean(key_file, "audio", "stereo2mono", &error);
+  if (error) {
+    g_error_free(error);
+    audio_input_stereo2mono = false;
+  }
+
+  // Echo Cancellation
+  // =========================================================================
+
+  error = NULL;
+  audio_ec_enabled =
+      g_key_file_get_boolean(key_file, "ec", "enabled", &error);
+  if (error) {
+    g_error_free(error);
+    audio_ec_enabled = false;
+  }
+
+  error = NULL;
+  audio_ec_loopback =
+      g_key_file_get_boolean(key_file, "ec", "loopback", &error);
+  if (error) {
+    g_error_free(error);
+    audio_ec_loopback = false;
+  }
+
   // Picovoice
   // =========================================================================
 
@@ -327,6 +355,8 @@ void genie::Config::load() {
       g_key_file_get_boolean(key_file, "system", "dns", nullptr);
 
   leds_path = g_key_file_get_string(key_file, "system", "leds", nullptr);
+
+  ssl_ca_file = g_key_file_get_string(key_file, "system", "ssl_ca_file", nullptr);
 
   // Voice Activity Detection (VAD)
   // =========================================================================

@@ -24,11 +24,13 @@
 #include "audioinput.hpp"
 #include "pv_porcupine.h"
 
-#define DEBUG_DUMP_STREAMS
+// Define the following to dump audio streams for debugging reasons
+// #define DEBUG_DUMP_STREAMS
 
 #ifdef DEBUG_DUMP_STREAMS
 FILE *fp_input;
-FILE *fp_output;
+FILE *fp_input_mono;
+FILE *fp_playback;
 FILE *fp_filter;
 #endif
 
@@ -39,6 +41,9 @@ genie::AudioInput::AudioInput(App *appInstance)
 genie::AudioInput::~AudioInput() {
   WebRtcVad_Free(vad_instance);
   free(pcm);
+  free(pcm_mono);
+  free(pcm_playback);
+  free(pcm_filter);
   if (alsa_handle != NULL) {
     snd_pcm_close(alsa_handle);
   }
@@ -47,6 +52,20 @@ genie::AudioInput::~AudioInput() {
   }
   pv_porcupine_delete_func(porcupine);
   dlclose(porcupine_library);
+  if (pp_state) {
+    speex_preprocess_state_destroy(pp_state);
+    pp_state = NULL;
+  }
+  if (echo_state) {
+    speex_echo_state_destroy(echo_state);
+    echo_state = NULL;
+  }
+#ifdef DEBUG_DUMP_STREAMS
+  fclose(fp_input);
+  fclose(fp_input_mono);
+  fclose(fp_playback);
+  fclose(fp_filter);
+#endif
 }
 
 void genie::AudioInput::close() {
@@ -133,7 +152,7 @@ bool genie::AudioInput::init_pv() {
   return true;
 }
 
-bool genie::AudioInput::init_alsa(gchar *input_audio_device) {
+bool genie::AudioInput::init_alsa(gchar *input_audio_device, int channels) {
   alsa_handle = NULL;
   int error_code =
       snd_pcm_open(&alsa_handle, input_audio_device, SND_PCM_STREAM_CAPTURE, 0);
@@ -181,7 +200,8 @@ bool genie::AudioInput::init_alsa(gchar *input_audio_device) {
     return false;
   }
 
-  error_code = snd_pcm_hw_params_set_channels(alsa_handle, hardware_params, 1);
+  error_code =
+      snd_pcm_hw_params_set_channels(alsa_handle, hardware_params, channels);
   if (error_code != 0) {
     g_error("'snd_pcm_hw_params_set_channels' failed with '%s'\n",
             snd_strerror(error_code));
@@ -220,6 +240,36 @@ bool genie::AudioInput::init_pulse() {
   return true;
 }
 
+bool genie::AudioInput::init_speex() {
+  spx_int32_t tmp;
+
+  echo_state = speex_echo_state_init_mc(
+      pv_frame_length,
+      (sample_rate * 300) / 1000, 1, 1);
+  speex_echo_ctl(echo_state, SPEEX_ECHO_SET_SAMPLING_RATE, &(sample_rate));
+
+  pp_state = speex_preprocess_state_init(pv_frame_length, sample_rate);
+
+  // Not supported with the prebuilt speex
+  // tmp = true;
+  // speex_preprocess_ctl(pp_state, SPEEX_PREPROCESS_SET_AGC, &tmp);
+
+  tmp = true;
+  speex_preprocess_ctl(pp_state, SPEEX_PREPROCESS_SET_DENOISE, &tmp);
+
+  tmp = true;
+  speex_preprocess_ctl(pp_state, SPEEX_PREPROCESS_SET_DEREVERB, &tmp);
+
+  tmp = -1;
+  speex_preprocess_ctl(pp_state, SPEEX_PREPROCESS_SET_ECHO_SUPPRESS, &tmp);
+
+  speex_preprocess_ctl(pp_state, SPEEX_PREPROCESS_SET_ECHO_STATE, echo_state);
+  
+  g_print("Initialized speex echo-cancellation\n");
+
+  return true;
+}
+
 int genie::AudioInput::init() {
   if (!app->config->audioInputDevice) {
     g_error("no input audio device");
@@ -230,8 +280,16 @@ int genie::AudioInput::init() {
     return -1;
   }
 
+  channels = 1;
+  if (app->config->audio_input_stereo2mono) {
+    channels = 2;
+    if (app->config->audio_ec_loopback) {
+      channels = 3;
+    }
+  }
+
   if (strcmp(app->config->audio_backend, "alsa") == 0) {
-    if (!init_alsa(app->config->audioInputDevice)) {
+    if (!init_alsa(app->config->audioInputDevice, channels)) {
       return -1;
     }
   } else if (strcmp(app->config->audio_backend, "pulse") == 0) {
@@ -243,7 +301,28 @@ int genie::AudioInput::init() {
     return -1;
   }
 
+  if (app->config->audio_ec_enabled) {
+    if (!init_speex()) {
+      return -1;
+    }
+  }
+
+#ifdef DEBUG_DUMP_STREAMS
+  fp_input = fopen("/tmp/input.raw", "wb+");
+  fp_input_mono = fopen("/tmp/input_mono.raw", "wb+");
+  fp_playback = fopen("/tmp/playback.raw", "wb+");
+  fp_filter = fopen("/tmp/filter.raw", "wb+");
+#endif
+
   pcm = (int16_t *)malloc(
+      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
+      channels * sizeof(int16_t));
+  if (!pcm) {
+    g_error("failed to allocate memory for audio buffer\n");
+    return -2;
+  }
+
+  pcm_mono = (int16_t *)malloc(
       std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
       sizeof(int16_t));
   if (!pcm) {
@@ -251,18 +330,18 @@ int genie::AudioInput::init() {
     return -2;
   }
 
-  pcmOutput = (int16_t *)malloc(
+  pcm_playback = (int16_t *)malloc(
       std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
       sizeof(int16_t));
-  if (!pcmOutput) {
+  if (!pcm_playback) {
     g_error("failed to allocate memory for audio buffer\n");
     return -2;
   }
 
-  pcmFilter = (int16_t *)malloc(
+  pcm_filter = (int16_t *)malloc(
       std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
       sizeof(int16_t));
-  if (!pcmFilter) {
+  if (!pcm_filter) {
     g_error("failed to allocate memory for audio buffer\n");
     return -2;
   }
@@ -380,8 +459,56 @@ genie::AudioFrame genie::AudioInput::read_frame(int32_t frame_length) {
     return AudioFrame(0);
   }
 
+  int16_t *pcm_out = pcm;
+
+  if (alsa_handle != NULL && channels >= 2) {
+    // lossy stereo to mono conversion for the first 2 channels (l/r)
+    // extract the playback signal from the 3rd channel
+    for (uint32_t i = 0, j = 0; i < (frame_length * channels);
+         i += channels, j++) {
+      int16_t left = *(int16_t *)&pcm[i];
+      int16_t right = *(int16_t *)&pcm[i + 1];
+      if (app->config->audio_input_stereo2mono) {
+        int16_t mix = (int16_t)((int32_t(left) + right) / 2);
+        pcm_mono[j] = mix;
+      } else {
+        pcm_mono[j] = left;
+      }
+      if (app->config->audio_ec_loopback && channels == 3) {
+        int16_t ref = *(int16_t *)&pcm[i + 2];
+        pcm_playback[j] = ref;
+      }
+    }
+
+    if (app->config->audio_ec_enabled && channels == 3) {
+      speex_echo_cancellation(echo_state, (const spx_int16_t *)pcm_mono,
+                              (const int16_t *)pcm_playback,
+                              (spx_int16_t *)pcm_filter);
+
+      /* preprecessor is run after AEC. This is not a mistake! */
+      if (pp_state) {
+        speex_preprocess_run(pp_state, (spx_int16_t *)pcm_filter);
+      }
+
+#ifdef DEBUG_DUMP_STREAMS
+      fwrite(pcm_playback, sizeof(int16_t), frame_length, fp_playback);
+      fwrite(pcm_filter, sizeof(int16_t), frame_length, fp_filter);
+#endif
+      pcm_out = pcm_filter;
+    } else {
+      pcm_out = pcm_mono;
+    }
+#ifdef DEBUG_DUMP_STREAMS
+    fwrite(pcm_mono, sizeof(int16_t), frame_length, fp_input_mono);
+#endif
+  }
+
+#ifdef DEBUG_DUMP_STREAMS
+  fwrite(pcm, sizeof(int16_t), frame_length * channels, fp_input);
+#endif
+
   AudioFrame frame(frame_length);
-  memcpy(frame.samples, pcm, frame_length * sizeof(int16_t));
+  memcpy(frame.samples, pcm_out, frame_length * sizeof(int16_t));
   return frame;
 }
 
@@ -426,7 +553,7 @@ void genie::AudioInput::loop_waiting() {
   // Check the new frame for the wake-word
   int32_t keyword_index = -1;
   pv_status_t status =
-      pv_porcupine_process_func(porcupine, pcm, &keyword_index);
+      pv_porcupine_process_func(porcupine, new_frame.samples, &keyword_index);
 
   if (status != PV_STATUS_SUCCESS) {
     // Picovoice error!
@@ -470,7 +597,7 @@ void genie::AudioInput::loop_woke() {
   state_woke_frame_count += 1;
 
   // Run Voice Activity Detection (VAD) against the frame
-  int vad_result = WebRtcVad_Process(vad_instance, sample_rate, pcm,
+  int vad_result = WebRtcVad_Process(vad_instance, sample_rate, new_frame.samples,
                                      AUDIO_INPUT_VAD_FRAME_LENGTH);
 
   if (vad_result == VAD_IS_SILENT) {
@@ -514,7 +641,7 @@ void genie::AudioInput::loop_listening() {
 
   app->dispatch(new state::events::InputFrame(std::move(new_frame)));
 
-  int silence = WebRtcVad_Process(vad_instance, sample_rate, pcm,
+  int silence = WebRtcVad_Process(vad_instance, sample_rate, new_frame.samples,
                                   AUDIO_INPUT_VAD_FRAME_LENGTH);
 
   if (silence == VAD_IS_SILENT) {

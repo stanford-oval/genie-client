@@ -33,12 +33,20 @@ public:
   int init();
   int duck();
   int unduck();
+  long get_volume();
+  void set_volume(long volume);
+  int adjust_playback_volume(long delta);
+  int increment_playback_volume();
+  int decrement_playback_volume();
 
 private:
   pa_simple *pulse_handle = NULL;
 
   App *app;
   bool ducked;
+
+  snd_mixer_elem_t *get_mixer_element(snd_mixer_t *handle,
+                                      const char *selem_name);
 };
 
 } // namespace genie

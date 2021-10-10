@@ -52,9 +52,8 @@ gboolean genie::EVInput::event_dispatch(GSource *g_source, GSourceFunc callback,
   input_event ev;
   int rc = 0;
 
+  rc = libevdev_next_event(source->device, LIBEVDEV_READ_FLAG_NORMAL, &ev);
   while (rc != -EAGAIN) {
-    rc = libevdev_next_event(source->device, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-
     if (rc == 0) {
       g_debug("Event type %d (%s), code %d (%s), value %d", ev.type,
               libevdev_event_type_get_name(ev.type), ev.code,
@@ -87,6 +86,8 @@ gboolean genie::EVInput::event_dispatch(GSource *g_source, GSourceFunc callback,
       g_print("source read failed %s\n", strerror(-rc));
       break;
     }
+
+    rc = libevdev_next_event(source->device, LIBEVDEV_READ_FLAG_NORMAL, &ev);
   }
 
   return callback(user_data);

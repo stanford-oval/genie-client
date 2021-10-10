@@ -86,6 +86,21 @@ public:
   gchar *audio_backend;
 
   /**
+   * @brief Use the audio input as a stereo and convert it to mono
+   */
+  bool audio_input_stereo2mono;
+
+  // Echo Cancellation
+  // -------------------------------------------------------------------------
+
+  bool audio_ec_enabled;
+
+  /**
+   * @brief Use the 3rd channel inside audio input stream for the loopback signal
+   */
+  bool audio_ec_loopback;
+
+  /**
    * @brief The general/main audio output device; used to control volume.
    */
   gchar *audio_output_device;
@@ -115,6 +130,7 @@ public:
 
   gchar *leds_path;
   bool dns_controller_enabled;
+  gchar *ssl_ca_file;
 
   // Voice Activity Detection (VAD)
   // -------------------------------------------------------------------------

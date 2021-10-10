@@ -6,6 +6,7 @@ assets/*
 !assets/err-erra.oga
 !assets/magic.oga
 !assets/news-intro.oga
+!assets/ca-certificates.crt
 # Meson build directory
 /build/
 # Build output directory

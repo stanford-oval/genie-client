@@ -79,10 +79,12 @@ private:
 
   // only accessed from the input thread
   int16_t *pcm;
-  int16_t *pcmOutput;
-  int16_t *pcmFilter;
+  int16_t *pcm_mono;
+  int16_t *pcm_playback;
+  int16_t *pcm_filter;
   int32_t pv_frame_length;
   size_t sample_rate;
+  int16_t channels;
   std::queue<AudioFrame> frame_buffer;
 
   SpeexEchoState *echo_state;
@@ -102,8 +104,9 @@ private:
 
   size_t ms_to_frames(size_t frame_length, size_t ms);
   bool init_pv();
-  bool init_alsa(gchar *input_audio_device);
+  bool init_alsa(gchar *input_audio_device, int channels);
   bool init_pulse();
+  bool init_speex();
   void loop();
   void loop_waiting();
   void loop_woke();

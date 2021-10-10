@@ -259,6 +259,8 @@ private:
   // Private Instance Methods
   // =========================================================================
 
+  void init_soup();
+
   void print_processing_entry(const char *name, double duration_ms,
                               double total_ms);
   void replay_deferred_events();
