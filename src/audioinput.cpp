@@ -21,7 +21,6 @@
 #include <signal.h>
 #include <stdio.h>
 
-#include "audiofifo.hpp"
 #include "audioinput.hpp"
 #include "pv_porcupine.h"
 
@@ -228,7 +227,7 @@ bool genie::AudioInput::init_alsa(gchar *input_audio_device, int channels) {
 
 bool genie::AudioInput::init_pulse() {
   const pa_sample_spec config{/* format */ PA_SAMPLE_S16LE,
-                              /* rate */ sample_rate,
+                              /* rate */ uint32_t(sample_rate),
                               /* channels */ 1};
 
   int error;
@@ -465,7 +464,7 @@ genie::AudioFrame genie::AudioInput::read_frame(int32_t frame_length) {
   if (alsa_handle != NULL && channels >= 2) {
     // lossy stereo to mono conversion for the first 2 channels (l/r)
     // extract the playback signal from the 3rd channel
-    for (uint32_t i = 0, j = 0; i < (frame_length * channels);
+    for (int32_t i = 0, j = 0; i < (frame_length * channels);
          i += channels, j++) {
       int16_t left = *(int16_t *)&pcm[i];
       int16_t right = *(int16_t *)&pcm[i + 1];
@@ -531,6 +530,10 @@ void genie::AudioInput::transition(State to_state) {
     case State::LISTENING:
       g_message("[AudioInput] -> State::LISTENING");
       state = State::LISTENING;
+      break;
+    case State::CLOSED:
+      g_critical(
+          "Unexpected transition to CLOSED state from inside the input thread");
       break;
   }
 }
