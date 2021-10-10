@@ -285,6 +285,33 @@ void genie::Config::load() {
   audio_output_device =
       get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
 
+  error = NULL;
+  audio_input_stereo2mono =
+      g_key_file_get_boolean(key_file, "audio", "stereo2mono", &error);
+  if (error) {
+    g_error_free(error);
+    audio_input_stereo2mono = false;
+  }
+
+  // Echo Cancellation
+  // =========================================================================
+
+  error = NULL;
+  audio_ec_enabled =
+      g_key_file_get_boolean(key_file, "ec", "enabled", &error);
+  if (error) {
+    g_error_free(error);
+    audio_ec_enabled = false;
+  }
+
+  error = NULL;
+  audio_ec_loopback =
+      g_key_file_get_boolean(key_file, "ec", "loopback", &error);
+  if (error) {
+    g_error_free(error);
+    audio_ec_loopback = false;
+  }
+
   // Picovoice
   // =========================================================================
 
