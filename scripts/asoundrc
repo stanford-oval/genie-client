@@ -34,3 +34,48 @@ pcm.playroute {
   type plug
   slave.pcm plugequal;
 }
+
+pcm.capture {
+  type hooks
+  slave.pcm "hw:audiocodec,0"
+  hooks.0 {
+    type ctl_elems
+    hook_args [
+      {
+         name "Left Input Mixer MIC1 Boost Switch"
+         optional true
+         value 1
+      }
+      {
+         name "Right Input Mixer MIC2 Boost Switch"
+         optional true
+         value 1
+      }
+      {
+         name "Xadc Input Mixer MIC3 Boost Switch"
+         optional true
+         value 1
+      }
+      {
+         name "ADC gain volume"
+         optional true
+         value 4
+      }
+      {
+         name "MIC1 gain volume"
+         optional true
+         value 4
+      }
+      {
+         name "MIC2 gain volume"
+         optional true
+         value 4
+      }
+      {
+         name "MIC3 gain volume"
+         optional true
+         value 0
+      }
+    ]
+  }
+}
