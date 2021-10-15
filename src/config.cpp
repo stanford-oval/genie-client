@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "utils/autoptrs.hpp"
+#include "leds.hpp"
 #include <memory>
 
 #undef G_LOG_DOMAIN
@@ -42,8 +43,9 @@ genie::Config::~Config() {
   g_free(audioVoice);
   g_free(audio_output_device);
   g_free(audio_backend);
-  g_free(leds_path);
   g_free(ssl_ca_file);
+  g_free(leds_path);
+  g_free(leds_type);
 }
 
 gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
@@ -57,6 +59,59 @@ gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
     return strdup(default_value);
   }
   return value;
+}
+
+int genie::Config::get_leds_effect_string(GKeyFile *key_file, const char *section,
+                                 const char *key, const char *default_value) {
+  GError *error = NULL;
+  gchar *value = g_key_file_get_string(key_file, section, key, &error);
+  if (error != NULL) {
+    g_warning("Failed to load [%s] %s from config file, using default '%s'",
+              section, key, default_value);
+    g_error_free(error);
+    value = strdup(default_value);
+  }
+
+  int i;
+  if (strcmp(value, "none") == 0) {
+    i = (int)LedsAnimation_t::None;
+  } else if (strcmp(value, "solid") == 0) {
+    i = (int)LedsAnimation_t::Solid;
+  } else if (strcmp(value, "circular") == 0) {
+    i = (int)LedsAnimation_t::Circular;
+  } else if (strcmp(value, "pulse") == 0) {
+    i = (int)LedsAnimation_t::Pulse;
+  } else {
+    g_warning("Failed to parse [%s] %s from config file, using 'none'", section,
+              key);
+    i = (int)LedsAnimation_t::None;
+  }
+  free(value);
+  return i;
+}
+
+int genie::Config::get_dec_color_from_hex_string(GKeyFile *key_file, const char *section,
+                                 const char *key, const char *default_value) {
+  GError *error = NULL;
+  gchar *value = g_key_file_get_string(key_file, section, key, &error);
+  if (error != NULL) {
+    g_warning("Failed to load [%s] %s from config file, using default '%s'",
+              section, key, default_value);
+    g_error_free(error);
+    value = strdup(default_value);
+  }
+
+  unsigned short r, g, b;
+  if (sscanf(value, "%02hx%02hx%02hx", &r, &g, &b) != 3) {
+    g_warning("Failed to parse [%s] %s from config file, using default '%s'",
+              section, key, default_value);
+    value = strdup(default_value);
+    sscanf(value, "%02hx%02hx%02hx", &r, &g, &b);
+  }
+  int i = (r << 16) + (g << 8) + b;
+  // g_debug("converted hex %s in %d\n", value, i);
+  free(value);
+  return i;
 }
 
 /**
@@ -348,13 +403,65 @@ void genie::Config::load() {
   sound_stt_error =
       get_string(key_file, "sound", "stt_error", DEFAULT_SOUND_STT_ERROR);
 
+  // Leds
+  // =========================================================================
+
+  error = NULL;
+  leds_enabled =
+      g_key_file_get_boolean(key_file, "leds", "enabled", &error);
+  if (error) {
+    leds_enabled = false;
+    g_error_free(error);
+  }
+
+  if (leds_enabled) {
+    error = NULL;
+    leds_type = g_key_file_get_string(key_file, "leds", "type", &error);
+    if (error) {
+      g_warning("Missing leds control type in configuration file, disabling");
+      leds_enabled = false;
+      g_error_free(error);
+    }
+
+    error = NULL;
+    leds_path = g_key_file_get_string(key_file, "leds", "path", &error);
+    if (error) {
+      g_warning("Missing leds path in configuration file, disabling");
+      leds_enabled = false;
+      g_error_free(error);
+    }
+
+    leds_starting_effect = get_leds_effect_string(
+        key_file, "leds", "starting_effect", DEFAULT_LEDS_STARTING_EFFECT);
+    leds_starting_color = get_dec_color_from_hex_string(
+        key_file, "leds", "starting_color", DEFAULT_LEDS_STARTING_COLOR);
+    leds_sleeping_effect = get_leds_effect_string(
+        key_file, "leds", "sleeping_effect", DEFAULT_LEDS_SLEEPING_EFFECT);
+    leds_sleeping_color = get_dec_color_from_hex_string(
+        key_file, "leds", "sleeping_color", DEFAULT_LEDS_SLEEPING_COLOR);
+    leds_listening_effect = get_leds_effect_string(
+        key_file, "leds", "listening_effect", DEFAULT_LEDS_LISTENING_EFFECT);
+    leds_listening_color = get_dec_color_from_hex_string(
+        key_file, "leds", "listening_color", DEFAULT_LEDS_LISTENING_COLOR);
+    leds_processing_effect = get_leds_effect_string(
+        key_file, "leds", "processing_effect", DEFAULT_LEDS_PROCESSING_EFFECT);
+    leds_processing_color = get_dec_color_from_hex_string(
+        key_file, "leds", "processing_color", DEFAULT_LEDS_PROCESSING_COLOR);
+    leds_saying_effect = get_leds_effect_string(
+        key_file, "leds", "saying_effect", DEFAULT_LEDS_SAYING_EFFECT);
+    leds_saying_color = get_dec_color_from_hex_string(
+        key_file, "leds", "saying_color", DEFAULT_LEDS_SAYING_COLOR);
+    leds_error_effect = get_leds_effect_string(
+        key_file, "leds", "error_effect", DEFAULT_LEDS_ERROR_EFFECT);
+    leds_error_color = get_dec_color_from_hex_string(
+        key_file, "leds", "error_color", DEFAULT_LEDS_ERROR_COLOR);
+  }
+
   // System
   // =========================================================================
 
   dns_controller_enabled =
       g_key_file_get_boolean(key_file, "system", "dns", nullptr);
-
-  leds_path = g_key_file_get_string(key_file, "system", "leds", nullptr);
 
   ssl_ca_file = g_key_file_get_string(key_file, "system", "ssl_ca_file", nullptr);
 

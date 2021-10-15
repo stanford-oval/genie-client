@@ -55,6 +55,22 @@ public:
   static const constexpr char *DEFAULT_SOUND_WORKING = "match.oga";
   static const constexpr char *DEFAULT_SOUND_STT_ERROR = "no-match.oga";
 
+  // Leds Defaults
+  // -------------------------------------------------------------------------
+
+  static const constexpr char *DEFAULT_LEDS_STARTING_EFFECT = "pulse";
+  static const constexpr char *DEFAULT_LEDS_STARTING_COLOR = "0000ff";
+  static const constexpr char *DEFAULT_LEDS_SLEEPING_EFFECT = "none";
+  static const constexpr char *DEFAULT_LEDS_SLEEPING_COLOR = "000000";
+  static const constexpr char *DEFAULT_LEDS_LISTENING_EFFECT = "pulse";
+  static const constexpr char *DEFAULT_LEDS_LISTENING_COLOR = "00ff00";
+  static const constexpr char *DEFAULT_LEDS_PROCESSING_EFFECT = "circular";
+  static const constexpr char *DEFAULT_LEDS_PROCESSING_COLOR = "0000ff";
+  static const constexpr char *DEFAULT_LEDS_SAYING_EFFECT = "pulse";
+  static const constexpr char *DEFAULT_LEDS_SAYING_COLOR = "8f00ff";
+  static const constexpr char *DEFAULT_LEDS_ERROR_EFFECT = "solid";
+  static const constexpr char *DEFAULT_LEDS_ERROR_COLOR = "ff0000";
+
   Config();
   ~Config();
   void load();
@@ -125,10 +141,29 @@ public:
   gchar *sound_working;
   gchar *sound_stt_error;
 
+  // Leds
+  // -------------------------------------------------------------------------
+
+  bool leds_enabled;
+  gchar *leds_type;
+  gchar *leds_path;
+
+  gint leds_starting_effect;
+  gint leds_starting_color;
+  gint leds_sleeping_effect;
+  gint leds_sleeping_color;
+  gint leds_listening_effect;
+  gint leds_listening_color;
+  gint leds_processing_effect;
+  gint leds_processing_color;
+  gint leds_saying_effect;
+  gint leds_saying_color;
+  gint leds_error_effect;
+  gint leds_error_color;
+
   // System
   // -------------------------------------------------------------------------
 
-  gchar *leds_path;
   bool dns_controller_enabled;
   gchar *ssl_ca_file;
 
@@ -141,6 +176,10 @@ public:
 
 protected:
 private:
+  int get_leds_effect_string(GKeyFile *key_file, const char *section, const char *key,
+                    const gchar *default_value);
+  int get_dec_color_from_hex_string(GKeyFile *key_file, const char *section, const char *key,
+                    const gchar *default_value);
   gchar *get_string(GKeyFile *key_file, const char *section, const char *key,
                     const gchar *default_value);
   size_t get_size(GKeyFile *key_file, const char *section, const char *key,
