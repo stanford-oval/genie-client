@@ -31,7 +31,7 @@ namespace state {
 void Sleeping::enter() {
   g_message("ENTER state Sleeping\n");
   app->audio_volume_controller->unduck();
-  app->leds->set_active(false);
+  app->leds->animate(LedsState_t::Sleeping);
 }
 
 void Sleeping::react(events::audio::PrepareEvent *prepare) {

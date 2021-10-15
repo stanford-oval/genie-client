@@ -19,6 +19,7 @@
 #include "state/processing.hpp"
 #include "app.hpp"
 #include "audioplayer.hpp"
+#include "leds.hpp"
 #include "ws-protocol/client.hpp"
 
 #undef G_LOG_DOMAIN
@@ -29,6 +30,7 @@ namespace state {
 
 void Processing::enter() {
   app->track_processing_event(ProcessingEventType::START_STT);
+  app->leds->animate(LedsState_t::Processing);
 }
 
 void Processing::react(events::TextMessage *text_message) {
@@ -51,6 +53,7 @@ void Processing::react(events::stt::ErrorResponse *response) {
             response->message.c_str());
   if (response->code != 404) {
     app->audio_player.get()->play_sound(Sound_t::STT_ERROR);
+    app->leds->animate(LedsState_t::Error);
   }
   app->transit(new Sleeping(app));
 }

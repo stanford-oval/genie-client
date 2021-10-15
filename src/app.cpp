@@ -80,6 +80,10 @@ int genie::App::exec() {
   g_setenv("PULSE_PROP_media.role", "voice-assistant", TRUE);
   g_setenv("GST_REGISTRY_UPDATE", "no", true);
 
+  leds = std::make_unique<Leds>(this);
+  leds->init();
+  leds->animate(LedsState_t::Starting);
+
   audio_volume_controller = std::make_unique<AudioVolumeController>(this);
 
   audio_player = std::make_unique<AudioPlayer>(this);
@@ -97,10 +101,6 @@ int genie::App::exec() {
 
   ev_input = std::make_unique<EVInput>(this);
   ev_input->init();
-
-  leds = std::make_unique<Leds>(this);
-  leds->init();
-  leds->set_active(false);
 
   if (config->dns_controller_enabled)
     dns_controller = std::make_unique<DNSController>();

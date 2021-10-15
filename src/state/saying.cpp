@@ -19,6 +19,7 @@
 #include "state/saying.hpp"
 #include "app.hpp"
 #include "audioplayer.hpp"
+#include "leds.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::Saying"
@@ -29,6 +30,7 @@ namespace state {
 void Saying::enter() {
   app->track_processing_event(ProcessingEventType::START_TTS);
   app->audio_player->say(text, text_id);
+  app->leds->animate(LedsState_t::Saying);
 }
 
 void Saying::react(events::AskSpecialMessage *ask_special_message) {

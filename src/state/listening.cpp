@@ -32,7 +32,7 @@ namespace state {
 
 void Listening::enter() {
   g_message("ENTER state Listening\n");
-  app->leds->set_active(true);
+  app->leds->animate(LedsState_t::Listening);
   app->stt->begin_session(is_follow_up);
   app->audio_input->wake();
   app->audio_volume_controller->duck();
