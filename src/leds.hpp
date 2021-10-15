@@ -22,15 +22,64 @@
 
 namespace genie {
 
+enum class LedsState_t {
+  Starting,
+  Sleeping,
+  Listening,
+  Processing,
+  Saying,
+  Error
+};
+
+enum class LedsAnimation_t {
+  None,
+  Solid,
+  Circular,
+  Pulse
+};
+
 class Leds {
 public:
   Leds(App *appInstance);
   ~Leds();
   int init();
-  void set_active(bool active);
 
+  void animate(enum LedsState_t state);
+
+protected:
+  void animate_internal(LedsAnimation_t style, int color = 0, int duration = 0);
+  bool set_user(bool enabled);
+  int get_brightness_internal(bool max);
+  bool set_brightness(int level);
+  bool set_leds();
+
+  void clear(int color = 0);
+  void solid(int color);
+  void circular(int color);
+  void pulse();
+
+  static gboolean update_circular(gpointer data);
+  static gboolean update_pulse(gpointer data);
 private:
+  bool initialized;
   App *app;
+  gchar *ctrl_path_base;
+  gchar *ctrl_path_brightness;
+  gchar *ctrl_path_all;
+  int *leds;
+  int led_count;
+  int max_brightness;
+
+  int base_color;
+  int brightness;
+
+  int step_circular;
+  int color_circular;
+  bool update_timer_circular;
+
+  int step_bright;
+  int bright_direction;
+  bool update_timer_pulse;
 };
 
 } // namespace genie
