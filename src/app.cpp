@@ -64,7 +64,38 @@ void genie::App::init_soup() {
                NULL);
 }
 
+int genie::App::process_args(int argc, char *argv[]) {
+  GError *error = NULL;
+  GOptionContext *context;
+
+  gboolean opt_version = false;
+  static GOptionEntry entries[] = {
+    { "version", 'v', 0, G_OPTION_ARG_NONE, &opt_version, "Show application version", NULL },
+    { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, NULL }
+  };
+
+  context = g_option_context_new(PACKAGE_NAME);
+  g_option_context_add_main_entries(context, entries, PACKAGE_NAME);
+  if (!g_option_context_parse(context, &argc, &argv, &error)) {
+    g_print("option parsing failed: %s\n", error->message);
+    g_error_free(error);
+    return false;
+  }
+  g_option_context_free(context);
+
+  if (opt_version) {
+    g_print(PACKAGE_NAME " v" PACKAGE_VERSION);
+    exit(EXIT_SUCCESS);
+  }
+
+  return true;
+}
+
 int genie::App::exec(int argc, char *argv[]) {
+  if (!process_args(argc, argv)) {
+    return EXIT_FAILURE;
+  }
+
   PROF_PRINT("start main loop\n");
 
   main_loop = g_main_loop_new(NULL, FALSE);

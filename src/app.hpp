@@ -259,6 +259,8 @@ private:
   // Private Instance Methods
   // =========================================================================
 
+  int process_args(int argc, char *argv[]);
+
   void init_soup();
 
   void print_processing_entry(const char *name, double duration_ms,
