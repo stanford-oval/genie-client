@@ -22,8 +22,14 @@ if [ $? -eq 0 ]; then
 	./pulseaudio --start -v -F /opt/genie/.system.pa -p /opt/genie/lib/pulseaudio --exit-idle-time=-1 --log-target=file:/tmp/pa.log
 fi
 
-if test "$1" = "--gdb" ; then
-	exec ./gdbserver 0.0.0.0:${GDB_PORT:-1234} ./genie
-else
-	exec ./genie
-fi
+RET=1
+while [ $RET -ne 0 ]; do
+	if test "$1" = "--gdb" ; then
+		./gdbserver 0.0.0.0:${GDB_PORT:-1234} ./genie
+	else
+		./genie
+	fi
+	RET=$?
+done
+
+exit $RET
