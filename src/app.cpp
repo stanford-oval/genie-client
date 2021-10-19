@@ -64,7 +64,7 @@ void genie::App::init_soup() {
                NULL);
 }
 
-int genie::App::exec() {
+int genie::App::exec(int argc, char *argv[]) {
   PROF_PRINT("start main loop\n");
 
   main_loop = g_main_loop_new(NULL, FALSE);
@@ -114,7 +114,7 @@ int genie::App::exec() {
 
   audio_input->close();
 
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 gboolean genie::App::sig_handler(gpointer data) {

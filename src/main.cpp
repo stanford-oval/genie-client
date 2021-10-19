@@ -18,10 +18,10 @@
 
 #include "app.hpp"
 
-int main(/*int argc, char *argv[]*/) {
+int main(int argc, char *argv[]) {
   using namespace genie;
 
   App app;
 
-  return app.exec();
+  return app.exec(argc, argv);
 }

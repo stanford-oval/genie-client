@@ -110,7 +110,7 @@ public:
   // Public Instance Methods
   // ---------------------------------------------------------------------------
 
-  int exec();
+  int exec(int argc, char *argv[]);
   void track_processing_event(ProcessingEventType eventType);
 
   /**
