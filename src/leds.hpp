@@ -28,7 +28,8 @@ enum class LedsState_t {
   Listening,
   Processing,
   Saying,
-  Error
+  Error,
+  NetError
 };
 
 enum class LedsAnimation_t {

@@ -101,6 +101,11 @@ void genie::Leds::animate(LedsState_t state) {
       animate_internal((LedsAnimation_t)app->config->leds_error_effect,
                        app->config->leds_error_color);
       break;
+    case LedsState_t::NetError:
+      g_debug("leds error\n");
+      animate_internal((LedsAnimation_t)app->config->leds_net_error_effect,
+                       app->config->leds_net_error_color);
+      break;
   }
 }
 

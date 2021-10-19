@@ -70,6 +70,8 @@ public:
   static const constexpr char *DEFAULT_LEDS_SAYING_COLOR = "8f00ff";
   static const constexpr char *DEFAULT_LEDS_ERROR_EFFECT = "solid";
   static const constexpr char *DEFAULT_LEDS_ERROR_COLOR = "ff0000";
+  static const constexpr char *DEFAULT_LEDS_NET_ERROR_EFFECT = "circular";
+  static const constexpr char *DEFAULT_LEDS_NET_ERROR_COLOR = "ffa500";
 
   Config();
   ~Config();
@@ -160,6 +162,8 @@ public:
   gint leds_saying_color;
   gint leds_error_effect;
   gint leds_error_color;
+  gint leds_net_error_effect;
+  gint leds_net_error_color;
 
   // System
   // -------------------------------------------------------------------------
