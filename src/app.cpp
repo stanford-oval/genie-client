@@ -20,9 +20,9 @@
 #include <glib.h>
 
 #include "app.hpp"
-#include "audioinput.hpp"
-#include "audioplayer.hpp"
-#include "audiovolume.hpp"
+#include "audio/audioinput.hpp"
+#include "audio/audioplayer.hpp"
+#include "audio/audiovolume.hpp"
 #include "config.hpp"
 #include "dns_controller.hpp"
 #include "evinput.hpp"

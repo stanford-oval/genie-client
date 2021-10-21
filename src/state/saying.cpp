@@ -18,7 +18,7 @@
 
 #include "state/saying.hpp"
 #include "app.hpp"
-#include "audioplayer.hpp"
+#include "audio/audioplayer.hpp"
 #include "leds.hpp"
 
 #undef G_LOG_DOMAIN

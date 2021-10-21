@@ -18,8 +18,8 @@
 
 #include "state/sleeping.hpp"
 #include "app.hpp"
-#include "audioplayer.hpp"
-#include "audiovolume.hpp"
+#include "audio/audioplayer.hpp"
+#include "audio/audiovolume.hpp"
 #include "leds.hpp"
 
 #undef G_LOG_DOMAIN
