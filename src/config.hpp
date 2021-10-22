@@ -170,6 +170,7 @@ public:
 
   bool dns_controller_enabled;
   gchar *ssl_ca_file;
+  gchar *cache_dir;
 
   // Voice Activity Detection (VAD)
   // -------------------------------------------------------------------------

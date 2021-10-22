@@ -46,6 +46,7 @@ genie::Config::~Config() {
   g_free(ssl_ca_file);
   g_free(leds_path);
   g_free(leds_type);
+  g_free(cache_dir);
 }
 
 gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
@@ -468,6 +469,19 @@ void genie::Config::load() {
       g_key_file_get_boolean(key_file, "system", "dns", nullptr);
 
   ssl_ca_file = g_key_file_get_string(key_file, "system", "ssl_ca_file", nullptr);
+
+  error = NULL;
+  cache_dir = g_key_file_get_string(key_file, "system", "cache_dir", &error);
+  if (error) {
+    g_error_free(error);
+    cache_dir = g_strdup_printf("%s/genie", g_get_user_cache_dir());
+  }
+
+  if (!g_file_test(cache_dir, G_FILE_TEST_IS_DIR)) {
+    if (!g_mkdir_with_parents(cache_dir, 0755)) {
+      g_printerr("failed to create cache_dir %s, errno = %d\n", cache_dir, errno);
+    }
+  }
 
   // Voice Activity Detection (VAD)
   // =========================================================================
