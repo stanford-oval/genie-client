@@ -43,6 +43,7 @@ private:
   GPid child_pid;
   std::string username;
   std::string access_token;
+  bool keep_running;
 };
 
 } // namespace genie
