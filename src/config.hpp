@@ -55,6 +55,10 @@ public:
   static const constexpr char *DEFAULT_SOUND_WORKING = "match.oga";
   static const constexpr char *DEFAULT_SOUND_STT_ERROR = "no-match.oga";
 
+  // Buttons Defaults
+  // -------------------------------------------------------------------------
+  static const constexpr char *DEFAULT_EVINPUT_DEV = "/dev/input/event0";
+
   // Leds Defaults
   // -------------------------------------------------------------------------
 
@@ -142,6 +146,11 @@ public:
   gchar *sound_alarm_clock_elapsed;
   gchar *sound_working;
   gchar *sound_stt_error;
+
+  // Buttons
+  // -------------------------------------------------------------------------
+  bool buttons_enabled;
+  gchar *evinput_device;
 
   // Leds
   // -------------------------------------------------------------------------

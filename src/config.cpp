@@ -44,6 +44,7 @@ genie::Config::~Config() {
   g_free(audio_output_device);
   g_free(audio_backend);
   g_free(ssl_ca_file);
+  g_free(evinput_device);
   g_free(leds_path);
   g_free(leds_type);
   g_free(cache_dir);
@@ -403,6 +404,21 @@ void genie::Config::load() {
       get_string(key_file, "sound", "working", DEFAULT_SOUND_WORKING);
   sound_stt_error =
       get_string(key_file, "sound", "stt_error", DEFAULT_SOUND_STT_ERROR);
+
+  // Buttons
+  // =========================================================================
+  error = NULL;
+  buttons_enabled =
+      g_key_file_get_boolean(key_file, "buttons", "enabled", &error);
+  if (error) {
+    buttons_enabled = false;
+    g_error_free(error);
+  }
+
+  if (buttons_enabled) {
+    evinput_device =
+        get_string(key_file, "buttons", "evinput_dev", DEFAULT_EVINPUT_DEV);
+  }
 
   // Leds
   // =========================================================================
