@@ -100,7 +100,8 @@ public:
   // Public Static Methods
   // -------------------------------------------------------------------------
 
-  static gboolean sig_handler(gpointer data);
+  static gboolean sigint_handler(gpointer data);
+  static gboolean sigterm_handler(gpointer data);
 
   // Public Instance Members
   // -------------------------------------------------------------------------
