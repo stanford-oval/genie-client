@@ -22,13 +22,14 @@ genie::AudioVolumeController::AudioVolumeController(App *appInstance)
     : app(appInstance), ducked(false) {}
 
 genie::AudioVolumeController::~AudioVolumeController() {
-  if (pulse_handle != NULL) {
+  if (pulse_handle != nullptr) {
     pa_simple_free(pulse_handle);
   }
 }
 
 int genie::AudioVolumeController::duck() {
-  if (ducked) return true;
+  if (ducked)
+    return true;
 
   if (strcmp(app->config->audio_backend, "alsa") == 0) {
     system("amixer -D hw:audiocodec cset name='hd' 0");
@@ -36,29 +37,24 @@ int genie::AudioVolumeController::duck() {
     const pa_sample_spec config{/* format */ PA_SAMPLE_S16LE,
                                 /* rate */ 44100,
                                 /* channels */ 2};
-    pulse_handle = pa_simple_new(NULL,
-                  "Genie-duck",
-                  PA_STREAM_PLAYBACK,
-                  NULL,
-                  "Dummy Output for Ducking",
-                  &config,
-                  NULL,
-                  NULL,
-                  NULL
-                  );
+    pulse_handle =
+        pa_simple_new(NULL, "Genie-duck", PA_STREAM_PLAYBACK, NULL,
+                      "Dummy Output for Ducking", &config, NULL, NULL, NULL);
   }
   ducked = true;
   return true;
 }
 
 int genie::AudioVolumeController::unduck() {
-  if (!ducked) return true;
+  if (!ducked)
+    return true;
 
   if (strcmp(app->config->audio_backend, "alsa") == 0) {
     system("amixer -D hw:audiocodec cset name='hd' 255");
   } else if (strcmp(app->config->audio_backend, "pulse") == 0) {
-    if (pulse_handle != NULL) {
+    if (pulse_handle != nullptr) {
       pa_simple_free(pulse_handle);
+      pulse_handle = nullptr;
     }
   }
   ducked = false;
@@ -67,7 +63,7 @@ int genie::AudioVolumeController::unduck() {
 
 snd_mixer_elem_t *
 genie::AudioVolumeController::get_mixer_element(snd_mixer_t *handle,
-                                      const char *selem_name) {
+                                                const char *selem_name) {
   snd_mixer_selem_id_t *sid;
 
   snd_mixer_open(&handle, 0);
