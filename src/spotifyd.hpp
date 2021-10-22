@@ -41,7 +41,6 @@ protected:
 private:
   App *app;
   GPid child_pid;
-  const char *cacheDir;
   std::string username;
   std::string access_token;
   std::string arch;
