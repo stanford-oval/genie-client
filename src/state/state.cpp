@@ -18,8 +18,8 @@
 
 #include "state/state.hpp"
 #include "app.hpp"
-#include "audioplayer.hpp"
-#include "audiovolume.hpp"
+#include "audio/audioplayer.hpp"
+#include "audio/audiovolume.hpp"
 #include "spotifyd.hpp"
 
 #undef G_LOG_DOMAIN

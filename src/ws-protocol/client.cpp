@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../audioplayer.hpp"
+#include "audio/audioplayer.hpp"
 #include "../spotifyd.hpp"
 
 #include "audio.hpp"
