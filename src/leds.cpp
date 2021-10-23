@@ -253,6 +253,7 @@ void genie::Leds::circular(int color) {
   }
   if (update_timer_pulse) {
     update_timer_pulse = false;
+    clear(base_color);
   }
 
   step_circular = 0;
