@@ -20,8 +20,8 @@
 
 #include "app.hpp"
 #include "audioplayer.hpp"
-#include "pv_porcupine.h"
 #include "stt.hpp"
+#include "wakeword.hpp"
 #include "utils/webrtc_vad.h"
 #include <atomic>
 #include <glib.h>
@@ -62,16 +62,10 @@ public:
 private:
   // initialized once and never overwritten
   App *const app;
+  WakeWord *wakeword;
   VadInst *const vad_instance;
   snd_pcm_t *alsa_handle = NULL;
   pa_simple *pulse_handle = NULL;
-
-  void *porcupine_library;
-  pv_porcupine_t *porcupine;
-  void (*pv_porcupine_delete_func)(pv_porcupine_t *);
-  pv_status_t (*pv_porcupine_process_func)(pv_porcupine_t *, const int16_t *,
-                                           int32_t *);
-  const char *(*pv_status_to_string_func)(pv_status_t);
 
   // thread safe, accessed from both threads
   std::thread input_thread;
@@ -103,7 +97,6 @@ private:
   AudioFrame read_frame(int32_t frame_length);
 
   size_t ms_to_frames(size_t frame_length, size_t ms);
-  bool init_pv();
   bool init_alsa(gchar *input_audio_device, int channels);
   bool init_pulse();
   bool init_speex();

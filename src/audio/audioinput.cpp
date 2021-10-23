@@ -22,7 +22,6 @@
 #include <stdio.h>
 
 #include "audioinput.hpp"
-#include "pv_porcupine.h"
 
 // Define the following to dump audio streams for debugging reasons
 // #define DEBUG_DUMP_STREAMS
@@ -50,8 +49,6 @@ genie::AudioInput::~AudioInput() {
   if (pulse_handle != NULL) {
     pa_simple_free(pulse_handle);
   }
-  pv_porcupine_delete_func(porcupine);
-  dlclose(porcupine_library);
   if (pp_state) {
     speex_preprocess_state_destroy(pp_state);
     pp_state = NULL;
@@ -66,90 +63,12 @@ genie::AudioInput::~AudioInput() {
   fclose(fp_playback);
   fclose(fp_filter);
 #endif
+  delete wakeword;
 }
 
 void genie::AudioInput::close() {
   state.store(State::CLOSED);
   input_thread.join();
-}
-
-bool genie::AudioInput::init_pv() {
-  const char *library_path = app->config->pv_library_path;
-  const char *model_path = app->config->pv_model_path;
-  const char *keyword_path = app->config->pv_keyword_path;
-  const float sensitivity = app->config->pv_sensitivity;
-
-  porcupine_library = dlopen(library_path, RTLD_NOW);
-  if (!porcupine_library) {
-    g_error("failed to open library: %s", library_path);
-    return false;
-  }
-
-  char *error = NULL;
-
-  pv_status_to_string_func = (const char *(*)(pv_status_t))dlsym(
-      porcupine_library, "pv_status_to_string");
-  if ((error = dlerror()) != NULL) {
-    g_error("failed to load 'pv_status_to_string' with '%s'.\n", error);
-    return false;
-  }
-
-  int32_t (*pv_sample_rate_func)() =
-      (int32_t(*)())dlsym(porcupine_library, "pv_sample_rate");
-  if ((error = dlerror()) != NULL) {
-    g_error("failed to load 'pv_sample_rate' with '%s'.\n", error);
-    return false;
-  }
-
-  int32_t sample_rate_signed = pv_sample_rate_func();
-  g_assert(sample_rate_signed > 0);
-  sample_rate = (size_t)sample_rate_signed;
-
-  pv_status_t (*pv_porcupine_init_func)(const char *, int32_t,
-                                        const char *const *, const float *,
-                                        pv_porcupine_t **) =
-      (pv_status_t(*)(const char *, int32_t, const char *const *, const float *,
-                      pv_porcupine_t **))dlsym(porcupine_library,
-                                               "pv_porcupine_init");
-  if ((error = dlerror()) != NULL) {
-    g_error("failed to load 'pv_porcupine_init' with '%s'.\n", error);
-    return false;
-  }
-
-  pv_porcupine_delete_func = (void (*)(pv_porcupine_t *))dlsym(
-      porcupine_library, "pv_porcupine_delete");
-  if ((error = dlerror()) != NULL) {
-    g_error("failed to load 'pv_porcupine_delete' with '%s'.\n", error);
-    return false;
-  }
-
-  pv_porcupine_process_func =
-      (pv_status_t(*)(pv_porcupine_t *, const int16_t *, int32_t *))dlsym(
-          porcupine_library, "pv_porcupine_process");
-  if ((error = dlerror()) != NULL) {
-    g_error("failed to load 'pv_porcupine_process' with '%s'.\n", error);
-    return false;
-  }
-
-  int32_t (*pv_porcupine_frame_length_func)() =
-      (int32_t(*)())dlsym(porcupine_library, "pv_porcupine_frame_length");
-  if ((error = dlerror()) != NULL) {
-    g_error("failed to load 'pv_porcupine_frame_length' with '%s'.\n", error);
-    return false;
-  }
-
-  pv_frame_length = pv_porcupine_frame_length_func();
-
-  porcupine = NULL;
-  pv_status_t status = pv_porcupine_init_func(model_path, 1, &keyword_path,
-                                              &sensitivity, &porcupine);
-  if (status != PV_STATUS_SUCCESS) {
-    g_error("'pv_porcupine_init' failed with '%s'\n",
-            pv_status_to_string_func(status));
-    return false;
-  }
-
-  return true;
 }
 
 bool genie::AudioInput::init_alsa(gchar *input_audio_device, int channels) {
@@ -276,9 +195,13 @@ int genie::AudioInput::init() {
     return -1;
   }
 
-  if (!init_pv()) {
+  wakeword = new WakeWord(app);
+  if (!wakeword->init()) {
     return -1;
   }
+
+  sample_rate = wakeword->sample_rate;
+  pv_frame_length = wakeword->pv_frame_length;
 
   channels = 1;
   if (app->config->audio_input_stereo2mono) {
@@ -346,9 +269,6 @@ int genie::AudioInput::init() {
     return -2;
   }
 
-  g_print("Initialized wakeword engine, frame length %d, sample rate %zd\n",
-          pv_frame_length, sample_rate);
-
   if (WebRtcVad_Init(vad_instance)) {
     g_error("failed to initialize webrtc vad\n");
     return -2;
@@ -381,6 +301,7 @@ int genie::AudioInput::init() {
             app->config->vad_input_detected_noise_ms,
             vad_input_detected_noise_frame_count);
 
+  g_print("Initialized audio input\n");
   input_thread = std::thread(&AudioInput::loop, this);
   return 0;
 }
@@ -551,26 +472,15 @@ void genie::AudioInput::loop_waiting() {
   }
 
   // Check the new frame for the wake-word
-  int32_t keyword_index = -1;
-  pv_status_t status =
-      pv_porcupine_process_func(porcupine, new_frame.samples, &keyword_index);
-
-  if (status != PV_STATUS_SUCCESS) {
-    // Picovoice error!
-    g_critical("'pv_porcupine_process' failed with '%s'\n",
-               pv_status_to_string_func(status));
-    return;
-  }
+  bool detected = wakeword->process(&new_frame);
 
   // Add the new frame to the queue
   frame_buffer.push(std::move(new_frame));
 
-  if (keyword_index == -1) {
+  if (!detected) {
     // wake-word not found
     return;
   }
-
-  g_message("Detected keyword!\n");
 
   app->dispatch(new state::events::Wake());
 
