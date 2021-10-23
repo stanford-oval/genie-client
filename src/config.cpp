@@ -43,6 +43,7 @@ genie::Config::~Config() {
   g_free(audioVoice);
   g_free(audio_output_device);
   g_free(audio_backend);
+  g_free(proxy);
   g_free(ssl_ca_file);
   g_free(evinput_device);
   g_free(leds_path);
@@ -483,6 +484,15 @@ void genie::Config::load() {
 
   dns_controller_enabled =
       g_key_file_get_boolean(key_file, "system", "dns", nullptr);
+
+  proxy = g_key_file_get_string(key_file, "system", "proxy", nullptr);
+  if (!proxy) {
+    // use system-wide proxy if available
+    proxy = g_strdup(g_getenv("http_proxy"));
+  }
+  if (proxy) {
+    g_print("Proxy enabled: %s\n", proxy);
+  }
 
   error = NULL;
   ssl_strict =

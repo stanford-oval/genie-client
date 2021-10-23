@@ -47,17 +47,25 @@ genie::App::App() {
 genie::App::~App() { g_main_loop_unref(main_loop); }
 
 void genie::App::init_soup() {
+  // enable proxy support
+  GProxyResolver *resolver;
+  resolver = g_simple_proxy_resolver_new(config->proxy, NULL);
+
   // initialize a shared SoupSession to be used by all outgoing connections
   if (config->ssl_ca_file) {
     soup_session = auto_gobject_ptr<SoupSession>(
         soup_session_new_with_options("ssl-strict", config->ssl_strict,
-                                      "ssl-ca-file", config->ssl_ca_file, NULL),
+                                      "ssl-ca-file", config->ssl_ca_file,
+                                      "proxy-resolver", resolver, NULL),
         adopt_mode::owned);
   } else {
     soup_session = auto_gobject_ptr<SoupSession>(
-        soup_session_new_with_options("ssl-strict", config->ssl_strict, NULL),
+        soup_session_new_with_options("ssl-strict", config->ssl_strict,
+                                      "proxy-resolver", resolver, NULL),
         adopt_mode::owned);
   }
+
+  g_object_unref(resolver);
 
   // enable the wss support
   const gchar *wss_aliases[] = {"wss", NULL};
