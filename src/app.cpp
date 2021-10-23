@@ -49,13 +49,14 @@ genie::App::~App() { g_main_loop_unref(main_loop); }
 void genie::App::init_soup() {
   // initialize a shared SoupSession to be used by all outgoing connections
   if (config->ssl_ca_file) {
-    soup_session =
-        auto_gobject_ptr<SoupSession>(soup_session_new_with_options(
+    soup_session = auto_gobject_ptr<SoupSession>(
+        soup_session_new_with_options("ssl-strict", config->ssl_strict,
                                       "ssl-ca-file", config->ssl_ca_file, NULL),
-                                      adopt_mode::owned);
+        adopt_mode::owned);
   } else {
-    soup_session =
-        auto_gobject_ptr<SoupSession>(soup_session_new(), adopt_mode::owned);
+    soup_session = auto_gobject_ptr<SoupSession>(
+        soup_session_new_with_options("ssl-strict", config->ssl_strict, NULL),
+        adopt_mode::owned);
   }
 
   // enable the wss support

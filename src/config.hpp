@@ -178,6 +178,7 @@ public:
   // -------------------------------------------------------------------------
 
   bool dns_controller_enabled;
+  bool ssl_strict;
   gchar *ssl_ca_file;
   gchar *cache_dir;
 

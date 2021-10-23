@@ -484,6 +484,17 @@ void genie::Config::load() {
   dns_controller_enabled =
       g_key_file_get_boolean(key_file, "system", "dns", nullptr);
 
+  error = NULL;
+  ssl_strict =
+      g_key_file_get_boolean(key_file, "system", "ssl_strict", &error);
+  if (error) {
+    ssl_strict = true;
+    g_error_free(error);
+  }
+  if (!ssl_strict) {
+    g_warning("SSL strict validation disabled");
+  }
+
   ssl_ca_file = g_key_file_get_string(key_file, "system", "ssl_ca_file", nullptr);
 
   error = NULL;
