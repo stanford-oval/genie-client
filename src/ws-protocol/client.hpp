@@ -65,6 +65,8 @@ protected:
 
 private:
   void connect();
+  static gboolean retry_connect_timer(gpointer data);
+  void retry_connect();
   void maybe_flush_queue();
   void send_json_now(JsonBuilder *builder);
 

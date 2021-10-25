@@ -196,7 +196,7 @@ void genie::conversation::Client::on_close(SoupWebsocketConnection *conn,
   g_warning("Genie WebSocket connection closed: %d %s", code, close_data);
 
   obj->ready = false;
-  obj->connect();
+  obj->retry_connect();
 }
 
 void genie::conversation::Client::on_connection(SoupSession *session,
@@ -212,6 +212,7 @@ void genie::conversation::Client::on_connection(SoupSession *session,
     g_warning("Failed to open websocket connection to Genie: %s",
               error->message);
     g_error_free(error);
+    self->retry_connect();
     return;
   }
   g_debug("Connected successfully to Genie conversation websocket");
@@ -247,6 +248,16 @@ genie::conversation::Client::~Client() {}
 int genie::conversation::Client::init() {
   connect();
   return true;
+}
+
+gboolean genie::conversation::Client::retry_connect_timer(gpointer data) {
+  conversation::Client *obj = (conversation::Client *)data;
+  obj->connect();
+  return false;
+}
+
+void genie::conversation::Client::retry_connect() {
+  g_timeout_add(3000, retry_connect_timer, this);
 }
 
 void genie::conversation::Client::connect() {
