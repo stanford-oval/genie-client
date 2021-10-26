@@ -257,7 +257,7 @@ gboolean genie::conversation::Client::retry_connect_timer(gpointer data) {
 }
 
 void genie::conversation::Client::retry_connect() {
-  g_timeout_add(3000, retry_connect_timer, this);
+  g_timeout_add(app->config->retry_interval, retry_connect_timer, this);
 }
 
 void genie::conversation::Client::connect() {

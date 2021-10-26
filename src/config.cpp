@@ -235,6 +235,10 @@ void genie::Config::load() {
     genieURL = g_strdup("wss://almond.stanford.edu/me/api/conversation");
   }
   error = NULL;
+
+  retry_interval =
+    get_size(key_file, "general", "retry_interval", DEFAULT_WS_RETRY_INTERVAL);
+
   genieAccessToken =
       g_key_file_get_string(key_file, "general", "accessToken", &error);
   if (error) {
