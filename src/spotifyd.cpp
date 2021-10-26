@@ -27,38 +27,38 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
-
 #include <vector>
 
 #define SPOTIFYD_VERSION "0.3.4"
 
-genie::Spotifyd::Spotifyd(App *app) : app(app) {
-  cacheDir = "/tmp";
-  child_pid = -1;
+genie::Spotifyd::Spotifyd(App *app)
+    : app(app), child_pid(-1), keep_running(false) {}
 
+genie::Spotifyd::~Spotifyd() {
+  keep_running = false;
+  close();
+}
+
+int genie::Spotifyd::download() {
+  const gchar *dl_arch;
+  std::string arch;
   struct utsname un;
   if (!uname(&un)) {
     arch = un.machine;
   }
-}
-
-genie::Spotifyd::~Spotifyd() { close(); }
-
-int genie::Spotifyd::download() {
-  const gchar *dlArch;
   if (arch == "armv7l") {
-    dlArch = "armhf-";
+    dl_arch = "armhf-";
   } else if (arch == "aarch64") {
-    dlArch = "arm64-";
+    dl_arch = "arm64-";
   } else {
-    dlArch = "";
+    dl_arch = "";
   }
 
   gchar *cmd = g_strdup_printf(
       "curl "
       "https://github.com/stanford-oval/spotifyd/releases/download/v%s/"
       "spotifyd-linux-%sslim.tar.gz -L | tar -xvz -C %s",
-      SPOTIFYD_VERSION, dlArch, cacheDir);
+      SPOTIFYD_VERSION, dl_arch, app->config->cache_dir);
   int rc = system(cmd);
   g_free(cmd);
 
@@ -69,7 +69,7 @@ int genie::Spotifyd::check_version() {
   FILE *fp;
   char buf[128];
 
-  gchar *cmd = g_strdup_printf("%s/spotifyd --version", cacheDir);
+  gchar *cmd = g_strdup_printf("%s/spotifyd --version", app->config->cache_dir);
   fp = popen(cmd, "r");
   if (fp == NULL) {
     g_free(cmd);
@@ -99,15 +99,19 @@ int genie::Spotifyd::check_version() {
 }
 
 int genie::Spotifyd::init() {
-  gchar *filePath = g_strdup_printf("%s/spotifyd", cacheDir);
-  if (!g_file_test(filePath, G_FILE_TEST_IS_EXECUTABLE)) {
+  gchar *cmd = g_strdup_printf("killall spotifyd");
+  system(cmd);
+  g_free(cmd);
+
+  gchar *file_path = g_strdup_printf("%s/spotifyd", app->config->cache_dir);
+  if (!g_file_test(file_path, G_FILE_TEST_IS_EXECUTABLE)) {
     download();
   } else {
     if (check_version()) {
       download();
     }
   }
-  g_free(filePath);
+  g_free(file_path);
 
   if (!username.empty() && !access_token.empty())
     return spawn();
@@ -124,9 +128,13 @@ int genie::Spotifyd::close() {
 
 void genie::Spotifyd::child_watch_cb(GPid pid, gint status, gpointer data) {
   Spotifyd *obj = reinterpret_cast<Spotifyd *>(data);
-  g_print("Child %" G_PID_FORMAT " exited with rc %d\n", pid,
+  g_print("spotifyd child %" G_PID_FORMAT " exited with rc %d\n", pid,
           g_spawn_check_exit_status(status, NULL));
   g_spawn_close_pid(pid);
+
+  if (obj->keep_running) {
+    obj->spawn();
+  }
 }
 
 static void child_setup(gpointer user_data) {
@@ -139,8 +147,8 @@ static void child_setup(gpointer user_data) {
 }
 
 int genie::Spotifyd::spawn() {
-  gchar *filePath = g_strdup_printf("%s/spotifyd", cacheDir);
-  const gchar *deviceName = "genie-cpp";
+  gchar *file_path = g_strdup_printf("%s/spotifyd", app->config->cache_dir);
+  const gchar *device_name = "genie-cpp";
   const gchar *backend;
   std::string config_backend(app->config->audio_backend);
   if (config_backend == "pulse") {
@@ -154,9 +162,9 @@ int genie::Spotifyd::spawn() {
   envp = g_environ_setenv(envp, "PULSE_PROP_media.role", "music", TRUE);
 
   std::vector<const gchar *> argv{
-      filePath,        "--no-daemon",
-      "--device",      app->config->audioOutputDeviceMusic,
-      "--device-name", deviceName,
+      file_path,       "--no-daemon",
+      "--device",      app->config->audio_output_device_music,
+      "--device-name", device_name,
       "--device-type", "speaker",
       "--backend",     backend,
       "--username",    username.c_str(),
@@ -175,17 +183,18 @@ int genie::Spotifyd::spawn() {
                            &child_pid, NULL, NULL, NULL, &gerror);
   if (gerror) {
     g_strfreev(envp);
-    g_free(filePath);
-    g_critical("Spawning spotifyd child failed: %s\n", gerror->message);
+    g_free(file_path);
+    g_critical("spawning spotifyd child failed: %s\n", gerror->message);
     g_error_free(gerror);
     return false;
   }
 
   g_strfreev(envp);
-  g_free(filePath);
+  g_free(file_path);
 
   g_child_watch_add(child_pid, child_watch_cb, this);
   g_print("spotifyd loaded, pid: %d\n", child_pid);
+  keep_running = true;
   return true;
 }
 
@@ -201,6 +210,7 @@ bool genie::Spotifyd::set_credentials(const std::string &username,
   this->access_token = access_token;
   g_debug("setting spotify username %s access token %s", this->username.c_str(),
           this->access_token.c_str());
+  keep_running = false;
   close();
   g_usleep(500);
   return spawn();

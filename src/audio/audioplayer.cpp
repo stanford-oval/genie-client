@@ -30,14 +30,14 @@ static const gchar *get_audio_output(const genie::Config &config,
                                      genie::AudioDestination destination) {
   switch (destination) {
     case genie::AudioDestination::MUSIC:
-      return config.audioOutputDeviceMusic;
+      return config.audio_output_device_music;
     case genie::AudioDestination::ALERT:
-      return config.audioOutputDeviceAlerts;
+      return config.audio_output_device_alerts;
     case genie::AudioDestination::VOICE:
-      return config.audioOutputDeviceVoice;
+      return config.audio_output_device_voice;
     default:
       g_warn_if_reached();
-      return config.audioOutputDeviceMusic;
+      return config.audio_output_device_music;
   }
 }
 
@@ -101,7 +101,7 @@ genie::AudioPlayer::AudioPlayer(App *appInstance)
   gst_init_static_plugins();
 #endif
 
-  gchar *location = g_strdup_printf("%s/en-US/voice/tts", app->config->nlURL);
+  gchar *location = g_strdup_printf("%s/en-US/voice/tts", app->config->nl_url);
   base_tts_url = location;
   g_free(location);
 
@@ -130,7 +130,7 @@ void genie::AudioPlayer::init_say_pipeline() {
 
   auto decoder = gst_element_factory_make("wavparse", "wav-parser");
   auto sink =
-      gst_element_factory_make(app->config->audioSink, "audio-output-say");
+      gst_element_factory_make(app->config->audio_sink, "audio-output-say");
 
   if (!pipeline || !soupsrc || !decoder || !sink) {
     g_error("Gst element could not be created\n");
@@ -160,7 +160,7 @@ void genie::AudioPlayer::init_say_pipeline() {
 
 void genie::AudioPlayer::init_url_pipeline() {
   auto sink = auto_gobject_ptr<GstElement>(
-      gst_element_factory_make(app->config->audioSink, "audio-output-url"),
+      gst_element_factory_make(app->config->audio_sink, "audio-output-url"),
       adopt_mode::ref_sink);
   const char *output_device =
       get_audio_output(*app->config, AudioDestination::MUSIC /* FIXME */);
@@ -304,7 +304,7 @@ bool genie::AudioPlayer::say(const std::string &text, gint64 ref_id) {
 
   player_queue.push(std::make_unique<SayAudioTask>(
       say_pipeline.pipeline, soupsrc, text, base_tts_url,
-      app->config->audioVoice, soup_has_post_data, ref_id));
+      app->config->audio_voice, soup_has_post_data, ref_id));
   dispatch_queue();
 
   return true;

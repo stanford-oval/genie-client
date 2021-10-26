@@ -27,9 +27,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#define GPIO_KEY_DEV "/dev/input/event0"
-
-genie::EVInput::EVInput(App *app) { this->app = app; }
+genie::EVInput::EVInput(App *app) : app(app) {}
 
 genie::EVInput::~EVInput() {}
 
@@ -98,13 +96,14 @@ gboolean genie::EVInput::callback(gpointer user_data) {
 }
 
 int genie::EVInput::init() {
-  int fd;
-  int rc = 1;
+  if (!app->config->buttons_enabled) return false;
+
+  int fd, rc = 1;
 
   source = g_source_new(&event_funcs, sizeof(InputEventSource));
   InputEventSource *event_source = (InputEventSource *)source;
 
-  fd = open(GPIO_KEY_DEV, O_RDONLY | O_NONBLOCK);
+  fd = open(app->config->evinput_device, O_RDONLY | O_NONBLOCK);
   if (fd == -1) {
     g_print("Failed to init libevdev (%s)\n", strerror(-fd));
     return false;

@@ -24,6 +24,7 @@ namespace genie {
 
 class Config {
 public:
+  static const size_t DEFAULT_WS_RETRY_INTERVAL = 3000;
   static const size_t VAD_MIN_MS = 100;
   static const size_t VAD_MAX_MS = 5000;
   static const size_t DEFAULT_VAD_START_SPEAKING_MS = 2000;
@@ -54,6 +55,10 @@ public:
       "alarm-clock-elapsed.oga";
   static const constexpr char *DEFAULT_SOUND_WORKING = "match.oga";
   static const constexpr char *DEFAULT_SOUND_STT_ERROR = "no-match.oga";
+
+  // Buttons Defaults
+  // -------------------------------------------------------------------------
+  static const constexpr char *DEFAULT_EVINPUT_DEV = "/dev/input/event0";
 
   // Leds Defaults
   // -------------------------------------------------------------------------
@@ -86,21 +91,22 @@ public:
   // General
   // -------------------------------------------------------------------------
 
-  gchar *genieURL;
-  gchar *genieAccessToken;
-  gchar *conversationId;
-  gchar *nlURL;
+  gchar *genie_url;
+  size_t retry_interval;
+  gchar *genie_access_token;
+  gchar *conversation_id;
+  gchar *nl_url;
 
   // Audio
   // -------------------------------------------------------------------------
 
-  gchar *audioInputDevice;
-  gchar *audioSink;
-  gchar *audioOutputDeviceMusic;
-  gchar *audioOutputDeviceVoice;
-  gchar *audioOutputDeviceAlerts;
-  gchar *audioOutputFIFO;
-  gchar *audioVoice;
+  gchar *audio_input_device;
+  gchar *audio_sink;
+  gchar *audio_output_device_music;
+  gchar *audio_output_device_voice;
+  gchar *audio_output_device_alerts;
+  gchar *audio_output_fifo;
+  gchar *audio_voice;
   gchar *audio_backend;
 
   /**
@@ -143,6 +149,11 @@ public:
   gchar *sound_working;
   gchar *sound_stt_error;
 
+  // Buttons
+  // -------------------------------------------------------------------------
+  bool buttons_enabled;
+  gchar *evinput_device;
+
   // Leds
   // -------------------------------------------------------------------------
 
@@ -169,7 +180,10 @@ public:
   // -------------------------------------------------------------------------
 
   bool dns_controller_enabled;
+  gchar *proxy;
+  bool ssl_strict;
   gchar *ssl_ca_file;
+  gchar *cache_dir;
 
   // Voice Activity Detection (VAD)
   // -------------------------------------------------------------------------

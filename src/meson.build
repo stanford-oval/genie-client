@@ -80,6 +80,7 @@ executable(
   'audio/audioinput.cpp',
   'audio/audioplayer.cpp',
   'audio/audiovolume.cpp',
+  'audio/wakeword.cpp',
   'stt.cpp',
   'spotifyd.cpp',
   'dns_controller.cpp',
