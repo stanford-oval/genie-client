@@ -58,7 +58,7 @@ public:
 protected:
   void send_json(auto_gobject_ptr<JsonBuilder> builder);
   bool is_connected();
-  const char *conversation_id() { return app->config->conversationId; }
+  const char *conversation_id() { return app->config->conversation_id; }
   void mark_ready();
 
   App *const app;

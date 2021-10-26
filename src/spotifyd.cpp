@@ -153,7 +153,7 @@ int genie::Spotifyd::spawn() {
 
   std::vector<const gchar *> argv{
       file_path,       "--no-daemon",
-      "--device",      app->config->audioOutputDeviceMusic,
+      "--device",      app->config->audio_output_device_music,
       "--device-name", device_name,
       "--device-type", "speaker",
       "--backend",     backend,

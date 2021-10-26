@@ -91,22 +91,22 @@ public:
   // General
   // -------------------------------------------------------------------------
 
-  gchar *genieURL;
+  gchar *genie_url;
   size_t retry_interval;
-  gchar *genieAccessToken;
-  gchar *conversationId;
-  gchar *nlURL;
+  gchar *genie_access_token;
+  gchar *conversation_id;
+  gchar *nl_url;
 
   // Audio
   // -------------------------------------------------------------------------
 
-  gchar *audioInputDevice;
-  gchar *audioSink;
-  gchar *audioOutputDeviceMusic;
-  gchar *audioOutputDeviceVoice;
-  gchar *audioOutputDeviceAlerts;
-  gchar *audioOutputFIFO;
-  gchar *audioVoice;
+  gchar *audio_input_device;
+  gchar *audio_sink;
+  gchar *audio_output_device_music;
+  gchar *audio_output_device_voice;
+  gchar *audio_output_device_alerts;
+  gchar *audio_output_fifo;
+  gchar *audio_voice;
   gchar *audio_backend;
 
   /**

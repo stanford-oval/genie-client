@@ -190,7 +190,7 @@ bool genie::AudioInput::init_speex() {
 }
 
 int genie::AudioInput::init() {
-  if (!app->config->audioInputDevice) {
+  if (!app->config->audio_input_device) {
     g_error("no input audio device");
     return -1;
   }
@@ -212,7 +212,7 @@ int genie::AudioInput::init() {
   }
 
   if (strcmp(app->config->audio_backend, "alsa") == 0) {
-    if (!init_alsa(app->config->audioInputDevice, channels)) {
+    if (!init_alsa(app->config->audio_input_device, channels)) {
       return -1;
     }
   } else if (strcmp(app->config->audio_backend, "pulse") == 0) {

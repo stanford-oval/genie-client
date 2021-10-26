@@ -237,8 +237,8 @@ void genie::conversation::Client::mark_ready() {
 
 genie::conversation::Client::Client(App *appInstance)
     : app(appInstance), ready(false) {
-  accessToken = g_strdup(app->config->genieAccessToken);
-  url = g_strdup(app->config->genieURL);
+  accessToken = g_strdup(app->config->genie_access_token);
+  url = g_strdup(app->config->genie_url);
   main_parser.reset(new ConversationProtocol(this));
   ext_parsers.emplace("audio", new AudioProtocol(this));
 }
@@ -265,7 +265,7 @@ void genie::conversation::Client::connect() {
 
   SoupURI *uri = soup_uri_new(url);
   soup_uri_set_query_from_fields(uri, "skip_history", "1", "sync_devices", "1",
-                                 "id", app->config->conversationId, nullptr);
+                                 "id", app->config->conversation_id, nullptr);
 
   msg = soup_message_new_from_uri(SOUP_METHOD_GET, uri);
   soup_uri_free(uri);

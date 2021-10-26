@@ -31,16 +31,16 @@
 genie::Config::Config() {}
 
 genie::Config::~Config() {
-  g_free(genieURL);
-  g_free(genieAccessToken);
-  g_free(conversationId);
-  g_free(nlURL);
-  g_free(audioInputDevice);
-  g_free(audioSink);
-  g_free(audioOutputDeviceMusic);
-  g_free(audioOutputDeviceVoice);
-  g_free(audioOutputDeviceAlerts);
-  g_free(audioVoice);
+  g_free(genie_url);
+  g_free(genie_access_token);
+  g_free(conversation_id);
+  g_free(nl_url);
+  g_free(audio_input_device);
+  g_free(audio_sink);
+  g_free(audio_output_device_music);
+  g_free(audio_output_device_voice);
+  g_free(audio_output_device_alerts);
+  g_free(audio_voice);
   g_free(audio_output_device);
   g_free(audio_backend);
   g_free(proxy);
@@ -230,16 +230,16 @@ void genie::Config::load() {
     return;
   }
 
-  genieURL = g_key_file_get_string(key_file, "general", "url", &error);
-  if (error || (genieURL && strlen(genieURL) == 0)) {
-    genieURL = g_strdup("wss://almond.stanford.edu/me/api/conversation");
+  genie_url = g_key_file_get_string(key_file, "general", "url", &error);
+  if (error || (genie_url && strlen(genie_url) == 0)) {
+    genie_url = g_strdup("wss://almond.stanford.edu/me/api/conversation");
   }
   error = NULL;
 
   retry_interval =
     get_size(key_file, "general", "retry_interval", DEFAULT_WS_RETRY_INTERVAL);
 
-  genieAccessToken =
+  genie_access_token =
       g_key_file_get_string(key_file, "general", "accessToken", &error);
   if (error) {
     g_error("Missing access token in config file");
@@ -247,44 +247,44 @@ void genie::Config::load() {
   }
 
   error = NULL;
-  nlURL = g_key_file_get_string(key_file, "general", "nlUrl", &error);
-  g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\n", genieURL,
-          genieAccessToken, nlURL);
+  nl_url = g_key_file_get_string(key_file, "general", "nlUrl", &error);
+  g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\n", genie_url,
+          genie_access_token, nl_url);
   if (error) {
     g_error("Missing NLP URL in config file");
     return;
   }
 
   error = NULL;
-  conversationId =
+  conversation_id =
       g_key_file_get_string(key_file, "general", "conversationId", &error);
   if (error) {
-    g_message("No conversation ID in config file, using xiaodu");
-    conversationId = g_strdup("xiaodu");
+    g_message("No conversation ID in config file, using genie-client");
+    conversation_id = g_strdup("genie-client");
     g_error_free(error);
   } else {
-    g_debug("conversationId: %s\n", conversationId);
+    g_debug("conversationId: %s\n", conversation_id);
   }
 
   // Audio
   // =========================================================================
 
   error = NULL;
-  audioInputDevice = g_key_file_get_string(key_file, "audio", "input", &error);
+  audio_input_device = g_key_file_get_string(key_file, "audio", "input", &error);
   if (error) {
     g_warning("Missing audio input device in configuration file");
-    audioInputDevice = g_strdup("hw:0,0");
+    audio_input_device = g_strdup("hw:0,0");
     g_error_free(error);
     return;
   }
 
   error = NULL;
-  audioSink = g_key_file_get_string(key_file, "audio", "sink", &error);
+  audio_sink = g_key_file_get_string(key_file, "audio", "sink", &error);
   if (error) {
-    audioSink = g_strdup("autoaudiosink");
-    audioOutputDeviceMusic = NULL;
-    audioOutputDeviceVoice = NULL;
-    audioOutputDeviceAlerts = NULL;
+    audio_sink = g_strdup("autoaudiosink");
+    audio_output_device_music = NULL;
+    audio_output_device_voice = NULL;
+    audio_output_device_alerts = NULL;
     g_error_free(error);
   } else {
     error = NULL;
@@ -296,45 +296,45 @@ void genie::Config::load() {
     }
 
     error = NULL;
-    audioOutputDeviceMusic =
+    audio_output_device_music =
         g_key_file_get_string(key_file, "audio", "music_output", &error);
     if (error) {
       g_error_free(error);
-      audioOutputDeviceMusic = g_strdup(output);
+      audio_output_device_music = g_strdup(output);
     }
 
     error = NULL;
-    audioOutputDeviceVoice =
+    audio_output_device_voice =
         g_key_file_get_string(key_file, "audio", "voice_output", &error);
     if (error) {
       g_error_free(error);
-      audioOutputDeviceVoice = g_strdup(output);
+      audio_output_device_voice = g_strdup(output);
     }
 
     error = NULL;
-    audioOutputDeviceAlerts =
+    audio_output_device_alerts =
         g_key_file_get_string(key_file, "audio", "alert_output", &error);
     if (error) {
       g_error_free(error);
-      audioOutputDeviceAlerts = g_strdup(output);
+      audio_output_device_alerts = g_strdup(output);
     }
 
     g_free(output);
   }
 
   error = NULL;
-  audioOutputFIFO =
+  audio_output_fifo =
       g_key_file_get_string(key_file, "audio", "output_fifo", &error);
   if (error) {
     g_error_free(error);
-    audioOutputFIFO = g_strdup("/tmp/playback.fifo");
+    audio_output_fifo = g_strdup("/tmp/playback.fifo");
   }
 
   error = NULL;
-  audioVoice = g_key_file_get_string(key_file, "audio", "voice", &error);
+  audio_voice = g_key_file_get_string(key_file, "audio", "voice", &error);
   if (error) {
     g_error_free(error);
-    audioVoice = g_strdup("female");
+    audio_voice = g_strdup("female");
   }
 
   error = NULL;
