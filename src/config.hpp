@@ -53,7 +53,7 @@ public:
   static const constexpr char *DEFAULT_PV_KEYWORD_PATH = "assets/keyword.ppn";
   static const constexpr float DEFAULT_PV_SENSITIVITY = 0.7f;
   static const constexpr char *DEFAULT_PV_WAKE_WORD_PATTERN =
-      "^computer[.,!?]?";
+      "^computers?[.,!?]?";
 
   // Sound Defaults
   // -------------------------------------------------------------------------
