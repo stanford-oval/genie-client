@@ -16,9 +16,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#undef G_LOG_DOMAIN
-#define G_LOG_DOMAIN "genie::STT"
-
 #include "stt.hpp"
 
 #include <cstring>
@@ -29,6 +26,12 @@
 #include <libsoup/soup.h>
 #include <sstream>
 #include <string>
+
+// note: we need to redefine G_LOG_DOMAIN here or the definition will
+// bleed into the functions declared in the header, which will break
+// the logging, but also break the One Definition Rule and cause potential havoc
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "genie::STT"
 
 using namespace genie::state::events::stt;
 
@@ -169,9 +172,11 @@ void genie::STTSession::on_connection(SoupSession *session, GAsyncResult *res,
       soup_session_websocket_connect_finish(session, res, &error),
       adopt_mode::owned);
   if (error) {
+    g_warning("Failed to connect to STT: %s", error->message);
+
     if (self->retries > 2) {
       self->m_controller->complete_error(self, SOUP_WEBSOCKET_CLOSE_ABNORMAL,
-                                        error->message);
+                                         error->message);
       g_error_free(error);
     } else {
       g_error_free(error);
