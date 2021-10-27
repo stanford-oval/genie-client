@@ -57,8 +57,11 @@ private:
   void handle_check(int64_t req, JsonReader *reader);
   void handle_prepare(int64_t req, JsonReader *reader);
   void handle_stop(int64_t req, JsonReader *reader);
+  void handle_resume(int64_t req, JsonReader *reader);
+  void handle_pause(int64_t req, JsonReader *reader);
   void handle_play_urls(int64_t req, JsonReader *reader);
   void handle_set_volume(int64_t req, JsonReader *reader);
+  void handle_adj_volume(int64_t req, JsonReader *reader);
   void handle_set_mute(int64_t req, JsonReader *reader);
 };
 

@@ -235,6 +235,13 @@ struct SetVolumeEvent : public RequestEvent<void> {
   const int volume;
 };
 
+struct AdjVolumeEvent : public RequestEvent<void> {
+  AdjVolumeEvent(std::unique_ptr<Request<void>> &&req, int delta)
+      : RequestEvent<void>(std::move(req)), delta(delta) {}
+
+  const int delta;
+};
+
 struct SetMuteEvent : public RequestEvent<void> {
   SetMuteEvent(std::unique_ptr<Request<void>> &&req, bool mute)
       : RequestEvent<void>(std::move(req)), mute(mute) {}
