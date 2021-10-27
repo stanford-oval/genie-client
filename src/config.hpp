@@ -31,6 +31,9 @@ public:
   static const size_t DEFAULT_VAD_DONE_SPEAKING_MS = 320;
   static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 640;
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
+  static const constexpr char *DEFAULT_NLP_URL =
+      "https://nlp-staging.almond.stanford.edu";
+  static const constexpr char *DEFAULT_LOCALE = "en-US";
 
   // Picovoice Defaults
   // -------------------------------------------------------------------------
@@ -96,6 +99,7 @@ public:
   gchar *genie_access_token;
   gchar *conversation_id;
   gchar *nl_url;
+  gchar *locale;
 
   // Audio
   // -------------------------------------------------------------------------
@@ -120,7 +124,8 @@ public:
   bool audio_ec_enabled;
 
   /**
-   * @brief Use the 3rd channel inside audio input stream for the loopback signal
+   * @brief Use the 3rd channel inside audio input stream for the loopback
+   * signal
    */
   bool audio_ec_loopback;
 
@@ -194,10 +199,11 @@ public:
 
 protected:
 private:
-  int get_leds_effect_string(GKeyFile *key_file, const char *section, const char *key,
-                    const gchar *default_value);
-  int get_dec_color_from_hex_string(GKeyFile *key_file, const char *section, const char *key,
-                    const gchar *default_value);
+  int get_leds_effect_string(GKeyFile *key_file, const char *section,
+                             const char *key, const gchar *default_value);
+  int get_dec_color_from_hex_string(GKeyFile *key_file, const char *section,
+                                    const char *key,
+                                    const gchar *default_value);
   gchar *get_string(GKeyFile *key_file, const char *section, const char *key,
                     const gchar *default_value);
   size_t get_size(GKeyFile *key_file, const char *section, const char *key,

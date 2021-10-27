@@ -21,8 +21,8 @@
 #include <glib.h>
 #include <string.h>
 
-#include "utils/autoptrs.hpp"
 #include "leds.hpp"
+#include "utils/autoptrs.hpp"
 #include <memory>
 
 #undef G_LOG_DOMAIN
@@ -35,6 +35,7 @@ genie::Config::~Config() {
   g_free(genie_access_token);
   g_free(conversation_id);
   g_free(nl_url);
+  g_free(locale);
   g_free(audio_input_device);
   g_free(audio_sink);
   g_free(audio_output_device_music);
@@ -64,8 +65,9 @@ gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
   return value;
 }
 
-int genie::Config::get_leds_effect_string(GKeyFile *key_file, const char *section,
-                                 const char *key, const char *default_value) {
+int genie::Config::get_leds_effect_string(GKeyFile *key_file,
+                                          const char *section, const char *key,
+                                          const char *default_value) {
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
@@ -93,8 +95,10 @@ int genie::Config::get_leds_effect_string(GKeyFile *key_file, const char *sectio
   return i;
 }
 
-int genie::Config::get_dec_color_from_hex_string(GKeyFile *key_file, const char *section,
-                                 const char *key, const char *default_value) {
+int genie::Config::get_dec_color_from_hex_string(GKeyFile *key_file,
+                                                 const char *section,
+                                                 const char *key,
+                                                 const char *default_value) {
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
@@ -231,13 +235,13 @@ void genie::Config::load() {
   }
 
   genie_url = g_key_file_get_string(key_file, "general", "url", &error);
-  if (error || (genie_url && strlen(genie_url) == 0)) {
+  if (error || !genie_url || strlen(genie_url) == 0) {
     genie_url = g_strdup("wss://almond.stanford.edu/me/api/conversation");
   }
-  error = NULL;
+  g_clear_error(&error);
 
-  retry_interval =
-    get_size(key_file, "general", "retry_interval", DEFAULT_WS_RETRY_INTERVAL);
+  retry_interval = get_size(key_file, "general", "retry_interval",
+                            DEFAULT_WS_RETRY_INTERVAL);
 
   genie_access_token =
       g_key_file_get_string(key_file, "general", "accessToken", &error);
@@ -248,12 +252,20 @@ void genie::Config::load() {
 
   error = NULL;
   nl_url = g_key_file_get_string(key_file, "general", "nlUrl", &error);
-  g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\n", genie_url,
-          genie_access_token, nl_url);
   if (error) {
-    g_error("Missing NLP URL in config file");
-    return;
+    nl_url = g_strdup(DEFAULT_NLP_URL);
+    g_clear_error(&error);
   }
+
+  error = NULL;
+  locale = g_key_file_get_string(key_file, "general", "locale", &error);
+  if (error) {
+    locale = g_strdup(DEFAULT_LOCALE);
+    g_clear_error(&error);
+  }
+
+  g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\nlocale: %s\n",
+          genie_url, genie_access_token, nl_url, locale);
 
   error = NULL;
   conversation_id =
@@ -261,7 +273,7 @@ void genie::Config::load() {
   if (error) {
     g_message("No conversation ID in config file, using genie-client");
     conversation_id = g_strdup("genie-client");
-    g_error_free(error);
+    g_clear_error(&error);
   } else {
     g_debug("conversationId: %s\n", conversation_id);
   }
@@ -270,12 +282,12 @@ void genie::Config::load() {
   // =========================================================================
 
   error = NULL;
-  audio_input_device = g_key_file_get_string(key_file, "audio", "input", &error);
+  audio_input_device =
+      g_key_file_get_string(key_file, "audio", "input", &error);
   if (error) {
     g_warning("Missing audio input device in configuration file");
     audio_input_device = g_strdup("hw:0,0");
-    g_error_free(error);
-    return;
+    g_clear_error(&error);
   }
 
   error = NULL;
@@ -359,8 +371,7 @@ void genie::Config::load() {
   // =========================================================================
 
   error = NULL;
-  audio_ec_enabled =
-      g_key_file_get_boolean(key_file, "ec", "enabled", &error);
+  audio_ec_enabled = g_key_file_get_boolean(key_file, "ec", "enabled", &error);
   if (error) {
     g_error_free(error);
     audio_ec_enabled = false;
@@ -429,8 +440,7 @@ void genie::Config::load() {
   // =========================================================================
 
   error = NULL;
-  leds_enabled =
-      g_key_file_get_boolean(key_file, "leds", "enabled", &error);
+  leds_enabled = g_key_file_get_boolean(key_file, "leds", "enabled", &error);
   if (error) {
     leds_enabled = false;
     g_error_free(error);
@@ -473,8 +483,8 @@ void genie::Config::load() {
         key_file, "leds", "saying_effect", DEFAULT_LEDS_SAYING_EFFECT);
     leds_saying_color = get_dec_color_from_hex_string(
         key_file, "leds", "saying_color", DEFAULT_LEDS_SAYING_COLOR);
-    leds_error_effect = get_leds_effect_string(
-        key_file, "leds", "error_effect", DEFAULT_LEDS_ERROR_EFFECT);
+    leds_error_effect = get_leds_effect_string(key_file, "leds", "error_effect",
+                                               DEFAULT_LEDS_ERROR_EFFECT);
     leds_error_color = get_dec_color_from_hex_string(
         key_file, "leds", "error_color", DEFAULT_LEDS_ERROR_COLOR);
     leds_net_error_effect = get_leds_effect_string(
@@ -499,8 +509,7 @@ void genie::Config::load() {
   }
 
   error = NULL;
-  ssl_strict =
-      g_key_file_get_boolean(key_file, "system", "ssl_strict", &error);
+  ssl_strict = g_key_file_get_boolean(key_file, "system", "ssl_strict", &error);
   if (error) {
     ssl_strict = true;
     g_error_free(error);
@@ -509,7 +518,8 @@ void genie::Config::load() {
     g_warning("SSL strict validation disabled");
   }
 
-  ssl_ca_file = g_key_file_get_string(key_file, "system", "ssl_ca_file", nullptr);
+  ssl_ca_file =
+      g_key_file_get_string(key_file, "system", "ssl_ca_file", nullptr);
 
   error = NULL;
   cache_dir = g_key_file_get_string(key_file, "system", "cache_dir", &error);
@@ -520,7 +530,8 @@ void genie::Config::load() {
 
   if (!g_file_test(cache_dir, G_FILE_TEST_IS_DIR)) {
     if (!g_mkdir_with_parents(cache_dir, 0755)) {
-      g_printerr("failed to create cache_dir %s, errno = %d\n", cache_dir, errno);
+      g_printerr("failed to create cache_dir %s, errno = %d\n", cache_dir,
+                 errno);
     }
   }
 

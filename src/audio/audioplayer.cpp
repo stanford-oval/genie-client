@@ -101,7 +101,8 @@ genie::AudioPlayer::AudioPlayer(App *appInstance)
   gst_init_static_plugins();
 #endif
 
-  gchar *location = g_strdup_printf("%s/en-US/voice/tts", app->config->nl_url);
+  gchar *location = g_strdup_printf("%s/%s/voice/tts", app->config->nl_url,
+                                    app->config->locale);
   base_tts_url = location;
   g_free(location);
 
