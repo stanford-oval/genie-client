@@ -35,6 +35,7 @@ genie::Config::~Config() {
   g_free(genie_access_token);
   g_free(conversation_id);
   g_free(nl_url);
+  g_free(locale);
   g_free(audio_input_device);
   g_free(audio_sink);
   g_free(audio_output_device_music);
@@ -247,10 +248,10 @@ void genie::Config::load() {
   }
 
   genie_url = g_key_file_get_string(key_file, "general", "url", &error);
-  if (error || (genie_url && strlen(genie_url) == 0)) {
+  if (error || !genie_url || strlen(genie_url) == 0) {
     genie_url = g_strdup("wss://almond.stanford.edu/me/api/conversation");
   }
-  error = NULL;
+  g_clear_error(&error);
 
   retry_interval = get_size(key_file, "general", "retry_interval",
                             DEFAULT_WS_RETRY_INTERVAL);
@@ -264,12 +265,20 @@ void genie::Config::load() {
 
   error = NULL;
   nl_url = g_key_file_get_string(key_file, "general", "nlUrl", &error);
-  g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\n", genie_url,
-          genie_access_token, nl_url);
   if (error) {
-    g_error("Missing NLP URL in config file");
-    return;
+    nl_url = g_strdup(DEFAULT_NLP_URL);
+    g_clear_error(&error);
   }
+
+  error = NULL;
+  locale = g_key_file_get_string(key_file, "general", "locale", &error);
+  if (error) {
+    locale = g_strdup(DEFAULT_LOCALE);
+    g_clear_error(&error);
+  }
+
+  g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\nlocale: %s\n",
+          genie_url, genie_access_token, nl_url, locale);
 
   error = NULL;
   conversation_id =
@@ -277,7 +286,7 @@ void genie::Config::load() {
   if (error) {
     g_message("No conversation ID in config file, using genie-client");
     conversation_id = g_strdup("genie-client");
-    g_error_free(error);
+    g_clear_error(&error);
   } else {
     g_debug("conversationId: %s\n", conversation_id);
   }
@@ -291,8 +300,7 @@ void genie::Config::load() {
   if (error) {
     g_warning("Missing audio input device in configuration file");
     audio_input_device = g_strdup("hw:0,0");
-    g_error_free(error);
-    return;
+    g_clear_error(&error);
   }
 
   error = NULL;

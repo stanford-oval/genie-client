@@ -37,7 +37,7 @@ static std::string get_ws_url(genie::App *app) {
   g_assert(g_str_has_prefix(nl_url, "http"));
 
   std::stringstream ws_url;
-  ws_url << "ws" << nl_url + 4 << "/en-US/voice/stream";
+  ws_url << "ws" << nl_url + 4 << "/" << app->config->locale << "/voice/stream";
   return ws_url.str();
 }
 
