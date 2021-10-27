@@ -131,17 +131,8 @@ void genie::STT::record_timing_event(STTSession *session,
 genie::STTSession::STTSession(STT *controller, const char *url,
                               bool is_follow_up)
     : m_controller(controller), m_state(State::INITIAL), m_done(false),
-      is_follow_up(is_follow_up) {
-  g_debug("SST connecting...\n");
-
-  auto_gobject_ptr<SoupMessage> msg(soup_message_new(SOUP_METHOD_GET, url),
-                                    adopt_mode::owned);
-
-  soup_session_websocket_connect_async(
-      controller->m_app->get_soup_session(), msg.get(), NULL, NULL, NULL,
-      (GAsyncReadyCallback)genie::STTSession::on_connection, this);
-
-  m_state = State::CONNECTING;
+      is_follow_up(is_follow_up), m_url(url), retries(0) {
+  connect();
 }
 
 genie::STTSession::~STTSession() {
@@ -153,6 +144,19 @@ genie::STTSession::~STTSession() {
   }
 }
 
+void genie::STTSession::connect() {
+  g_debug("STT connecting...\n");
+
+  auto_gobject_ptr<SoupMessage> msg(soup_message_new(SOUP_METHOD_GET, m_url),
+                                    adopt_mode::owned);
+
+  soup_session_websocket_connect_async(
+      m_controller->m_app->get_soup_session(), msg.get(), NULL, NULL, NULL,
+      (GAsyncReadyCallback)genie::STTSession::on_connection, this);
+
+  m_state = State::CONNECTING;
+}
+
 void genie::STTSession::on_connection(SoupSession *session, GAsyncResult *res,
                                       gpointer data) {
   STTSession *self = static_cast<STTSession *>(data);
@@ -160,16 +164,20 @@ void genie::STTSession::on_connection(SoupSession *session, GAsyncResult *res,
   g_debug("STT connected");
   self->m_controller->record_timing_event(self, STT::Event::FIRST_FRAME);
 
-  SoupWebsocketConnection *conn;
   GError *error = NULL;
-
   self->m_connection = auto_gobject_ptr<SoupWebsocketConnection>(
       soup_session_websocket_connect_finish(session, res, &error),
       adopt_mode::owned);
   if (error) {
-    self->m_controller->complete_error(self, SOUP_WEBSOCKET_CLOSE_ABNORMAL,
-                                       error->message);
-    g_error_free(error);
+    if (self->retries > 2) {
+      self->m_controller->complete_error(self, SOUP_WEBSOCKET_CLOSE_ABNORMAL,
+                                        error->message);
+      g_error_free(error);
+    } else {
+      g_error_free(error);
+      self->retries++;
+      self->connect();
+    }
     return;
   }
   self->m_state = State::STREAMING;
@@ -198,7 +206,7 @@ void genie::STTSession::handle_stt_result(const char *text) {
   if (mangled.empty()) {
     m_controller->complete_error(this, 400, "wakeword only");
   } else {
-    g_message("Manged: %s", mangled.c_str());
+    g_message("Mangled: %s", mangled.c_str());
     m_controller->complete_success(this, mangled.c_str());
   }
 }
