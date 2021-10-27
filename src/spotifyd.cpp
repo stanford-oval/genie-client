@@ -31,13 +31,9 @@
 
 #define SPOTIFYD_VERSION "0.3.4"
 
-genie::Spotifyd::Spotifyd(App *app)
-    : app(app), child_pid(-1), keep_running(false) {}
+genie::Spotifyd::Spotifyd(App *app) : app(app), child_pid(-1) {}
 
-genie::Spotifyd::~Spotifyd() {
-  keep_running = false;
-  close();
-}
+genie::Spotifyd::~Spotifyd() { close(); }
 
 int genie::Spotifyd::download() {
   const gchar *dl_arch;
@@ -131,10 +127,7 @@ void genie::Spotifyd::child_watch_cb(GPid pid, gint status, gpointer data) {
   g_print("spotifyd child %" G_PID_FORMAT " exited with rc %d\n", pid,
           g_spawn_check_exit_status(status, NULL));
   g_spawn_close_pid(pid);
-
-  if (obj->keep_running) {
-    obj->spawn();
-  }
+  obj->child_pid = -1;
 }
 
 static void child_setup(gpointer user_data) {
@@ -194,7 +187,6 @@ int genie::Spotifyd::spawn() {
 
   g_child_watch_add(child_pid, child_watch_cb, this);
   g_print("spotifyd loaded, pid: %d\n", child_pid);
-  keep_running = true;
   return true;
 }
 
@@ -203,14 +195,14 @@ bool genie::Spotifyd::set_credentials(const std::string &username,
   if (access_token.empty())
     return false;
 
-  if (this->username == username && this->access_token == access_token)
+  if (this->username == username && this->access_token == access_token &&
+      child_pid != -1)
     return true;
 
   this->username = username;
   this->access_token = access_token;
   g_debug("setting spotify username %s access token %s", this->username.c_str(),
           this->access_token.c_str());
-  keep_running = false;
   close();
   g_usleep(500);
   return spawn();
