@@ -48,12 +48,15 @@ private:
   auto_gobject_ptr<SoupWebsocketConnection> m_connection;
   bool m_done;
   bool is_follow_up;
+  const char *m_url;
+  int retries;
 
   void handle_stt_result(const char *text);
 
 public:
   STTSession(STT *controller, const char *url, bool is_follow_up);
   ~STTSession();
+  void connect();
 
   static void on_connection(SoupSession *session, GAsyncResult *res,
                             gpointer data);
