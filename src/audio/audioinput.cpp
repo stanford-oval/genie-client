@@ -510,14 +510,17 @@ void genie::AudioInput::loop_woke() {
     return;
   }
 
-  app->dispatch(new state::events::InputFrame(std::move(new_frame)));
-
   state_woke_frame_count += 1;
 
   // Run Voice Activity Detection (VAD) against the frame
+
+  // NOTE: this must run BEFORE we send the frame to the main thread
+  // because the frame will become null when we send it
   int vad_result =
       WebRtcVad_Process(vad_instance, sample_rate, new_frame.samples,
                         AUDIO_INPUT_VAD_FRAME_LENGTH);
+
+  app->dispatch(new state::events::InputFrame(std::move(new_frame)));
 
   if (vad_result == VAD_IS_SILENT) {
     g_debug("Frame %zu is silent in woke state (silent: %zu, noise: %zu)",
@@ -567,11 +570,16 @@ void genie::AudioInput::loop_listening() {
     return;
   }
 
-  app->dispatch(new state::events::InputFrame(std::move(new_frame)));
   state_woke_frame_count += 1;
 
+  // Run Voice Activity Detection (VAD) against the frame
+
+  // NOTE: this must run BEFORE we send the frame to the main thread
+  // because the frame will become null when we send it
   int silence = WebRtcVad_Process(vad_instance, sample_rate, new_frame.samples,
                                   AUDIO_INPUT_VAD_FRAME_LENGTH);
+
+  app->dispatch(new state::events::InputFrame(std::move(new_frame)));
 
   if (silence == VAD_IS_SILENT) {
     g_debug("Frame %zu is silent in listening state (silent: %zu, noise: %zu)",
