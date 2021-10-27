@@ -36,10 +36,10 @@ genie::Leds::Leds(App *appInstance) {
 }
 
 genie::Leds::~Leds() {
+  set_user(false);
   free(ctrl_path_all);
   free(ctrl_path_brightness);
   free(leds);
-  set_user(false);
 }
 
 int genie::Leds::init() {
