@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../audioplayer.hpp"
+#include "audio/audioplayer.hpp"
 #include "../spotifyd.hpp"
 
 #include "audio.hpp"
@@ -196,7 +196,7 @@ void genie::conversation::Client::on_close(SoupWebsocketConnection *conn,
   g_warning("Genie WebSocket connection closed: %d %s", code, close_data);
 
   obj->ready = false;
-  obj->connect();
+  obj->retry_connect();
 }
 
 void genie::conversation::Client::on_connection(SoupSession *session,
@@ -212,6 +212,7 @@ void genie::conversation::Client::on_connection(SoupSession *session,
     g_warning("Failed to open websocket connection to Genie: %s",
               error->message);
     g_error_free(error);
+    self->retry_connect();
     return;
   }
   g_debug("Connected successfully to Genie conversation websocket");
@@ -236,8 +237,8 @@ void genie::conversation::Client::mark_ready() {
 
 genie::conversation::Client::Client(App *appInstance)
     : app(appInstance), ready(false) {
-  accessToken = g_strdup(app->config->genieAccessToken);
-  url = g_strdup(app->config->genieURL);
+  accessToken = g_strdup(app->config->genie_access_token);
+  url = g_strdup(app->config->genie_url);
   main_parser.reset(new ConversationProtocol(this));
   ext_parsers.emplace("audio", new AudioProtocol(this));
 }
@@ -249,12 +250,22 @@ int genie::conversation::Client::init() {
   return true;
 }
 
+gboolean genie::conversation::Client::retry_connect_timer(gpointer data) {
+  conversation::Client *obj = (conversation::Client *)data;
+  obj->connect();
+  return false;
+}
+
+void genie::conversation::Client::retry_connect() {
+  g_timeout_add(app->config->retry_interval, retry_connect_timer, this);
+}
+
 void genie::conversation::Client::connect() {
   SoupMessage *msg;
 
   SoupURI *uri = soup_uri_new(url);
   soup_uri_set_query_from_fields(uri, "skip_history", "1", "sync_devices", "1",
-                                 "id", app->config->conversationId, nullptr);
+                                 "id", app->config->conversation_id, nullptr);
 
   msg = soup_message_new_from_uri(SOUP_METHOD_GET, uri);
   soup_uri_free(uri);

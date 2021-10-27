@@ -33,7 +33,7 @@
 using namespace genie::state::events::stt;
 
 static std::string get_ws_url(genie::App *app) {
-  const char *nl_url = app->config->nlURL;
+  const char *nl_url = app->config->nl_url;
   g_assert(g_str_has_prefix(nl_url, "http"));
 
   std::stringstream ws_url;

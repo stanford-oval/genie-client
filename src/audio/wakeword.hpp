@@ -19,31 +19,30 @@
 #pragma once
 
 #include "app.hpp"
-#include <string>
+#include "pv_porcupine.h"
 
 namespace genie {
 
-class Spotifyd {
+class WakeWord {
 public:
-  Spotifyd(App *app);
-  ~Spotifyd();
+  WakeWord(App *app);
+  ~WakeWord();
   int init();
-  int close();
-  bool set_credentials(const std::string &username,
-                       const std::string &access_token);
+  int process(AudioFrame *frame);
 
-protected:
-  int spawn();
-  int download();
-  int check_version();
-  static void child_watch_cb(GPid pid, gint status, gpointer data);
+  int32_t pv_frame_length;
+  size_t sample_rate;
 
 private:
-  App *app;
-  GPid child_pid;
-  std::string username;
-  std::string access_token;
-  bool keep_running;
+  // initialized once and never overwritten
+  App *const app;
+
+  void *porcupine_library;
+  pv_porcupine_t *porcupine;
+  void (*pv_porcupine_delete_func)(pv_porcupine_t *);
+  pv_status_t (*pv_porcupine_process_func)(pv_porcupine_t *, const int16_t *,
+                                           int32_t *);
+  const char *(*pv_status_to_string_func)(pv_status_t);
 };
 
 } // namespace genie

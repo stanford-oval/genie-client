@@ -28,7 +28,7 @@
 #include <queue>
 #include <sys/time.h>
 
-#include "audio.hpp"
+#include "audio/audio.hpp"
 #include "state/events.hpp"
 #include "state/listening.hpp"
 #include "state/processing.hpp"

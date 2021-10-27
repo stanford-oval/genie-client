@@ -58,13 +58,15 @@ public:
 protected:
   void send_json(auto_gobject_ptr<JsonBuilder> builder);
   bool is_connected();
-  const char *conversation_id() { return app->config->conversationId; }
+  const char *conversation_id() { return app->config->conversation_id; }
   void mark_ready();
 
   App *const app;
 
 private:
   void connect();
+  static gboolean retry_connect_timer(gpointer data);
+  void retry_connect();
   void maybe_flush_queue();
   void send_json_now(JsonBuilder *builder);
 

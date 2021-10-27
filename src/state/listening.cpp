@@ -18,9 +18,9 @@
 
 #include "state/listening.hpp"
 #include "app.hpp"
-#include "audioinput.hpp"
-#include "audioplayer.hpp"
-#include "audiovolume.hpp"
+#include "audio/audioinput.hpp"
+#include "audio/audioplayer.hpp"
+#include "audio/audiovolume.hpp"
 #include "leds.hpp"
 #include "stt.hpp"
 

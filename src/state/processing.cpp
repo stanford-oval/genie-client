@@ -18,7 +18,7 @@
 
 #include "state/processing.hpp"
 #include "app.hpp"
-#include "audioplayer.hpp"
+#include "audio/audioplayer.hpp"
 #include "leds.hpp"
 #include "ws-protocol/client.hpp"
 
