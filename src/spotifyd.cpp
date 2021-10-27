@@ -23,6 +23,7 @@
 #include <glib/gstdio.h>
 #include <signal.h>
 #include <string.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -68,8 +69,7 @@ int genie::Spotifyd::check_version() {
   FILE *fp;
   char buf[128];
 
-  gchar *cmd = g_strdup_printf(
-      "%s/spotifyd --version", app->config->cache_dir);
+  gchar *cmd = g_strdup_printf("%s/spotifyd --version", app->config->cache_dir);
   fp = popen(cmd, "r");
   if (fp == NULL) {
     g_free(cmd);
@@ -84,7 +84,8 @@ int genie::Spotifyd::check_version() {
       update = true;
     } else {
       if (strcmp(SPOTIFYD_VERSION, buf) != 0) {
-        g_message("spotifyd local version %s, need %s, updating...", buf, SPOTIFYD_VERSION);
+        g_message("spotifyd local version %s, need %s, updating...", buf,
+                  SPOTIFYD_VERSION);
         update = true;
       }
     }
@@ -136,6 +137,15 @@ void genie::Spotifyd::child_watch_cb(GPid pid, gint status, gpointer data) {
   }
 }
 
+static void child_setup(gpointer user_data) {
+  // this function is executed in the child process, between fork() and execve()
+  // we have to be very careful here, we can basically only execute syscalls,
+  // no memory allocations allowed
+
+  // set this process to receive SIGTERM when the parent (genie-client-cpp) dies
+  prctl(PR_SET_PDEATHSIG, SIGTERM);
+}
+
 int genie::Spotifyd::spawn() {
   gchar *file_path = g_strdup_printf("%s/spotifyd", app->config->cache_dir);
   const gchar *device_name = "genie-cpp";
@@ -169,8 +179,8 @@ int genie::Spotifyd::spawn() {
 
   GError *gerror = NULL;
   g_spawn_async_with_pipes(NULL, (gchar **)argv.data(), envp,
-                           G_SPAWN_DO_NOT_REAP_CHILD, NULL, NULL, &child_pid,
-                           NULL, NULL, NULL, &gerror);
+                           G_SPAWN_DO_NOT_REAP_CHILD, child_setup, NULL,
+                           &child_pid, NULL, NULL, NULL, &gerror);
   if (gerror) {
     g_strfreev(envp);
     g_free(file_path);

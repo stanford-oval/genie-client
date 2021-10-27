@@ -58,5 +58,12 @@ void Processing::react(events::stt::ErrorResponse *response) {
   app->transit(new Sleeping(app));
 }
 
+void Processing::react(events::AskSpecialMessage *ask_special_message) {
+  app->track_processing_event(ProcessingEventType::END_GENIE);
+  g_message("Received AskSpecialMessage (before TextMessage), "
+            "turn done.");
+  app->transit(new Sleeping(app));
+}
+
 } // namespace state
 } // namespace genie

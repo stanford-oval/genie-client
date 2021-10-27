@@ -153,5 +153,10 @@ void State::react(events::audio::SetVolumeEvent *set_volume) {
   set_volume->resolve();
 }
 
+void State::react(events::audio::AdjVolumeEvent *adj_volume) {
+  app->audio_volume_controller->adjust_playback_volume(adj_volume->delta);
+  adj_volume->resolve();
+}
+
 } // namespace state
 } // namespace genie

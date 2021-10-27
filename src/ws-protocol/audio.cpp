@@ -75,10 +75,16 @@ void genie::conversation::AudioProtocol::handle_message(JsonReader *reader) {
     handle_prepare(req, reader);
   } else if (strcmp(op, "stop") == 0) {
     handle_stop(req, reader);
+  } else if (strcmp(op, "resume") == 0) {
+    handle_resume(req, reader);
+  } else if (strcmp(op, "pause") == 0) {
+    handle_pause(req, reader);
   } else if (strcmp(op, "play-urls") == 0) {
     handle_play_urls(req, reader);
   } else if (strcmp(op, "set-volume") == 0) {
     handle_set_volume(req, reader);
+  } else if (strcmp(op, "adj-volume") == 0) {
+    handle_adj_volume(req, reader);
   } else if (strcmp(op, "set-mute") == 0) {
     handle_set_mute(req, reader);
   } else {
@@ -188,6 +194,23 @@ void genie::conversation::AudioProtocol::handle_stop(int64_t req,
   app->dispatch(new state::events::audio::StopEvent(std::move(request)));
 }
 
+void genie::conversation::AudioProtocol::handle_pause(int64_t req,
+                                                      JsonReader *reader) {
+  auto request = std::make_unique<SimpleAudioResponse>(client, req);
+
+  // TODO handle pause differently than stop
+  app->dispatch(new state::events::audio::StopEvent(std::move(request)));
+}
+
+void genie::conversation::AudioProtocol::handle_resume(int64_t req,
+                                                       JsonReader *reader) {
+  auto request = std::make_unique<SimpleAudioResponse>(client, req);
+
+  // TODO implement resume
+  // this is enough to get resume in spotify but not news/radio
+  request->resolve();
+}
+
 void genie::conversation::AudioProtocol::handle_play_urls(int64_t req,
                                                           JsonReader *reader) {
   auto request = std::make_unique<SimpleAudioResponse>(client, req);
@@ -223,6 +246,19 @@ void genie::conversation::AudioProtocol::handle_set_volume(int64_t req,
 
   app->dispatch(
       new state::events::audio::SetVolumeEvent(std::move(request), volume));
+}
+
+void genie::conversation::AudioProtocol::handle_adj_volume(int64_t req,
+                                                           JsonReader *reader) {
+
+  auto request = std::make_unique<SimpleAudioResponse>(client, req);
+
+  json_reader_read_member(reader, "delta");
+  int delta = json_reader_get_int_value(reader);
+  json_reader_end_member(reader);
+
+  app->dispatch(
+      new state::events::audio::AdjVolumeEvent(std::move(request), delta));
 }
 
 void genie::conversation::AudioProtocol::handle_set_mute(int64_t req,

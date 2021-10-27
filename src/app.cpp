@@ -40,9 +40,7 @@ double time_diff_ms(struct timeval x, struct timeval y) {
   return time_diff(x, y) / 1000;
 }
 
-genie::App::App() {
-  is_processing = FALSE;
-}
+genie::App::App() { is_processing = FALSE; }
 
 genie::App::~App() { g_main_loop_unref(main_loop); }
 
@@ -79,9 +77,9 @@ int genie::App::process_args(int argc, char *argv[]) {
 
   gboolean opt_version = false;
   static GOptionEntry entries[] = {
-    { "version", 'v', 0, G_OPTION_ARG_NONE, &opt_version, "Show application version", NULL },
-    { NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, NULL }
-  };
+      {"version", 'v', 0, G_OPTION_ARG_NONE, &opt_version,
+       "Show application version", NULL},
+      {NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, NULL}};
 
   context = g_option_context_new(PACKAGE_NAME);
   g_option_context_add_main_entries(context, entries, PACKAGE_NAME);
@@ -109,8 +107,8 @@ int genie::App::exec(int argc, char *argv[]) {
 
   main_loop = g_main_loop_new(NULL, FALSE);
 
-  g_unix_signal_add(SIGINT, sig_handler, main_loop);
-  g_unix_signal_add(SIGTERM, sig_handler, main_loop);
+  g_unix_signal_add(SIGINT, sigint_handler, main_loop);
+  g_unix_signal_add(SIGTERM, sigterm_handler, main_loop);
 
   config = std::make_unique<Config>();
   config->load();
@@ -157,10 +155,16 @@ int genie::App::exec(int argc, char *argv[]) {
   return EXIT_SUCCESS;
 }
 
-gboolean genie::App::sig_handler(gpointer data) {
+gboolean genie::App::sigint_handler(gpointer data) {
   GMainLoop *loop = static_cast<GMainLoop *>(data);
   g_main_loop_quit(loop);
   return G_SOURCE_REMOVE;
+}
+
+gboolean genie::App::sigterm_handler(gpointer data) {
+  // exit the process directly, to avoid any crash on termination
+  // that could cause us to restart
+  exit(0);
 }
 
 void genie::App::print_processing_entry(const char *name, double duration_ms,

@@ -21,3 +21,6 @@ load-module module-role-ducking trigger_roles=voice-assistant ducking_roles=musi
 ### Set default devices
 set-default-sink echosink
 set-default-source echosrc
+
+### Set volumes
+set-sink-volume echosink 55000
