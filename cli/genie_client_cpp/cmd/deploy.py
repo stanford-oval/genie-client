@@ -1,6 +1,6 @@
 import re
 from argparse import BooleanOptionalAction
-from typing import List, Union
+from typing import List, Union, Optional
 
 from clavier import log as logging
 
@@ -19,6 +19,16 @@ COMMANDS_TO_KILL = (
     re.compile(r"/genie$"),
     re.compile(r"^/tmp/spotifyd\s"),
 )
+
+
+class MultipleChoice(list):
+    def __contains__(self, value):
+        if isinstance(value, list):
+            for item in value:
+                if not super().__contains__(value):
+                    return False
+            return True
+        return super().__contains__(value)
 
 
 def add_to(subparsers):
@@ -56,7 +66,7 @@ def add_to(subparsers):
     parser.add_argument(
         "deployables",
         nargs="*",
-        choices=CONFIG.xiaodu.deployables.keys(),
+        choices=MultipleChoice(CONFIG.xiaodu.deployables.keys()),
         help="List of what to deploy. If empty, deploy everything.",
     )
 
@@ -77,9 +87,10 @@ def run(
     remote = Remote.create(target)
 
     if len(deployables) == 0:
+        LOG.info("Deploying EVERYTHING!")
         deployables = CONFIG.xiaodu.deployables.keys()
 
     for deployable_name in deployables:
         deployable = CONFIG.xiaodu.deployables[deployable_name]
-        LOG.info(f"Deplying `{deployable_name}`...", **deployable)
+        LOG.info(f"Deploying `{deployable_name}`...")
         remote.push(deployable["src"], deployable["dest"])
