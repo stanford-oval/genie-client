@@ -41,8 +41,8 @@ FILE *fp_filter;
 
 genie::AudioInput::AudioInput(App *appInstance)
     : app(appInstance), vad_instance(WebRtcVad_Create()), alsa_handle(nullptr),
-      pulse_handle(nullptr), echo_state(nullptr), pp_state(nullptr),
-      state(State::WAITING) {}
+      pulse_handle(nullptr), state(State::WAITING), echo_state(nullptr),
+      pp_state(nullptr) {}
 
 genie::AudioInput::~AudioInput() {
   WebRtcVad_Free(vad_instance);
