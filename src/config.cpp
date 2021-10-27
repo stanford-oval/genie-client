@@ -256,6 +256,9 @@ void genie::Config::load() {
   retry_interval = get_size(key_file, "general", "retry_interval",
                             DEFAULT_WS_RETRY_INTERVAL);
 
+  connect_timeout =
+      get_size(key_file, "general", "connect_timeout", DEFAULT_CONNECT_TIMEOUT);
+
   genie_access_token =
       g_key_file_get_string(key_file, "general", "accessToken", &error);
   if (error) {

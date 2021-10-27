@@ -55,14 +55,16 @@ void genie::App::init_soup() {
   // initialize a shared SoupSession to be used by all outgoing connections
   if (config->ssl_ca_file) {
     soup_session = auto_gobject_ptr<SoupSession>(
-        soup_session_new_with_options("ssl-strict", config->ssl_strict,
-                                      "ssl-ca-file", config->ssl_ca_file,
-                                      "proxy-resolver", resolver, NULL),
+        soup_session_new_with_options(
+            "ssl-strict", config->ssl_strict, "ssl-ca-file",
+            config->ssl_ca_file, "proxy-resolver", resolver, "timeout",
+            (unsigned int)config->connect_timeout, NULL),
         adopt_mode::owned);
   } else {
     soup_session = auto_gobject_ptr<SoupSession>(
-        soup_session_new_with_options("ssl-strict", config->ssl_strict,
-                                      "proxy-resolver", resolver, NULL),
+        soup_session_new_with_options(
+            "ssl-strict", config->ssl_strict, "proxy-resolver", resolver,
+            "timeout", (unsigned int)config->connect_timeout, NULL),
         adopt_mode::owned);
   }
 

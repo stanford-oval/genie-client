@@ -25,6 +25,7 @@ namespace genie {
 class Config {
 public:
   static const size_t DEFAULT_WS_RETRY_INTERVAL = 3000;
+  static const size_t DEFAULT_CONNECT_TIMEOUT = 5000;
   static const size_t VAD_MIN_MS = 100;
   static const size_t VAD_MAX_MS = 5000;
   static const size_t DEFAULT_VAD_START_SPEAKING_MS = 2000;
@@ -103,6 +104,7 @@ public:
 
   gchar *genie_url;
   size_t retry_interval;
+  size_t connect_timeout;
   gchar *genie_access_token;
   gchar *conversation_id;
   gchar *nl_url;
