@@ -281,6 +281,16 @@ void genie::Config::load() {
           genie_url, genie_access_token, nl_url, locale);
 
   error = NULL;
+  locale = g_key_file_get_string(key_file, "general", "locale", &error);
+  if (error) {
+    locale = g_strdup(DEFAULT_LOCALE);
+    g_clear_error(&error);
+  }
+
+  g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\nlocale: %s\n",
+          genie_url, genie_access_token, nl_url, locale);
+
+  error = NULL;
   conversation_id =
       g_key_file_get_string(key_file, "general", "conversationId", &error);
   if (error) {
