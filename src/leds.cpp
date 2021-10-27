@@ -30,6 +30,9 @@ genie::Leds::Leds(App *appInstance) {
   initialized = false;
   update_timer_circular = false;
   update_timer_pulse = false;
+  ctrl_path_all = nullptr;
+  ctrl_path_brightness = nullptr;
+  leds = nullptr;
 }
 
 genie::Leds::~Leds() {
@@ -40,7 +43,8 @@ genie::Leds::~Leds() {
 }
 
 int genie::Leds::init() {
-  if (!app->config->leds_enabled) return false;
+  if (!app->config->leds_enabled)
+    return false;
 
   if (strcmp(app->config->leds_type, "aw") == 0) {
     led_count = 12;
@@ -68,7 +72,8 @@ int genie::Leds::init() {
 }
 
 void genie::Leds::animate(LedsState_t state) {
-  if (!app->config->leds_enabled || !initialized) return;
+  if (!app->config->leds_enabled || !initialized)
+    return;
 
   switch (state) {
     case LedsState_t::Starting:
@@ -109,7 +114,8 @@ void genie::Leds::animate(LedsState_t state) {
   }
 }
 
-void genie::Leds::animate_internal(LedsAnimation_t style, int color, int duration) {
+void genie::Leds::animate_internal(LedsAnimation_t style, int color,
+                                   int duration) {
   switch (style) {
     case LedsAnimation_t::None:
       solid(0);
@@ -141,7 +147,8 @@ bool genie::Leds::set_user(bool enabled) {
 }
 
 bool genie::Leds::set_brightness(int level) {
-  if (level > max_brightness) return false;
+  if (level > max_brightness)
+    return false;
 
   char buffer[16];
   snprintf(buffer, sizeof(buffer) - 1, "%d", level);
@@ -157,7 +164,8 @@ bool genie::Leds::set_brightness(int level) {
 
 int genie::Leds::get_brightness_internal(bool max = false) {
   char path[256], buffer[64];
-  snprintf(path, sizeof(path) - 1, "%s/%sbrightness", ctrl_path_base, max ? "max_" : "");
+  snprintf(path, sizeof(path) - 1, "%s/%sbrightness", ctrl_path_base,
+           max ? "max_" : "");
   int fd = open(path, O_RDONLY);
   if (fd > 0) {
     read(fd, buffer, sizeof(buffer) - 1);
@@ -188,7 +196,7 @@ void genie::Leds::clear(int color) {
 bool genie::Leds::set_leds() {
   char buffer[128];
   for (int i = 0, j = 0; i < led_count; i++) {
-    j += snprintf (buffer + j, sizeof(buffer) - j, "%d ", leds[i]);
+    j += snprintf(buffer + j, sizeof(buffer) - j, "%d ", leds[i]);
   }
   int fd = open(ctrl_path_all, O_WRONLY);
   if (fd > 0) {
@@ -204,7 +212,8 @@ bool genie::Leds::set_leds() {
 gboolean genie::Leds::update_circular(gpointer data) {
   Leds *obj = (Leds *)data;
 
-  if (!obj->update_timer_circular) return false;
+  if (!obj->update_timer_circular)
+    return false;
 
   obj->leds[obj->step_circular] = obj->base_color;
   obj->step_circular++;
@@ -263,7 +272,8 @@ void genie::Leds::circular(int color) {
 }
 
 void genie::Leds::pulse() {
-  if (update_timer_pulse) return;
+  if (update_timer_pulse)
+    return;
   if (update_timer_circular) {
     update_timer_circular = false;
     usleep(100);
