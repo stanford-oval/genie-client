@@ -40,7 +40,10 @@ double time_diff_ms(struct timeval x, struct timeval y) {
   return time_diff(x, y) / 1000;
 }
 
-genie::App::App() { is_processing = FALSE; }
+genie::App::App() {
+  main_thread = std::this_thread::get_id();
+  is_processing = FALSE;
+}
 
 genie::App::~App() { g_main_loop_unref(main_loop); }
 

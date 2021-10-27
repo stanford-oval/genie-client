@@ -28,6 +28,8 @@ namespace genie {
 namespace state {
 
 void Saying::enter() {
+  State::enter();
+
   app->track_processing_event(ProcessingEventType::START_TTS);
   app->audio_player->say(text, text_id);
   app->leds->animate(LedsState_t::Saying);

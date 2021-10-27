@@ -31,6 +31,7 @@ public:
   Processing(App *app) : State{app} {}
 
   void enter() override;
+  const char *name() override { return NAME; };
 
   void react(events::TextMessage *text_message) override;
   void react(events::stt::TextResponse *response) override;

@@ -28,6 +28,19 @@
 namespace genie {
 namespace state {
 
+void State::enter() {
+  g_message("ENTER state %s\n", name());
+  enter_time = std::chrono::steady_clock::now();
+}
+
+void State::exit() {
+  exit_time = std::chrono::steady_clock::now();
+
+  auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(
+      exit_time - enter_time);
+  g_message("Spent %ld milliseconds in state %s", (long)delta.count(), name());
+}
+
 // Event Handling Methods
 // ===========================================================================
 

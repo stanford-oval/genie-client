@@ -30,6 +30,7 @@ genie::Leds::Leds(App *appInstance) {
   initialized = false;
   update_timer_circular = false;
   update_timer_pulse = false;
+  ctrl_path_base = nullptr;
   ctrl_path_all = nullptr;
   ctrl_path_brightness = nullptr;
   leds = nullptr;

@@ -33,6 +33,7 @@ public:
       : State{app}, is_follow_up(is_follow_up) {}
 
   void enter() override;
+  const char *name() override { return NAME; };
 
   void react(events::Wake *) override;
   void react(events::InputFrame *input_frame) override;

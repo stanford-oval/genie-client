@@ -29,6 +29,8 @@ namespace genie {
 namespace state {
 
 void Processing::enter() {
+  State::enter();
+
   app->track_processing_event(ProcessingEventType::START_STT);
   app->leds->animate(LedsState_t::Processing);
 }

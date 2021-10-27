@@ -19,6 +19,7 @@
 #pragma once
 
 #include "events.hpp"
+#include <chrono>
 
 namespace genie {
 
@@ -29,16 +30,21 @@ namespace state {
 class Machine;
 
 class State {
+private:
+  std::chrono::steady_clock::time_point enter_time;
+  std::chrono::steady_clock::time_point exit_time;
+
 public:
   static const constexpr char *NAME = "State";
 
   App *app;
 
-  State(App *app) : app(app) {}
+  State(App *app) : enter_time(), exit_time(), app(app) {}
   virtual ~State() = default;
 
-  virtual void enter(){};
-  virtual void exit(){};
+  virtual void enter();
+  virtual void exit();
+  virtual const char *name() = 0;
 
   // note: you must not define a react for the base Event class
   // otherwise you won't get any error when you add new event classes

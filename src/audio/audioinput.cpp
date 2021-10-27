@@ -34,7 +34,8 @@ FILE *fp_filter;
 #endif
 
 genie::AudioInput::AudioInput(App *appInstance)
-    : app(appInstance), vad_instance(WebRtcVad_Create()),
+    : app(appInstance), vad_instance(WebRtcVad_Create()), alsa_handle(nullptr),
+      pulse_handle(nullptr), echo_state(nullptr), pp_state(nullptr),
       state(State::WAITING) {}
 
 genie::AudioInput::~AudioInput() {
@@ -162,9 +163,8 @@ bool genie::AudioInput::init_pulse() {
 bool genie::AudioInput::init_speex() {
   spx_int32_t tmp;
 
-  echo_state = speex_echo_state_init_mc(
-      pv_frame_length,
-      (sample_rate * 300) / 1000, 1, 1);
+  echo_state = speex_echo_state_init_mc(pv_frame_length,
+                                        (sample_rate * 300) / 1000, 1, 1);
   speex_echo_ctl(echo_state, SPEEX_ECHO_SET_SAMPLING_RATE, &(sample_rate));
 
   pp_state = speex_preprocess_state_init(pv_frame_length, sample_rate);
@@ -183,7 +183,7 @@ bool genie::AudioInput::init_speex() {
   speex_preprocess_ctl(pp_state, SPEEX_PREPROCESS_SET_ECHO_SUPPRESS, &tmp);
 
   speex_preprocess_ctl(pp_state, SPEEX_PREPROCESS_SET_ECHO_STATE, echo_state);
-  
+
   g_print("Initialized speex echo-cancellation\n");
 
   return true;
@@ -238,8 +238,8 @@ int genie::AudioInput::init() {
 #endif
 
   pcm = (int16_t *)malloc(
-      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) *
-      channels * sizeof(int16_t));
+      std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length) * channels *
+      sizeof(int16_t));
   if (!pcm) {
     g_error("failed to allocate memory for audio buffer\n");
     return -2;
@@ -507,8 +507,9 @@ void genie::AudioInput::loop_woke() {
   state_woke_frame_count += 1;
 
   // Run Voice Activity Detection (VAD) against the frame
-  int vad_result = WebRtcVad_Process(vad_instance, sample_rate, new_frame.samples,
-                                     AUDIO_INPUT_VAD_FRAME_LENGTH);
+  int vad_result =
+      WebRtcVad_Process(vad_instance, sample_rate, new_frame.samples,
+                        AUDIO_INPUT_VAD_FRAME_LENGTH);
 
   if (vad_result == VAD_IS_SILENT) {
     // We picked up silence

@@ -31,7 +31,8 @@ namespace genie {
 namespace state {
 
 void Listening::enter() {
-  g_message("ENTER state Listening\n");
+  State::enter();
+
   app->leds->animate(LedsState_t::Listening);
   app->stt->begin_session(is_follow_up);
   app->audio_input->wake();
