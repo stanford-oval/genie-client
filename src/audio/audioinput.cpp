@@ -531,7 +531,7 @@ void genie::AudioInput::loop_woke() {
     // Increment the silent count
     state_vad_silent_count += 1;
     // Set the noise count to zero
-    state_vad_noise_count = 0;
+    // state_vad_noise_count = 0;
   } else if (vad_result == VAD_NOT_SILENT) {
     g_debug("Frame %zu is not silent in woke state (silent: %zu, noise: %zu)",
             state_woke_frame_count, state_vad_silent_count,

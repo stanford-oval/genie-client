@@ -164,16 +164,16 @@ size_t genie::Config::get_bounded_size(GKeyFile *key_file, const char *section,
 
   if (value < (ssize_t)min) {
     g_warning("CONFIG [%s] %s must be %zd or greater, found %zd. "
-              "Setting to default (%zd).",
-              section, key, min, value, default_value);
-    return default_value;
+              "Setting to minimum.",
+              section, key, min, value);
+    return min;
   }
 
   if (value > (ssize_t)max) {
     g_warning("CONFIG [%s] %s must be %zd or less, found %zd. "
-              "Setting to default (%zd).",
-              section, key, max, value, default_value);
-    return default_value;
+              "Setting to maximum.",
+              section, key, max, value);
+    return max;
   }
 
   return value;

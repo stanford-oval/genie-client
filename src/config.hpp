@@ -28,8 +28,8 @@ public:
   static const size_t VAD_MIN_MS = 100;
   static const size_t VAD_MAX_MS = 5000;
   static const size_t DEFAULT_VAD_START_SPEAKING_MS = 2000;
-  static const size_t DEFAULT_VAD_DONE_SPEAKING_MS = 500;
-  static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 640;
+  static const size_t DEFAULT_VAD_DONE_SPEAKING_MS = 300;
+  static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 300;
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
   static const constexpr char *DEFAULT_NLP_URL =
       "https://nlp-staging.almond.stanford.edu";
