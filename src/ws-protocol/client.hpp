@@ -20,6 +20,7 @@
 
 #include "../app.hpp"
 #include "../utils/autoptrs.hpp"
+#include <chrono>
 #include <deque>
 #include <json-glib/json-glib.h>
 #include <libsoup/soup.h>
@@ -82,6 +83,7 @@ private:
   auto_gobject_ptr<SoupWebsocketConnection> m_connection;
   std::deque<auto_gobject_ptr<JsonBuilder>> m_outgoing_queue;
   bool ready;
+  std::chrono::steady_clock::time_point connect_time;
 
   std::unique_ptr<ProtocolParser> main_parser;
   std::unordered_map<std::string, std::unique_ptr<ProtocolParser>> ext_parsers;
