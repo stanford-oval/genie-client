@@ -77,6 +77,7 @@ private:
   static void on_message(SoupWebsocketConnection *conn, gint type,
                          GBytes *message, gpointer data);
   static void on_close(SoupWebsocketConnection *conn, gpointer data);
+  static gboolean send_ping(gpointer data);
 
   gchar *url;
   const gchar *accessToken;
@@ -84,6 +85,7 @@ private:
   std::deque<auto_gobject_ptr<JsonBuilder>> m_outgoing_queue;
   bool ready;
   std::chrono::steady_clock::time_point connect_time;
+  unsigned int ping_timeout_id;
 
   std::unique_ptr<ProtocolParser> main_parser;
   std::unordered_map<std::string, std::unique_ptr<ProtocolParser>> ext_parsers;
