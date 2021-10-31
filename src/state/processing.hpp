@@ -37,6 +37,10 @@ public:
   void react(events::stt::TextResponse *response) override;
   void react(events::stt::ErrorResponse *response) override;
   void react(events::AskSpecialMessage *ask_special_message) override;
+  void react(events::audio::PrepareEvent *prepare) override;
+
+private:
+  bool preparing_audio = false;
 };
 
 } // namespace state
