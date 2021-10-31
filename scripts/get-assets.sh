@@ -1,13 +1,19 @@
 #!/bin/bash -ex
 
-if [ -z "${1}" ] || [ "${1}" == "amd64" ] || [ "${1}" == "amd64/" ]; then
+if [ -z "${1}" ]; then
+    ARCH=$(uname -m)
+else
+    ARCH="${1}"
+fi
+
+if [ "${ARCH}" == "amd64" ] || [ "${ARCH}" == "amd64/" ] || [ "${ARCH}" == "x86_64" ]; then
     LIB_PATH="linux/x86_64"
-elif [ "${1}" == "armhf" ] || [ "${1}" == "arm32v7/" ]; then
+elif [ "${ARCH}" == "armhf" ] || [ "${ARCH}" == "arm32v7/" ] || [ "${ARCH}" == "armv7l" ] || [ "${ARCH}" == "armv7" ]; then
     LIB_PATH="raspberry-pi/cortex-a72"
-elif [ "${1}" == "arm64" ] || [ "${1}" == "arm64v8/" ]; then
+elif [ "${ARCH}" == "arm64" ] || [ "${ARCH}" == "arm64v8/" ] || [ "${ARCH}" == "aarch64" ]; then
     LIB_PATH="raspberry-pi/cortex-a72-aarch64"
 else
-    echo "Unsupported: ${1}"
+    echo "Unsupported: ${ARCH}"
     exit 1
 fi
 
