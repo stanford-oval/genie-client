@@ -77,6 +77,8 @@ executable(
   'config.cpp',
   'evinput.cpp',
   'leds.cpp',
+  'audio/alsa.cpp',
+  'audio/pulsesimple.cpp',
   'audio/audioinput.cpp',
   'audio/audioplayer.cpp',
   'audio/audiovolume.cpp',

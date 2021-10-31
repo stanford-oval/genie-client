@@ -27,13 +27,7 @@
 #include <glib.h>
 #include <queue>
 #include <thread>
-
-#include <alsa/asoundlib.h>
-#include <pulse/error.h>
-#include <pulse/simple.h>
-
-#include <speex/speex_echo.h>
-#include <speex/speex_preprocess.h>
+#include "audiodriver.hpp"
 
 #define AUDIO_INPUT_VAD_FRAME_LENGTH 480
 
@@ -53,7 +47,7 @@ public:
     LISTENING,
   };
 
-  AudioInput(App *appInstance);
+  AudioInput(App *app);
   ~AudioInput();
   int init();
   void close();
@@ -62,27 +56,19 @@ public:
 private:
   // initialized once and never overwritten
   App *const app;
-  WakeWord *wakeword;
   VadInst *const vad_instance;
-  snd_pcm_t *alsa_handle = NULL;
-  pa_simple *pulse_handle = NULL;
+  WakeWord *wakeword;
+  AudioInputDriver *input;
 
   // thread safe, accessed from both threads
   std::thread input_thread;
   std::atomic<State> state;
 
   // only accessed from the input thread
-  int16_t *pcm;
-  int16_t *pcm_mono;
-  int16_t *pcm_playback;
-  int16_t *pcm_filter;
   int32_t pv_frame_length;
   size_t sample_rate;
   int16_t channels;
   std::queue<AudioFrame> frame_buffer;
-
-  SpeexEchoState *echo_state;
-  SpeexPreprocessState *pp_state;
 
   size_t vad_start_frame_count;
   size_t vad_done_frame_count;
@@ -93,13 +79,7 @@ private:
   size_t state_vad_silent_count;
   size_t state_vad_noise_count;
 
-  // only called from the input thread
-  AudioFrame read_frame(int32_t frame_length);
-
   size_t ms_to_frames(size_t frame_length, size_t ms);
-  bool init_alsa(gchar *input_audio_device, int channels);
-  bool init_pulse();
-  bool init_speex();
   void loop();
   void loop_waiting();
   void loop_woke();
