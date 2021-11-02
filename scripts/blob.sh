@@ -109,6 +109,10 @@ cp /lib/arm-linux-gnueabihf/libnss_* /out/lib/
 
 cp -p /usr/local/bin/pulseaudio /out/
 strip /out/pulseaudio
+
+cp -p /usr/local/bin/{parec,paplay,pacmd,pactl} /out/
+strip /out/{parec,paplay,pacmd,pactl}
+
 cp -p /usr/bin/gdbserver /out/
 strip /out/gdbserver
 
