@@ -225,3 +225,6 @@ class SSHRemote(Remote):
             stdout=PIPE,
             stderr=PIPE,
         )
+
+    def exec(self, *cmd: str, **opts):
+        return sh.run("ssh", self._target, *cmd, **opts)
