@@ -27,7 +27,7 @@ while [ $RET -ne 0 ]; do
 	if test "$1" = "--gdb" ; then
 		./gdbserver 0.0.0.0:${GDB_PORT:-1234} ./genie
 	else
-		./genie
+		./genie >>/tmp/genie.log 2>&1
 	fi
 	RET=$?
 done
