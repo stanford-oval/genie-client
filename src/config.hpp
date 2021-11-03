@@ -31,6 +31,12 @@ public:
   static const size_t DEFAULT_VAD_START_SPEAKING_MS = 2000;
   static const size_t DEFAULT_VAD_DONE_SPEAKING_MS = 300;
   static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 300;
+
+  // Max time spent in AudioInput LISTENING state
+  static const size_t DEFAULT_VAD_LISTEN_TIMEOUT_MS = 10000;
+  static const size_t VAD_LISTEN_TIMEOUT_MIN_MS = 1000;
+  static const size_t VAD_LISTEN_TIMEOUT_MAX_MS = 100000;
+
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
   static const constexpr char *DEFAULT_NLP_URL =
       "https://nlp-staging.almond.stanford.edu";
@@ -243,6 +249,7 @@ public:
   size_t vad_start_speaking_ms;
   size_t vad_done_speaking_ms;
   size_t vad_input_detected_noise_ms;
+  size_t vad_listen_timeout_ms;
 
 protected:
 private:

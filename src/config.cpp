@@ -594,4 +594,8 @@ void genie::Config::load() {
   vad_input_detected_noise_ms = get_bounded_size(
       key_file, "vad", "input_detected_noise_ms",
       DEFAULT_VAD_INPUT_DETECTED_NOISE_MS, VAD_MIN_MS, VAD_MAX_MS);
+
+  vad_listen_timeout_ms = get_bounded_size(
+      key_file, "vad", "listen_timeout_ms", DEFAULT_VAD_LISTEN_TIMEOUT_MS,
+      VAD_LISTEN_TIMEOUT_MIN_MS, VAD_LISTEN_TIMEOUT_MAX_MS);
 }

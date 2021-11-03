@@ -307,6 +307,12 @@ int genie::AudioInput::init() {
             app->config->vad_input_detected_noise_ms,
             vad_input_detected_noise_frame_count);
 
+  vad_listen_timeout_frame_count = ms_to_frames(
+      AUDIO_INPUT_VAD_FRAME_LENGTH, app->config->vad_listen_timeout_ms);
+  g_message("Calculated listen timeout frame count: %zd ms "
+            "-> %zd frames",
+            app->config->vad_listen_timeout_ms, vad_listen_timeout_frame_count);
+
   g_message("Initialized audio input with %s backend\n",
             app->config->audio_backend);
   input_thread = std::thread(&AudioInput::loop, this);
@@ -594,6 +600,12 @@ void genie::AudioInput::loop_listening() {
   }
   if (state_vad_silent_count >= vad_done_frame_count) {
     g_debug("Detected %zu frames of silence, VAD done", state_vad_silent_count);
+    app->dispatch(new state::events::InputDone(true));
+    transition(State::WAITING);
+  } else if (state_woke_frame_count >= vad_listen_timeout_frame_count) {
+    g_message("LISTENING timed out after %zu frames (~%zu ms)",
+              vad_listen_timeout_frame_count,
+              app->config->vad_listen_timeout_ms);
     app->dispatch(new state::events::InputDone(true));
     transition(State::WAITING);
   }

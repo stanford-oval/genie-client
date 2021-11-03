@@ -21,8 +21,8 @@
 #include "app.hpp"
 #include "audioplayer.hpp"
 #include "stt.hpp"
-#include "wakeword.hpp"
 #include "utils/webrtc_vad.h"
+#include "wakeword.hpp"
 #include <atomic>
 #include <glib.h>
 #include <queue>
@@ -87,6 +87,7 @@ private:
   size_t vad_start_frame_count;
   size_t vad_done_frame_count;
   size_t vad_input_detected_noise_frame_count;
+  size_t vad_listen_timeout_frame_count;
 
   // Loop state variables
   size_t state_woke_frame_count;
