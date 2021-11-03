@@ -47,7 +47,7 @@ void Listening::enter() {
 }
 
 void Listening::react(events::Wake *) {
-  g_warning("FIXME Received Wake event while in Listening state.\n");
+  g_debug("FIXME Received Wake event while in Listening state.\n");
 }
 
 void Listening::react(events::InputFrame *input_frame) {

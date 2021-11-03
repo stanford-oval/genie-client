@@ -52,20 +52,20 @@ void State::react(events::Wake *) {
 }
 
 void State::react(events::InputFrame *input_frame) {
-  g_warning("FIXME received InputFrame when not in Listen state, discarding.");
+  g_debug("FIXME received InputFrame when not in Listen state, discarding.");
 }
 
 void State::react(events::InputDone *) {
-  g_warning("FIXME received InputDone when not in Listen state, ignoring.");
+  g_debug("FIXME received InputDone when not in Listen state, ignoring.");
 }
 
 void State::react(events::InputNotDetected *) {
-  g_warning("FIXME received InputNotDetected when not in Listen state, "
-            "ignoring.");
+  g_debug("FIXME received InputNotDetected when not in Listen state, "
+          "ignoring.");
 }
 
 void State::react(events::InputTimeout *) {
-  g_warning("FIXME received InputTimeout when not in Listen state, ignoring.");
+  g_debug("FIXME received InputTimeout when not in Listen state, ignoring.");
 }
 
 // Genie Server Message Events
@@ -138,11 +138,11 @@ void State::react(events::PlayerStreamEnd *player_stream_end) {
 // ---------------------------------------------------------------------------
 
 void State::react(events::stt::TextResponse *response) {
-  g_warning("FIXME Received events::stt::TextResponse in state %s", NAME);
+  g_debug("FIXME Received events::stt::TextResponse in state %s", NAME);
 }
 
 void State::react(events::stt::ErrorResponse *response) {
-  g_warning("FIXME Received events::stt::ErrorResponse in state %s", NAME);
+  g_debug("FIXME Received events::stt::ErrorResponse in state %s", NAME);
 }
 
 // Audio Control Protocol
