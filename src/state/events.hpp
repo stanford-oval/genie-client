@@ -155,6 +155,8 @@ struct AdjustVolume : Event {
 
 struct TogglePlayback : Event {};
 
+struct Panic : Event {};
+
 // Audio Player Events
 // ===========================================================================
 

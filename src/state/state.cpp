@@ -21,6 +21,7 @@
 #include "audio/audioplayer.hpp"
 #include "audio/audiovolume.hpp"
 #include "spotifyd.hpp"
+#include "ws-protocol/client.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::State"
@@ -113,6 +114,11 @@ void State::react(events::AdjustVolume *adjust_volume) {
 
 void State::react(events::TogglePlayback *) {
   g_warning("TODO Playback toggled in state %s", NAME);
+}
+
+void State::react(events::Panic *) {
+  g_warning("PANIC!!! :D");
+  app->conversation_client.get()->send_thingtalk("$stop;");
 }
 
 void State::react(events::PlayerStreamEnter *player_stream_enter) {
