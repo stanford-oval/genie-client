@@ -119,6 +119,7 @@ void State::react(events::TogglePlayback *) {
 void State::react(events::Panic *) {
   g_warning("PANIC!!! :D");
   app->conversation_client.get()->send_thingtalk("$stop;");
+  app->spotifyd.get()->close();
   app->transit(new Sleeping(app));
 }
 
