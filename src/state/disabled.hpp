@@ -34,8 +34,9 @@ public:
   void exit() override;
   const char *name() override { return NAME; };
 
-  // The one "actual" handler, which brings it out of this state
+  // The "actual" handlers that do things
   void react(events::ToggleDisabled *) override;
+  void react(events::Panic *) override;
 
   // Events that state::State handles that we want to ignore
   void react(events::Wake *) override {}
@@ -43,7 +44,6 @@ public:
   void react(events::AudioMessage *) override {}
   void react(events::SoundMessage *) override {}
   void react(events::AdjustVolume *) override {}
-  void react(events::Panic *) override {}
   void react(events::PlayerStreamEnter *) override {}
   void react(events::PlayerStreamEnd *) override {}
 
