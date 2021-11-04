@@ -73,11 +73,11 @@ def add_to(subparsers):
 
 @Context.inject_current
 def run(
-    target: str,
-    *,
-    build: bool,
-    plain: bool,
+    target: Union[str, Remote],
     deployables: List[str],
+    *,
+    build: bool = False,
+    plain: bool = False,
 ):
     if build:
         build_cmd.run(exe_only=("exe" in deployables), plain=plain)
