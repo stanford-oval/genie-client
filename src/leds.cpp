@@ -112,6 +112,11 @@ void genie::Leds::animate(LedsState_t state) {
       animate_internal((LedsAnimation_t)app->config->leds_net_error_effect,
                        app->config->leds_net_error_color);
       break;
+    case LedsState_t::Disabled:
+      g_debug("leds disabled\n");
+      animate_internal((LedsAnimation_t)app->config->leds_disabled_effect,
+                       app->config->leds_disabled_color);
+      break;
   }
 }
 

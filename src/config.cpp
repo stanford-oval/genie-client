@@ -533,6 +533,10 @@ void genie::Config::load() {
         key_file, "leds", "net_error_effect", DEFAULT_LEDS_NET_ERROR_EFFECT);
     leds_net_error_color = get_dec_color_from_hex_string(
         key_file, "leds", "net_error_color", DEFAULT_LEDS_NET_ERROR_COLOR);
+    leds_disabled_effect = get_leds_effect_string(
+        key_file, "leds", "disabled_effect", DEFAULT_LEDS_DISABLED_EFFECT);
+    leds_disabled_color = get_dec_color_from_hex_string(
+        key_file, "leds", "diabled_color", DEFAULT_LEDS_DISABLED_COLOR);
   } else {
     leds_type = nullptr;
     leds_path = nullptr;

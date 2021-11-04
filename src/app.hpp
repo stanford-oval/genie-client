@@ -30,6 +30,8 @@
 #include <thread>
 
 #include "audio/audio.hpp"
+
+#include "state/disabled.hpp"
 #include "state/events.hpp"
 #include "state/listening.hpp"
 #include "state/processing.hpp"
@@ -91,6 +93,7 @@ class App {
   friend class state::Listening;
   friend class state::Processing;
   friend class state::Saying;
+  friend class state::Disabled;
 
 public:
   // =========================================================================

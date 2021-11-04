@@ -123,6 +123,11 @@ void State::react(events::Panic *) {
   app->transit(new Sleeping(app));
 }
 
+void State::react(events::ToggleDisabled *) {
+  g_message("DISABLING...");
+  app->transit(new Disabled(app));
+}
+
 void State::react(events::PlayerStreamEnter *player_stream_enter) {
   g_message("Received PlayerStreamEnter with type=%d ref_id=%" G_GINT64_FORMAT
             ", ignoring.",
@@ -147,6 +152,7 @@ void State::react(events::stt::ErrorResponse *response) {
 }
 
 // Audio Control Protocol
+// ---------------------------------------------------------------------------
 
 void State::react(events::audio::CheckSpotifyEvent *check_spotify) {
   app->spotifyd->set_credentials(check_spotify->username,

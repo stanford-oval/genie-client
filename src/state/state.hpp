@@ -62,6 +62,7 @@ public:
   virtual void react(events::AdjustVolume *adjust_volume);
   virtual void react(events::TogglePlayback *);
   virtual void react(events::Panic *);
+  virtual void react(events::ToggleDisabled *);
   virtual void react(events::PlayerStreamEnter *player_stream_enter);
   virtual void react(events::PlayerStreamEnd *player_stream_end);
   virtual void react(events::stt::TextResponse *response);

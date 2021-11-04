@@ -70,7 +70,7 @@ gboolean genie::EVInput::event_dispatch(GSource *g_source, GSourceFunc callback,
             // ev_input->app->dispatch(new state::events::AdjustVolume(-1));
             break;
           case KEY_MUTE:
-            // ev_input->app->dispatch(new state::events::Wake());
+            ev_input->app->dispatch(new state::events::ToggleDisabled());
             break;
           case KEY_PLAYPAUSE:
             // ev_input->app->dispatch(new state::events::TogglePlayback());
