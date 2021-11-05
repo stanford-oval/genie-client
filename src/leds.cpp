@@ -185,9 +185,9 @@ int genie::Leds::get_brightness_internal(bool max = false) {
 }
 
 void genie::Leds::solid(int color) {
-  if (update_timer_circular || update_timer_pulse) {
+  if (update_timer_circular) {
     update_timer_circular = false;
-    update_timer_pulse = false;
+    usleep(100);
   }
   clear(color);
   set_leds();
@@ -282,6 +282,7 @@ void genie::Leds::pulse() {
     return;
   if (update_timer_circular) {
     update_timer_circular = false;
+    usleep(100);
   }
 
   step_bright = brightness;
