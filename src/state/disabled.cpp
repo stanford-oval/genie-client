@@ -49,5 +49,10 @@ void Disabled::react(events::ToggleDisabled *) {
   app->transit(new Sleeping(app));
 }
 
+void Disabled::react(events::audio::StopEvent *event) {
+  app->audio_player->stop();
+  event->resolve();
+}
+
 } // namespace state
 } // namespace genie

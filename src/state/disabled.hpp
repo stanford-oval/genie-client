@@ -37,6 +37,7 @@ public:
   // The "actual" handlers that do things
   void react(events::ToggleDisabled *) override;
   void react(events::Panic *) override;
+  void react(events::audio::StopEvent *event) override;
 
   // Events that state::State handles that we want to ignore
   void react(events::Wake *) override {}
@@ -51,7 +52,6 @@ public:
   // doesn't block on the client" (- Gio)
   void react(events::audio::PrepareEvent *event) override { event->resolve(); }
   void react(events::audio::PlayURLsEvent *event) override { event->resolve(); }
-  void react(events::audio::StopEvent *event) override { event->resolve(); }
   void react(events::audio::SetMuteEvent *event) override { event->resolve(); }
   void react(events::audio::SetVolumeEvent *event) override {
     event->resolve();
