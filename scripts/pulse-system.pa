@@ -23,4 +23,4 @@ set-default-sink echosink
 set-default-source echosrc
 
 ### Set volumes
-set-sink-volume echosink 55000
+# set-sink-volume echosink 65000
