@@ -254,8 +254,6 @@ void genie::AudioInput::loop_woke() {
 
   app->dispatch(new state::events::InputFrame(std::move(new_frame)));
 
-  app->dispatch(new state::events::InputFrame(std::move(new_frame)));
-
   if (vad_result == VAD_IS_SILENT) {
     g_debug("Frame %zu is silent in woke state (silent: %zu, noise: %zu)",
             state_woke_frame_count, state_vad_silent_count,
