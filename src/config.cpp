@@ -44,6 +44,17 @@ genie::Config::~Config() {
   g_free(audio_voice);
   g_free(audio_output_device);
   g_free(audio_backend);
+  g_free(sound_wake);
+  g_free(sound_no_input);
+  g_free(sound_too_much_input);
+  g_free(sound_news_intro);
+  g_free(sound_alarm_clock_elapsed);
+  g_free(sound_working);
+  g_free(sound_stt_error);
+  g_free(pv_library_path);
+  g_free(pv_model_path);
+  g_free(pv_keyword_path);
+  g_free(pv_wake_word_pattern);
   g_free(proxy);
   g_free(ssl_ca_file);
   g_free(evinput_device);

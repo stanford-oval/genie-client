@@ -23,11 +23,18 @@
 
 #include "wakeword.hpp"
 
-genie::WakeWord::WakeWord(App *app) : app(app) {}
+genie::WakeWord::WakeWord(App *app) : app(app) {
+  porcupine = nullptr;
+  porcupine_library = nullptr;
+}
 
 genie::WakeWord::~WakeWord() {
-  pv_porcupine_delete_func(porcupine);
-  dlclose(porcupine_library);
+  if (porcupine) {
+    pv_porcupine_delete_func(porcupine);
+  }
+  if (porcupine_library) {
+    dlclose(porcupine_library);
+  }
 }
 
 int genie::WakeWord::init() {

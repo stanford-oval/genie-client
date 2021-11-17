@@ -37,7 +37,9 @@ genie::Leds::Leds(App *appInstance) {
 }
 
 genie::Leds::~Leds() {
-  set_user(false);
+  if (initialized) {
+    set_user(false);
+  }
   free(ctrl_path_all);
   free(ctrl_path_brightness);
   free(leds);
