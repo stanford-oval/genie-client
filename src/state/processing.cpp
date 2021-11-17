@@ -29,15 +29,23 @@ namespace genie {
 namespace state {
 
 void Processing::enter() {
+  State::enter();
+
   app->track_processing_event(ProcessingEventType::START_STT);
   app->leds->animate(LedsState_t::Processing);
 }
 
 void Processing::react(events::TextMessage *text_message) {
   app->track_processing_event(ProcessingEventType::END_GENIE);
-  g_message("Received TextMessage, responding with text: %s\n",
-            text_message->text.c_str());
-  app->transit(new Saying(app, text_message->id, text_message->text));
+  if (preparing_audio) {
+    g_message("Received TextMessage, skipping 'cause of prepare audio: %s",
+              text_message->text.c_str());
+    app->transit(new Sleeping(app));
+  } else {
+    g_message("Received TextMessage, responding with text: %s\n",
+              text_message->text.c_str());
+    app->transit(new Saying(app, text_message->id, text_message->text));
+  }
 }
 
 void Processing::react(events::stt::TextResponse *response) {
@@ -63,6 +71,13 @@ void Processing::react(events::AskSpecialMessage *ask_special_message) {
   g_message("Received AskSpecialMessage (before TextMessage), "
             "turn done.");
   app->transit(new Sleeping(app));
+}
+
+void Processing::react(events::audio::PrepareEvent *prepare) {
+  // HACK Flag not to say text
+  preparing_audio = true;
+  // defer this event to the next state
+  app->defer(prepare);
 }
 
 } // namespace state

@@ -21,12 +21,26 @@
 #include "audio/audioplayer.hpp"
 #include "audio/audiovolume.hpp"
 #include "spotifyd.hpp"
+#include "ws-protocol/client.hpp"
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::state::State"
 
 namespace genie {
 namespace state {
+
+void State::enter() {
+  g_message("ENTER state %s\n", name());
+  enter_time = std::chrono::steady_clock::now();
+}
+
+void State::exit() {
+  exit_time = std::chrono::steady_clock::now();
+
+  auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(
+      exit_time - enter_time);
+  g_message("Spent %ld milliseconds in state %s", (long)delta.count(), name());
+}
 
 // Event Handling Methods
 // ===========================================================================
@@ -38,26 +52,33 @@ void State::react(events::Wake *) {
 }
 
 void State::react(events::InputFrame *input_frame) {
-  g_warning("FIXME received InputFrame when not in Listen state, discarding.");
+  g_debug("FIXME received InputFrame when not in Listen state, discarding.");
 }
 
 void State::react(events::InputDone *) {
-  g_warning("FIXME received InputDone when not in Listen state, ignoring.");
+  g_debug("FIXME received InputDone when not in Listen state, ignoring.");
 }
 
 void State::react(events::InputNotDetected *) {
-  g_warning("FIXME received InputNotDetected when not in Listen state, "
-            "ignoring.");
+  g_debug("FIXME received InputNotDetected when not in Listen state, "
+          "ignoring.");
 }
 
 void State::react(events::InputTimeout *) {
-  g_warning("FIXME received InputTimeout when not in Listen state, ignoring.");
+  g_debug("FIXME received InputTimeout when not in Listen state, ignoring.");
 }
+
+// Genie Server Message Events
+// ---------------------------------------------------------------------------
+//
+// Dispatched when `genie::conversation::ConversationProtocol` receives a
+// message on the websocket from the Genie server.
+//
 
 void State::react(events::TextMessage *text_message) {
   g_message("Received TextMessage, saying text: %s\n",
             text_message->text.c_str());
-  app->audio_player->say(text_message->text, text_message->id);
+  app->transit(new Saying(app, text_message->id, text_message->text));
 }
 
 void State::react(events::AudioMessage *audio_message) {
@@ -95,6 +116,18 @@ void State::react(events::TogglePlayback *) {
   g_warning("TODO Playback toggled in state %s", NAME);
 }
 
+void State::react(events::Panic *) {
+  g_warning("PANIC!!! :D");
+  app->conversation_client.get()->send_thingtalk("$stop;");
+  app->spotifyd.get()->pause();
+  app->transit(new Sleeping(app));
+}
+
+void State::react(events::ToggleDisabled *) {
+  g_message("DISABLING...");
+  app->transit(new Disabled(app));
+}
+
 void State::react(events::PlayerStreamEnter *player_stream_enter) {
   g_message("Received PlayerStreamEnter with type=%d ref_id=%" G_GINT64_FORMAT
             ", ignoring.",
@@ -111,14 +144,15 @@ void State::react(events::PlayerStreamEnd *player_stream_end) {
 // ---------------------------------------------------------------------------
 
 void State::react(events::stt::TextResponse *response) {
-  g_warning("FIXME Received events::stt::TextResponse in state %s", NAME);
+  g_debug("FIXME Received events::stt::TextResponse in state %s", NAME);
 }
 
 void State::react(events::stt::ErrorResponse *response) {
-  g_warning("FIXME Received events::stt::ErrorResponse in state %s", NAME);
+  g_debug("FIXME Received events::stt::ErrorResponse in state %s", NAME);
 }
 
 // Audio Control Protocol
+// ---------------------------------------------------------------------------
 
 void State::react(events::audio::CheckSpotifyEvent *check_spotify) {
   app->spotifyd->set_credentials(check_spotify->username,

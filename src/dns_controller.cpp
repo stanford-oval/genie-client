@@ -18,11 +18,12 @@
 
 #include "dns_controller.hpp"
 
+#include <cstdio>
 #include <memory>
 #include <sstream>
-#include <cstdio>
 
-genie::DNSController::DNSController() {
+genie::DNSController::DNSController(const char *dns_server)
+    : dns_server(dns_server) {
   g_debug("Initializing DNS controller...");
 
   update_dns_config();
@@ -63,7 +64,8 @@ void genie::DNSController::update_dns_config() {
   char *contents;
   size_t size;
   GError *error = nullptr;
-  if (!g_file_get_contents("/data/wifi/resolv.conf", &contents, &size, &error)) {
+  if (!g_file_get_contents("/data/wifi/resolv.conf", &contents, &size,
+                           &error)) {
     g_warning("Failed to read new DNS configuration: %s", error->message);
     g_error_free(error);
     return;
@@ -95,7 +97,7 @@ void genie::DNSController::update_dns_config() {
   if (!any_change)
     return;
   if (!any_nameserver)
-    new_buffer << "nameserver 8.8.8.8" << std::endl;
+    new_buffer << "nameserver " << dns_server << std::endl;
 
   std::string new_contents(new_buffer.str());
   if (!g_file_set_contents("/data/wifi/resolv.conf", new_contents.c_str(), -1,

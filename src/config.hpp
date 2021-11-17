@@ -25,15 +25,29 @@ namespace genie {
 class Config {
 public:
   static const size_t DEFAULT_WS_RETRY_INTERVAL = 3000;
+  static const size_t DEFAULT_CONNECT_TIMEOUT = 5000;
   static const size_t VAD_MIN_MS = 100;
   static const size_t VAD_MAX_MS = 5000;
   static const size_t DEFAULT_VAD_START_SPEAKING_MS = 2000;
-  static const size_t DEFAULT_VAD_DONE_SPEAKING_MS = 500;
-  static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 640;
+  static const size_t DEFAULT_VAD_DONE_SPEAKING_MS = 300;
+  static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 300;
+
+  // Max time spent in AudioInput LISTENING state
+  static const size_t DEFAULT_VAD_LISTEN_TIMEOUT_MS = 10000;
+  static const size_t VAD_LISTEN_TIMEOUT_MIN_MS = 1000;
+  static const size_t VAD_LISTEN_TIMEOUT_MAX_MS = 100000;
+
   static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
   static const constexpr char *DEFAULT_NLP_URL =
       "https://nlp-staging.almond.stanford.edu";
   static const constexpr char *DEFAULT_LOCALE = "en-US";
+
+  // Hacks Defaults
+  // ---------------------------------------------------------------------------
+
+  static const bool DEFAULT_HACKS_WAKE_WORD_VERIFICATION = true;
+  static const bool DEFAULT_HACKS_SURPRESS_REPEATED_NOTIFS = false;
+  static const constexpr char *DEFAULT_HACKS_DNS_SERVER = "8.8.8.8";
 
   // Picovoice Defaults
   // -------------------------------------------------------------------------
@@ -45,7 +59,7 @@ public:
   static const constexpr char *DEFAULT_PV_KEYWORD_PATH = "assets/keyword.ppn";
   static const constexpr float DEFAULT_PV_SENSITIVITY = 0.7f;
   static const constexpr char *DEFAULT_PV_WAKE_WORD_PATTERN =
-      "^computer[.,!?]?";
+      "^computers?[.,!?]?";
 
   // Sound Defaults
   // -------------------------------------------------------------------------
@@ -80,6 +94,8 @@ public:
   static const constexpr char *DEFAULT_LEDS_ERROR_COLOR = "ff0000";
   static const constexpr char *DEFAULT_LEDS_NET_ERROR_EFFECT = "circular";
   static const constexpr char *DEFAULT_LEDS_NET_ERROR_COLOR = "ffa500";
+  static const constexpr char *DEFAULT_LEDS_DISABLED_EFFECT = "solid";
+  static const constexpr char *DEFAULT_LEDS_DISABLED_COLOR = "ff0000";
 
   Config();
   ~Config();
@@ -96,6 +112,7 @@ public:
 
   gchar *genie_url;
   size_t retry_interval;
+  size_t connect_timeout;
   gchar *genie_access_token;
   gchar *conversation_id;
   gchar *nl_url;
@@ -133,6 +150,44 @@ public:
    * @brief The general/main audio output device; used to control volume.
    */
   gchar *audio_output_device;
+
+  // Hacks
+  // -------------------------------------------------------------------------
+  //
+  // Little tricks and tweaks that can help in some specific situations.
+  //
+
+  /**
+   * @brief Verify presence of wake-word at start of STT response before sending
+   * to Genie server.
+   *
+   * When this setting is `true` Speech-To-Text (STT) responses must match the
+   * `pv_wake_word_pattern` to be sent to the server for processing. STT results
+   * the do _not_ match the pattern are silently discarded.
+   *
+   * When this works well it prevents false positives in wake-word detection
+   * from sending junk to the server. However -- particularly with "Genie"
+   * wake-word variations that we've tested -- the STT produces a wide range of
+   * wake-word transcriptions, making it difficult to craft a pattern that
+   * matches all of them. This results in a non-negligible amount of false
+   * negatives where the client aborts legitimate requests.
+   *
+   * Setting this flag to `false` can help in situations where you're not
+   * concerned about mis-wakes making server requests.
+   */
+  bool hacks_wake_word_verification;
+
+  /**
+   * At the moment (2021-09-30) we have a bug where the server sends
+   * notifications _twice_, which is annoying. This switch enabled client-side
+   * detection and supression of repeated notifications.
+   */
+  bool hacks_surpress_repeated_notifs;
+
+  /**
+   * DNS server for `genie::DNSController`.
+   */
+  char *hacks_dns_server;
 
   // Picovoice (Wake-Word Detection)
   // -------------------------------------------------------------------------
@@ -180,6 +235,8 @@ public:
   gint leds_error_color;
   gint leds_net_error_effect;
   gint leds_net_error_color;
+  gint leds_disabled_effect;
+  gint leds_disabled_color;
 
   // System
   // -------------------------------------------------------------------------
@@ -196,6 +253,7 @@ public:
   size_t vad_start_speaking_ms;
   size_t vad_done_speaking_ms;
   size_t vad_input_detected_noise_ms;
+  size_t vad_listen_timeout_ms;
 
 protected:
 private:
@@ -216,6 +274,8 @@ private:
   double get_bounded_double(GKeyFile *key_file, const char *section,
                             const char *key, const double default_value,
                             const double min, const double max);
+  bool get_bool(GKeyFile *key_file, const char *section, const char *key,
+                const bool default_value);
 };
 
 } // namespace genie

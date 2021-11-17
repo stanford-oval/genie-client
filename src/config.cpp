@@ -175,16 +175,16 @@ size_t genie::Config::get_bounded_size(GKeyFile *key_file, const char *section,
 
   if (value < (ssize_t)min) {
     g_warning("CONFIG [%s] %s must be %zd or greater, found %zd. "
-              "Setting to default (%zd).",
-              section, key, min, value, default_value);
-    return default_value;
+              "Setting to minimum.",
+              section, key, min, value);
+    return min;
   }
 
   if (value > (ssize_t)max) {
     g_warning("CONFIG [%s] %s must be %zd or less, found %zd. "
-              "Setting to default (%zd).",
-              section, key, max, value, default_value);
-    return default_value;
+              "Setting to maximum.",
+              section, key, max, value);
+    return max;
   }
 
   return value;
@@ -230,6 +230,19 @@ double genie::Config::get_bounded_double(GKeyFile *key_file,
   return value;
 }
 
+bool genie::Config::get_bool(GKeyFile *key_file, const char *section,
+                             const char *key, const bool default_value) {
+  GError *error = NULL;
+  gboolean value = g_key_file_get_boolean(key_file, section, key, &error);
+  if (error != NULL) {
+    g_warning("Failed to load [%s] %s from config file, using default %s",
+              section, key, default_value ? "true" : "false");
+    g_error_free(error);
+    return default_value;
+  }
+  return static_cast<bool>(value);
+}
+
 void genie::Config::load() {
   std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
       auto_key_file(g_key_file_new());
@@ -254,6 +267,9 @@ void genie::Config::load() {
   retry_interval = get_size(key_file, "general", "retry_interval",
                             DEFAULT_WS_RETRY_INTERVAL);
 
+  connect_timeout =
+      get_size(key_file, "general", "connect_timeout", DEFAULT_CONNECT_TIMEOUT);
+
   genie_access_token =
       g_key_file_get_string(key_file, "general", "accessToken", &error);
   if (error) {
@@ -267,6 +283,16 @@ void genie::Config::load() {
     nl_url = g_strdup(DEFAULT_NLP_URL);
     g_clear_error(&error);
   }
+
+  error = NULL;
+  locale = g_key_file_get_string(key_file, "general", "locale", &error);
+  if (error) {
+    locale = g_strdup(DEFAULT_LOCALE);
+    g_clear_error(&error);
+  }
+
+  g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\nlocale: %s\n",
+          genie_url, genie_access_token, nl_url, locale);
 
   error = NULL;
   locale = g_key_file_get_string(key_file, "general", "locale", &error);
@@ -396,6 +422,20 @@ void genie::Config::load() {
     audio_ec_loopback = false;
   }
 
+  // Hacks
+  // =========================================================================
+
+  hacks_wake_word_verification =
+      get_bool(key_file, "hacks", "wake_word_verification",
+               DEFAULT_HACKS_WAKE_WORD_VERIFICATION);
+
+  hacks_surpress_repeated_notifs =
+      get_bool(key_file, "hacks", "surpress_repeated_notifs",
+               DEFAULT_HACKS_SURPRESS_REPEATED_NOTIFS);
+
+  hacks_dns_server =
+      get_string(key_file, "hacks", "dns_server", DEFAULT_HACKS_DNS_SERVER);
+
   // Picovoice
   // =========================================================================
 
@@ -445,6 +485,8 @@ void genie::Config::load() {
   if (buttons_enabled) {
     evinput_device =
         get_string(key_file, "buttons", "evinput_dev", DEFAULT_EVINPUT_DEV);
+  } else {
+    evinput_device = nullptr;
   }
 
   // Leds
@@ -502,6 +544,13 @@ void genie::Config::load() {
         key_file, "leds", "net_error_effect", DEFAULT_LEDS_NET_ERROR_EFFECT);
     leds_net_error_color = get_dec_color_from_hex_string(
         key_file, "leds", "net_error_color", DEFAULT_LEDS_NET_ERROR_COLOR);
+    leds_disabled_effect = get_leds_effect_string(
+        key_file, "leds", "disabled_effect", DEFAULT_LEDS_DISABLED_EFFECT);
+    leds_disabled_color = get_dec_color_from_hex_string(
+        key_file, "leds", "diabled_color", DEFAULT_LEDS_DISABLED_COLOR);
+  } else {
+    leds_type = nullptr;
+    leds_path = nullptr;
   }
 
   // System
@@ -560,4 +609,8 @@ void genie::Config::load() {
   vad_input_detected_noise_ms = get_bounded_size(
       key_file, "vad", "input_detected_noise_ms",
       DEFAULT_VAD_INPUT_DETECTED_NOISE_MS, VAD_MIN_MS, VAD_MAX_MS);
+
+  vad_listen_timeout_ms = get_bounded_size(
+      key_file, "vad", "listen_timeout_ms", DEFAULT_VAD_LISTEN_TIMEOUT_MS,
+      VAD_LISTEN_TIMEOUT_MIN_MS, VAD_LISTEN_TIMEOUT_MAX_MS);
 }

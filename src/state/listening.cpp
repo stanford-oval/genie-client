@@ -31,7 +31,8 @@ namespace genie {
 namespace state {
 
 void Listening::enter() {
-  g_message("ENTER state Listening\n");
+  State::enter();
+
   app->leds->animate(LedsState_t::Listening);
   app->stt->begin_session(is_follow_up);
   app->audio_input->wake();
@@ -46,7 +47,7 @@ void Listening::enter() {
 }
 
 void Listening::react(events::Wake *) {
-  g_warning("FIXME Received Wake event while in Listening state.\n");
+  g_debug("FIXME Received Wake event while in Listening state.\n");
 }
 
 void Listening::react(events::InputFrame *input_frame) {

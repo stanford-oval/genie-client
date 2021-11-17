@@ -24,8 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "audio/audioplayer.hpp"
 #include "../spotifyd.hpp"
+#include "audio/audioplayer.hpp"
 
 #include "audio.hpp"
 #include "client.hpp"
@@ -33,6 +33,8 @@
 
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::conversation::Client"
+
+using namespace std::literals;
 
 bool genie::conversation::Client::is_connected() {
   if (!m_connection) {
@@ -187,16 +189,41 @@ void genie::conversation::Client::on_message(SoupWebsocketConnection *conn,
 
 void genie::conversation::Client::on_close(SoupWebsocketConnection *conn,
                                            gpointer data) {
-  conversation::Client *obj = static_cast<conversation::Client *>(data);
+  conversation::Client *self = static_cast<conversation::Client *>(data);
   // soup_websocket_connection_close(conn, SOUP_WEBSOCKET_CLOSE_NORMAL, NULL);
 
   const char *close_data = soup_websocket_connection_get_close_data(conn);
 
   gushort code = soup_websocket_connection_get_close_code(conn);
-  g_warning("Genie WebSocket connection closed: %d %s", code, close_data);
+  g_warning("Genie WebSocket connection closed after %.1LF seconds: %d %s",
+            (std::chrono::steady_clock::now() - self->connect_time) / 1.s, code,
+            close_data);
+  if (self->ping_timeout_id > 0)
+    g_source_remove(self->ping_timeout_id);
+  self->ping_timeout_id = 0;
 
-  obj->ready = false;
-  obj->retry_connect();
+  self->ready = false;
+  self->retry_connect();
+}
+
+gboolean genie::conversation::Client::send_ping(gpointer data) {
+  conversation::Client *self = static_cast<conversation::Client *>(data);
+
+  if (!self->ready) {
+    self->ping_timeout_id = 0;
+    return G_SOURCE_REMOVE;
+  }
+
+  auto_gobject_ptr<JsonBuilder> builder(json_builder_new(), adopt_mode::owned);
+
+  json_builder_begin_object(builder.get());
+  json_builder_set_member_name(builder.get(), "type");
+  json_builder_add_string_value(builder.get(), "ping");
+  json_builder_end_object(builder.get());
+
+  self->send_json_now(builder.get());
+
+  return G_SOURCE_CONTINUE;
 }
 
 void genie::conversation::Client::on_connection(SoupSession *session,
@@ -216,6 +243,9 @@ void genie::conversation::Client::on_connection(SoupSession *session,
     return;
   }
   g_debug("Connected successfully to Genie conversation websocket");
+  self->connect_time = std::chrono::steady_clock::now();
+
+  self->ping_timeout_id = g_timeout_add_seconds(30, send_ping, self);
 
   soup_websocket_connection_set_max_incoming_payload_size(
       self->m_connection.get(), 512000);
@@ -236,14 +266,17 @@ void genie::conversation::Client::mark_ready() {
 }
 
 genie::conversation::Client::Client(App *appInstance)
-    : app(appInstance), ready(false) {
+    : app(appInstance), ready(false), ping_timeout_id(0) {
   accessToken = g_strdup(app->config->genie_access_token);
   url = g_strdup(app->config->genie_url);
   main_parser.reset(new ConversationProtocol(this));
   ext_parsers.emplace("audio", new AudioProtocol(this));
 }
 
-genie::conversation::Client::~Client() {}
+genie::conversation::Client::~Client() {
+  if (ping_timeout_id > 0)
+    g_source_remove(ping_timeout_id);
+}
 
 int genie::conversation::Client::init() {
   connect();

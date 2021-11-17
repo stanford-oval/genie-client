@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import mkstemp
 from typing import Any, List, Literal, Optional, Union
 import os
-from subprocess import DEVNULL
+from subprocess import DEVNULL, PIPE, Popen
 import shlex
 
 from clavier import sh, log as logging
@@ -71,6 +71,7 @@ class Remote(ABC):
             encoding=encoding,
         )
 
+
 class ADBRemote(Remote):
     def write(
         self,
@@ -127,13 +128,13 @@ class SSHRemote(Remote):
         log=LOG,
         chdir: Union[None, Path, str] = None,
         **opts,
-    ) -> None:
+    ):
         if chdir is not None:
             raise NotImplementedError(
                 "Can not set directory for ssh remote command"
             )
 
-        sh.run("ssh", self._target, *args, log=log, **opts)
+        return sh.run("ssh", self._target, *args, log=log, **opts)
 
     def write(
         self,
@@ -167,7 +168,7 @@ class SSHRemote(Remote):
         )
 
     def rm(self, path: Union[str, Path]) -> sh.Result:
-        return sh.run("ssh", self._target, "rm", "-rf", path)
+        return self.run("rm", "-rf", path)
 
     def push(self, src: Union[str, Path], dest: Union[str, Path]):
         if isinstance(src, str):
@@ -177,11 +178,15 @@ class SSHRemote(Remote):
 
         LOG.info("Pushing...", src=src, dest=dest)
 
+        if not self.is_dir(dest.parent):
+            LOG.info("Creating destination parent directory...")
+            self.run("mkdir", "-p", dest.parent)
+
         if src.is_dir():
             if self.is_dir(dest):
                 LOG.info(
                     "Removing destination in order to push directory...",
-                    dest=dest
+                    dest=dest,
                 )
                 self.rm(dest)
 
@@ -192,3 +197,34 @@ class SSHRemote(Remote):
             f"{self._target}:{dest}",
             stdout=DEVNULL,
         )
+
+    def pull(self, src: Union[str, Path], dest: Union[str, Path]):
+        if isinstance(src, str):
+            src = Path(str)
+        if isinstance(dest, str):
+            dest = Path(dest)
+
+        LOG.info("Pulling...", src=src, dest=dest)
+
+        if not dest.parent.is_dir():
+            LOG.info("Creating destination parent directory...")
+            dest.parent.mkdir(parents=True)
+
+        sh.run(
+            "scp",
+            {"r": self.is_dir(src)},
+            f"{self._target}:{src}",
+            dest,
+            stdout=DEVNULL,
+        )
+
+    def spawn(self, *cmd: str) -> Popen:
+        return Popen(
+            ["ssh", self._target, *cmd],
+            encoding="utf-8",
+            stdout=PIPE,
+            stderr=PIPE,
+        )
+
+    def exec(self, *cmd: str, **opts):
+        return sh.run("ssh", self._target, *cmd, **opts)

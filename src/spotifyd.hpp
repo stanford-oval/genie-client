@@ -29,6 +29,7 @@ public:
   ~Spotifyd();
   int init();
   int close();
+  void pause();
   bool set_credentials(const std::string &username,
                        const std::string &access_token);
 

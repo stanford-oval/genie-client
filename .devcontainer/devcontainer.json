@@ -32,6 +32,7 @@
 		"ms-vscode.cpptools",
 		"streetsidesoftware.code-spell-checker",
 		"asabil.meson",
+		"ms-python.python",
 	],
 	
 	"workspaceMount": "source=${localWorkspaceFolder},target=/src,type=bind,consistency=delegated",

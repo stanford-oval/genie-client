@@ -16,34 +16,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
+#include "state/disabled.hpp"
+#include "app.hpp"
+#include "audio/audioplayer.hpp"
+#include "audio/audiovolume.hpp"
+#include "leds.hpp"
+#include "spotifyd.hpp"
+#include "state/sleeping.hpp"
+#include "ws-protocol/client.hpp"
 
-#include "events.hpp"
-#include "state.hpp"
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "genie::state::Disabled"
 
 namespace genie {
 namespace state {
 
-class Listening : public State {
-public:
-  static const constexpr char *NAME = "Listening";
+void Disabled::enter() {
+  State::enter();
+  app->leds->animate(LedsState_t::Disabled);
+}
 
-  Listening(App *app) : State{app} {}
-  Listening(App *app, bool is_follow_up)
-      : State{app}, is_follow_up(is_follow_up) {}
+void Disabled::exit() { State::exit(); }
 
-  void enter() override;
-  const char *name() override { return NAME; };
+void Disabled::react(events::Panic *) {
+  g_warning("PANIC!!! :D");
+  app->conversation_client.get()->send_thingtalk("$stop;");
+  app->spotifyd.get()->pause();
+}
 
-  void react(events::Wake *) override;
-  void react(events::InputFrame *input_frame) override;
-  void react(events::InputDone *) override;
-  void react(events::InputNotDetected *) override;
-  void react(events::InputTimeout *) override;
+void Disabled::react(events::ToggleDisabled *) {
+  g_message("ENABLING....");
+  app->transit(new Sleeping(app));
+}
 
-private:
-  bool is_follow_up = false;
-};
+void Disabled::react(events::audio::StopEvent *event) {
+  app->audio_player->stop();
+  event->resolve();
+}
 
 } // namespace state
 } // namespace genie

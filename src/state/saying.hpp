@@ -32,6 +32,7 @@ public:
       : State{app}, text_id(text_id), text(text) {}
 
   void enter() override;
+  const char *name() override { return NAME; };
 
   void react(events::AskSpecialMessage *ask_special_message) override;
   void react(events::PlayerStreamEnter *player_stream_enter) override;

@@ -29,15 +29,11 @@ enum class LedsState_t {
   Processing,
   Saying,
   Error,
-  NetError
+  NetError,
+  Disabled
 };
 
-enum class LedsAnimation_t {
-  None,
-  Solid,
-  Circular,
-  Pulse
-};
+enum class LedsAnimation_t { None, Solid, Circular, Pulse };
 
 class Leds {
 public:
@@ -61,6 +57,7 @@ protected:
 
   static gboolean update_circular(gpointer data);
   static gboolean update_pulse(gpointer data);
+
 private:
   bool initialized;
   App *app;

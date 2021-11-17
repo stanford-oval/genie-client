@@ -30,6 +30,7 @@ genie::Leds::Leds(App *appInstance) {
   initialized = false;
   update_timer_circular = false;
   update_timer_pulse = false;
+  ctrl_path_base = nullptr;
   ctrl_path_all = nullptr;
   ctrl_path_brightness = nullptr;
   leds = nullptr;
@@ -112,6 +113,11 @@ void genie::Leds::animate(LedsState_t state) {
       g_debug("leds error\n");
       animate_internal((LedsAnimation_t)app->config->leds_net_error_effect,
                        app->config->leds_net_error_color);
+      break;
+    case LedsState_t::Disabled:
+      g_debug("leds disabled\n");
+      animate_internal((LedsAnimation_t)app->config->leds_disabled_effect,
+                       app->config->leds_disabled_color);
       break;
   }
 }

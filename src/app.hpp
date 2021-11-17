@@ -27,8 +27,11 @@
 #include <memory>
 #include <queue>
 #include <sys/time.h>
+#include <thread>
 
 #include "audio/audio.hpp"
+
+#include "state/disabled.hpp"
 #include "state/events.hpp"
 #include "state/listening.hpp"
 #include "state/processing.hpp"
@@ -90,6 +93,7 @@ class App {
   friend class state::Listening;
   friend class state::Processing;
   friend class state::Saying;
+  friend class state::Disabled;
 
 public:
   // =========================================================================
@@ -170,6 +174,7 @@ private:
   // Private Instance Members
   // -------------------------------------------------------------------------
 
+  std::thread::id main_thread;
   GMainLoop *main_loop;
   auto_gobject_ptr<SoupSession> soup_session;
 
@@ -304,6 +309,7 @@ private:
    * `state::State::enter()` on the `new_state`.
    */
   template <typename S> void transit(S *new_state) {
+    g_assert(std::this_thread::get_id() == main_thread);
     g_message("TRANSIT to %s", S::NAME);
     current_state->exit();
     delete current_state;

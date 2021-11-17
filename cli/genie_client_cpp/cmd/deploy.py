@@ -1,8 +1,8 @@
 import re
 from argparse import BooleanOptionalAction
-from typing import Union
+from typing import List, Union, Optional
 
-from clavier import log as logging, CFG
+from clavier import log as logging
 
 from genie_client_cpp.config import CONFIG
 from genie_client_cpp.remote import Remote
@@ -20,9 +20,15 @@ COMMANDS_TO_KILL = (
     re.compile(r"^/tmp/spotifyd\s"),
 )
 
-OUT_PATHS = CFG.genie_client_cpp.paths.out
-SCRIPT_PATHS = CFG.genie_client_cpp.paths.scripts
-DEPLOY_PATHS = CFG.genie_client_cpp.xiaodu.paths
+
+class MultipleChoice(list):
+    def __contains__(self, value):
+        if isinstance(value, list):
+            for item in value:
+                if not super().__contains__(value):
+                    return False
+            return True
+        return super().__contains__(value)
 
 
 def add_to(subparsers):
@@ -33,42 +39,12 @@ def add_to(subparsers):
     )
 
     parser.add_argument(
-        "target",
-        nargs="?",
+        "-t",
+        "--target",
         help=(
             "_destination_ argument for `ssh` or 'adb' to use Android debugger "
             "over a USB cable"
         ),
-    )
-
-    parser.add_argument(
-        "-x",
-        "--exe",
-        action="store_true",
-        default=False,
-        help="Push the `genie` bin to the target",
-    )
-
-    parser.add_argument(
-        "-c",
-        "--config",
-        action="store_true",
-        default=False,
-        help="Push `config.ini` to the target",
-    )
-
-    parser.add_argument(
-        "--pulse-config",
-        action="store_true",
-        default=False,
-        help="Push PulseAudio config file to the target",
-    )
-
-    parser.add_argument(
-        "--assets",
-        action="store_true",
-        default=False,
-        help="Deploy the assets",
     )
 
     parser.add_argument(
@@ -87,72 +63,34 @@ def add_to(subparsers):
         help="Pass `--progress plain` to `docker build` (real Docker only!)",
     )
 
-
-@LOG.inject
-def deploy_all(target: str, log=LOG):
-    log.info("FULL deploy (kill, remove, deploy all)...")
-
-    remove.run(target)
-
-    remote = Remote.create(target)
-
-    remote.run("mkdir", "-p", CFG.genie_client_cpp.xiaodu.paths.install)
-    remote.push(OUT_PATHS.lib, DEPLOY_PATHS.lib)
-
-    deploy_assets(remote)
-
-    remote.push(SCRIPT_PATHS.launch, DEPLOY_PATHS.launch)
-    remote.push(SCRIPT_PATHS.asoundrc, DEPLOY_PATHS.asoundrc)
-    deploy_config(remote)
-    deploy_exe(remote)
-    remote.push(OUT_PATHS.pulseaudio, DEPLOY_PATHS.pulseaudio)
-    # remote.push(OUT_PATHS.gdbserver, DEPLOY_PATHS.gdbserver)
-    deploy_pulse_config(remote)
-
-@LOG.inject
-def deploy_exe(target: Union[str, Remote], log=LOG):
-    log.info("Deploying executable...")
-    kill.run(target)
-    Remote.create(target).push(OUT_PATHS.exe, DEPLOY_PATHS.exe)
-
-@LOG.inject
-def deploy_config(target: Union[str, Remote], log=LOG):
-    log.info("Deploying config file...")
-    Remote.create(target).push(OUT_PATHS.config, DEPLOY_PATHS.config)
-
-@LOG.inject
-def deploy_assets(target: Union[str, Remote], log=LOG):
-    log.info("Deploying assets...")
-    Remote.create(target).push(OUT_PATHS.assets, DEPLOY_PATHS.assets)
-
-@LOG.inject
-def deploy_pulse_config(target: Union[str, Remote], log=LOG):
-    log.info("Deploying PulseAudio config...")
-    Remote.create(target).push(SCRIPT_PATHS.pulseaudio_config, DEPLOY_PATHS.pulseaudio_config)
+    parser.add_argument(
+        "deployables",
+        nargs="*",
+        choices=MultipleChoice(CONFIG.xiaodu.deployables.keys()),
+        help="List of what to deploy. If empty, deploy everything.",
+    )
 
 
 @Context.inject_current
 def run(
-    target: str,
+    target: Union[str, Remote],
+    deployables: List[str],
     *,
-    build: bool,
-    plain: bool,
-    exe: bool,
-    config: bool,
-    assets: bool,
-    pulse_config: bool,
+    build: bool = False,
+    plain: bool = False,
 ):
     if build:
-        build_cmd.run(exe_only=exe, plain=plain)
+        build_cmd.run(exe_only=("exe" in deployables), plain=plain)
 
-    if exe or config or assets or pulse_config:
-        if exe:
-            deploy_exe(target)
-        if config:
-            deploy_config(target)
-        if assets:
-            deploy_assets(target)
-        if pulse_config:
-            deploy_pulse_config(target)
-    else:
-        deploy_all(target)
+    kill.run(target)
+
+    remote = Remote.create(target)
+
+    if len(deployables) == 0:
+        LOG.info("Deploying EVERYTHING!")
+        deployables = CONFIG.xiaodu.deployables.keys()
+
+    for deployable_name in deployables:
+        deployable = CONFIG.xiaodu.deployables[deployable_name]
+        LOG.info(f"Deploying `{deployable_name}`...")
+        remote.push(deployable["src"], deployable["dest"])

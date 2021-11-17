@@ -21,6 +21,7 @@
 #include <glib-unix.h>
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <json-glib/json-glib.h>
 #include <signal.h>
 #include <string.h>
 #include <sys/prctl.h>
@@ -120,6 +121,60 @@ int genie::Spotifyd::close() {
     return kill(child_pid, SIGINT);
   }
   return true;
+}
+
+static void on_pause_sent(SoupSession *session, SoupMessage *msg,
+                          gpointer data) {
+  GError *error = nullptr;
+
+  guint status_code;
+  gchar *status_reason = nullptr;
+  g_object_get(msg, "status-code", &status_code, "reason-phrase",
+               &status_reason, nullptr);
+
+  g_message("Sent pause request to Spotify, got HTTP %u: %s", status_code,
+            status_reason);
+
+  if (status_code >= 400) {
+    GBytes *bytes = nullptr;
+    g_object_get(msg, "response-body-data", &bytes, nullptr);
+
+    gsize size;
+    g_warning("Failed to pause spotifyd through the API: %s",
+              (const char *)g_bytes_get_data(bytes, &size));
+    g_bytes_unref(bytes);
+  }
+  g_free(status_reason);
+}
+
+void genie::Spotifyd::pause() {
+  // compute the device ID of spotifyd
+  // it is the sha1 of the device name
+  // we pass on the command-line
+  std::unique_ptr<GChecksum, fn_deleter<GChecksum, g_checksum_free>> checksum(
+      g_checksum_new(G_CHECKSUM_SHA1));
+  g_checksum_update(checksum.get(), (const unsigned char *)"genie-cpp",
+                    strlen("genie-cpp"));
+  const gchar *device_id = g_checksum_get_string(checksum.get());
+
+  g_debug("Sending request to Spotify to pause spotifyd (%s)", device_id);
+  std::unique_ptr<SoupURI, fn_deleter<SoupURI, soup_uri_free>> uri(
+      soup_uri_new("https://api.spotify.com/v1/me/player/pause"));
+  soup_uri_set_query_from_fields(uri.get(), "device_id", device_id, nullptr);
+
+  SoupMessage *msg = soup_message_new_from_uri("PUT", uri.get());
+  soup_message_set_request(msg, "application/json", SOUP_MEMORY_STATIC, "", 0);
+
+  SoupMessageHeaders *headers;
+  g_object_get(msg, "request-headers", &headers, nullptr);
+  soup_message_headers_set_encoding(headers, SOUP_ENCODING_CONTENT_LENGTH);
+
+  char *authorization = g_strdup_printf("Bearer %s", access_token.c_str());
+  soup_message_headers_append(headers, "Authorization", authorization);
+  g_free(authorization);
+
+  soup_session_queue_message(app->get_soup_session(), msg, on_pause_sent,
+                             nullptr);
 }
 
 void genie::Spotifyd::child_watch_cb(GPid pid, gint status, gpointer data) {

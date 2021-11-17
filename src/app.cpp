@@ -40,7 +40,10 @@ double time_diff_ms(struct timeval x, struct timeval y) {
   return time_diff(x, y) / 1000;
 }
 
-genie::App::App() { is_processing = FALSE; }
+genie::App::App() {
+  main_thread = std::this_thread::get_id();
+  is_processing = FALSE;
+}
 
 genie::App::~App() { g_main_loop_unref(main_loop); }
 
@@ -52,14 +55,16 @@ void genie::App::init_soup() {
   // initialize a shared SoupSession to be used by all outgoing connections
   if (config->ssl_ca_file) {
     soup_session = auto_gobject_ptr<SoupSession>(
-        soup_session_new_with_options("ssl-strict", config->ssl_strict,
-                                      "ssl-ca-file", config->ssl_ca_file,
-                                      "proxy-resolver", resolver, NULL),
+        soup_session_new_with_options(
+            "ssl-strict", config->ssl_strict, "ssl-ca-file",
+            config->ssl_ca_file, "proxy-resolver", resolver, "timeout",
+            (unsigned int)config->connect_timeout, NULL),
         adopt_mode::owned);
   } else {
     soup_session = auto_gobject_ptr<SoupSession>(
-        soup_session_new_with_options("ssl-strict", config->ssl_strict,
-                                      "proxy-resolver", resolver, NULL),
+        soup_session_new_with_options(
+            "ssl-strict", config->ssl_strict, "proxy-resolver", resolver,
+            "timeout", (unsigned int)config->connect_timeout, NULL),
         adopt_mode::owned);
   }
 
@@ -140,8 +145,9 @@ int genie::App::exec(int argc, char *argv[]) {
   ev_input = std::make_unique<EVInput>(this);
   ev_input->init();
 
-  if (config->dns_controller_enabled)
-    dns_controller = std::make_unique<DNSController>();
+  if (config->dns_controller_enabled) {
+    dns_controller = std::make_unique<DNSController>(config->hacks_dns_server);
+  }
 
   this->current_state = new state::Sleeping(this);
   this->current_state->enter();

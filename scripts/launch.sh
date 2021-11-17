@@ -5,7 +5,7 @@ export HOME=/opt/genie
 if [ -z "$(pidof ntpd)" ]; then
 	/usr/bin/start_ntp.sh &
 fi
-amixer -D hw:audiocodec cset name='LINEOUT volume' 3
+amixer -D hw:audiocodec cset name='LINEOUT volume' 9
 amixer -D hw:audiocodec cset name='MIC1 gain volume' 6.5
 amixer -D hw:audiocodec cset name='MIC2 gain volume' 6.5
 
@@ -27,7 +27,7 @@ while [ $RET -ne 0 ]; do
 	if test "$1" = "--gdb" ; then
 		./gdbserver 0.0.0.0:${GDB_PORT:-1234} ./genie
 	else
-		./genie
+		./genie >>/tmp/genie.log 2>&1
 	fi
 	RET=$?
 done

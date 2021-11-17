@@ -20,12 +20,17 @@
 #include "alsa.hpp"
 #include "pulsesimple.hpp"
 
+// note: we need to redefine G_LOG_DOMAIN here or the definition will
+// bleed into the functions declared in the header, which will break
+// the logging, but also break the One Definition Rule and cause potential havoc
+#undef G_LOG_DOMAIN
+#define G_LOG_DOMAIN "genie::AudioInput"
+
 genie::AudioInputDriver::~AudioInputDriver() {}
 
 genie::AudioInput::AudioInput(App *app)
-    : app(app), vad_instance(WebRtcVad_Create()),
-      wakeword(nullptr), input(nullptr),
-      state(State::WAITING) {}
+    : app(app), vad_instance(WebRtcVad_Create()), wakeword(nullptr),
+      input(nullptr), state(State::WAITING) {}
 
 genie::AudioInput::~AudioInput() {
   WebRtcVad_Free(vad_instance);
@@ -105,7 +110,14 @@ int genie::AudioInput::init() {
             app->config->vad_input_detected_noise_ms,
             vad_input_detected_noise_frame_count);
 
-  g_print("Initialized audio input\n");
+  vad_listen_timeout_frame_count = ms_to_frames(
+      AUDIO_INPUT_VAD_FRAME_LENGTH, app->config->vad_listen_timeout_ms);
+  g_message("Calculated listen timeout frame count: %zd ms "
+            "-> %zd frames",
+            app->config->vad_listen_timeout_ms, vad_listen_timeout_frame_count);
+
+  g_message("Initialized audio input with %s backend\n",
+            app->config->audio_backend);
   input_thread = std::thread(&AudioInput::loop, this);
   return 0;
 }
@@ -209,6 +221,7 @@ void genie::AudioInput::loop_waiting() {
     return;
   }
 
+  g_message("Wakeword detected in waiting state");
   app->dispatch(new state::events::Wake());
 
   g_debug("Sending prior %zd frames\n", frame_buffer.size());
@@ -232,19 +245,31 @@ void genie::AudioInput::loop_woke() {
   state_woke_frame_count += 1;
 
   // Run Voice Activity Detection (VAD) against the frame
-  int vad_result = WebRtcVad_Process(vad_instance, sample_rate, new_frame.samples,
-                                     AUDIO_INPUT_VAD_FRAME_LENGTH);
+
+  // NOTE: this must run BEFORE we send the frame to the main thread
+  // because the frame will become null when we send it
+  int vad_result =
+      WebRtcVad_Process(vad_instance, sample_rate, new_frame.samples,
+                        AUDIO_INPUT_VAD_FRAME_LENGTH);
+
+  app->dispatch(new state::events::InputFrame(std::move(new_frame)));
 
   app->dispatch(new state::events::InputFrame(std::move(new_frame)));
 
   if (vad_result == VAD_IS_SILENT) {
+    g_debug("Frame %zu is silent in woke state (silent: %zu, noise: %zu)",
+            state_woke_frame_count, state_vad_silent_count,
+            state_vad_noise_count);
     // We picked up silence
     //
     // Increment the silent count
     state_vad_silent_count += 1;
     // Set the noise count to zero
-    state_vad_noise_count = 0;
+    // state_vad_noise_count = 0;
   } else if (vad_result == VAD_NOT_SILENT) {
+    g_debug("Frame %zu is not silent in woke state (silent: %zu, noise: %zu)",
+            state_woke_frame_count, state_vad_silent_count,
+            state_vad_noise_count);
     // We picked up silence
     //
     // Increment the noise count
@@ -253,6 +278,8 @@ void genie::AudioInput::loop_woke() {
     state_vad_silent_count = 0;
 
     if (state_vad_noise_count >= vad_input_detected_noise_frame_count) {
+      g_debug("Detected %zu frames of noise, transition to listening",
+              state_vad_noise_count);
       // We have measured the configured amount of consecutive noise frames,
       // which means we have detected input.
       //
@@ -263,6 +290,7 @@ void genie::AudioInput::loop_woke() {
   }
 
   if (state_woke_frame_count >= vad_start_frame_count) {
+    g_debug("Not detected VAD input after %zu frames", vad_start_frame_count);
     // We have not detected speech over the start frame count, give up
     app->dispatch(new state::events::InputDone(false));
     transition(State::WAITING);
@@ -276,17 +304,36 @@ void genie::AudioInput::loop_listening() {
     return;
   }
 
+  state_woke_frame_count += 1;
+
+  // Run Voice Activity Detection (VAD) against the frame
+
+  // NOTE: this must run BEFORE we send the frame to the main thread
+  // because the frame will become null when we send it
   int silence = WebRtcVad_Process(vad_instance, sample_rate, new_frame.samples,
                                   AUDIO_INPUT_VAD_FRAME_LENGTH);
 
   app->dispatch(new state::events::InputFrame(std::move(new_frame)));
 
   if (silence == VAD_IS_SILENT) {
+    g_debug("Frame %zu is silent in listening state (silent: %zu, noise: %zu)",
+            state_woke_frame_count, state_vad_silent_count,
+            state_vad_noise_count);
     state_vad_silent_count += 1;
   } else if (silence == VAD_NOT_SILENT) {
+    g_debug(
+        "Frame %zu is not silent in listening state (silent: %zu, noise: %zu)",
+        state_woke_frame_count, state_vad_silent_count, state_vad_noise_count);
     state_vad_silent_count = 0;
   }
   if (state_vad_silent_count >= vad_done_frame_count) {
+    g_debug("Detected %zu frames of silence, VAD done", state_vad_silent_count);
+    app->dispatch(new state::events::InputDone(true));
+    transition(State::WAITING);
+  } else if (state_woke_frame_count >= vad_listen_timeout_frame_count) {
+    g_message("LISTENING timed out after %zu frames (~%zu ms)",
+              vad_listen_timeout_frame_count,
+              app->config->vad_listen_timeout_ms);
     app->dispatch(new state::events::InputDone(true));
     transition(State::WAITING);
   }

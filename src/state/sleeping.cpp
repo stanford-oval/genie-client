@@ -29,7 +29,7 @@ namespace genie {
 namespace state {
 
 void Sleeping::enter() {
-  g_message("ENTER state Sleeping\n");
+  State::enter();
   app->audio_volume_controller->unduck();
   app->leds->animate(LedsState_t::Sleeping);
 }
