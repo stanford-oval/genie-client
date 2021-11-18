@@ -54,11 +54,9 @@ public:
   // Picovoice Defaults
   // -------------------------------------------------------------------------
 
-  static const constexpr char *DEFAULT_PV_LIBRARY_PATH =
-      "assets/libpv_porcupine.so";
-  static const constexpr char *DEFAULT_PV_MODEL_PATH =
-      "assets/porcupine_params.pv";
-  static const constexpr char *DEFAULT_PV_KEYWORD_PATH = "assets/keyword.ppn";
+  static const constexpr char *DEFAULT_PV_LIBRARY_PATH = "libpv_porcupine.so";
+  static const constexpr char *DEFAULT_PV_MODEL_PATH = "porcupine_params.pv";
+  static const constexpr char *DEFAULT_PV_KEYWORD_PATH = "keyword.ppn";
   static const constexpr float DEFAULT_PV_SENSITIVITY = 0.7f;
   static const constexpr char *DEFAULT_PV_WAKE_WORD_PATTERN =
       "^computers?[.,!?]?";
@@ -119,6 +117,7 @@ public:
   gchar *conversation_id;
   gchar *nl_url;
   gchar *locale;
+  gchar *asset_dir;
   AuthMode auth_mode;
 
   // Audio
@@ -195,7 +194,6 @@ public:
   // Picovoice (Wake-Word Detection)
   // -------------------------------------------------------------------------
 
-  gchar *pv_library_path;
   gchar *pv_model_path;
   gchar *pv_keyword_path;
   float pv_sensitivity;

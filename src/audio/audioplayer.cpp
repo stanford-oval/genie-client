@@ -275,7 +275,7 @@ gboolean genie::AudioPlayer::play_location(const gchar *location,
   if (*location == '/')
     path = g_strdup(location);
   else
-    path = g_build_filename(g_get_current_dir(), "assets", location, nullptr);
+    path = g_build_filename(app->config->asset_dir, location, nullptr);
   gchar *uri = g_strdup_printf("file://%s", path);
 
   gboolean ok = play_url(uri, destination);

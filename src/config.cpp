@@ -36,6 +36,7 @@ genie::Config::~Config() {
   g_free(conversation_id);
   g_free(nl_url);
   g_free(locale);
+  g_free(asset_dir);
   g_free(audio_input_device);
   g_free(audio_sink);
   g_free(audio_output_device_music);
@@ -51,7 +52,6 @@ genie::Config::~Config() {
   g_free(sound_alarm_clock_elapsed);
   g_free(sound_working);
   g_free(sound_stt_error);
-  g_free(pv_library_path);
   g_free(pv_model_path);
   g_free(pv_keyword_path);
   g_free(pv_wake_word_pattern);
@@ -286,6 +286,9 @@ void genie::Config::load() {
     return;
   }
 
+  asset_dir =
+      get_string(key_file, "general", "assets_dir", pkglibdir "/assets");
+
   genie_url = g_key_file_get_string(key_file, "general", "url", &error);
   if (error || !genie_url || strlen(genie_url) == 0) {
     genie_url = g_strdup("wss://almond.stanford.edu/me/api/conversation");
@@ -471,9 +474,6 @@ void genie::Config::load() {
 
   // Picovoice
   // =========================================================================
-
-  pv_library_path =
-      get_string(key_file, "picovoice", "library", DEFAULT_PV_LIBRARY_PATH);
 
   pv_model_path =
       get_string(key_file, "picovoice", "model", DEFAULT_PV_MODEL_PATH);

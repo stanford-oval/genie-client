@@ -52,3 +52,4 @@ add_global_arguments([
 ], language : 'c')
 
 subdir('src')
+install_subdir('assets', install_dir: pkglibdir)
