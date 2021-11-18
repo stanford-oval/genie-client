@@ -79,8 +79,6 @@ private:
   static void on_close(SoupWebsocketConnection *conn, gpointer data);
   static gboolean send_ping(gpointer data);
 
-  gchar *url;
-  const gchar *accessToken;
   auto_gobject_ptr<SoupWebsocketConnection> m_connection;
   std::deque<auto_gobject_ptr<JsonBuilder>> m_outgoing_queue;
   bool ready;

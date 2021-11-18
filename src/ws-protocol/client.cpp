@@ -267,8 +267,6 @@ void genie::conversation::Client::mark_ready() {
 
 genie::conversation::Client::Client(App *appInstance)
     : app(appInstance), ready(false), ping_timeout_id(0) {
-  accessToken = g_strdup(app->config->genie_access_token);
-  url = g_strdup(app->config->genie_url);
   main_parser.reset(new ConversationProtocol(this));
   ext_parsers.emplace("audio", new AudioProtocol(this));
 }
@@ -296,17 +294,20 @@ void genie::conversation::Client::retry_connect() {
 void genie::conversation::Client::connect() {
   SoupMessage *msg;
 
-  SoupURI *uri = soup_uri_new(url);
+  SoupURI *uri = soup_uri_new(app->config->genie_url);
   soup_uri_set_query_from_fields(uri, "skip_history", "1", "sync_devices", "1",
                                  "id", app->config->conversation_id, nullptr);
 
   msg = soup_message_new_from_uri(SOUP_METHOD_GET, uri);
   soup_uri_free(uri);
 
-  if (accessToken) {
-    gchar *auth = g_strdup_printf("Bearer %s", accessToken);
+  if (app->config->auth_mode == AuthMode::BEARER) {
+    gchar *auth = g_strdup_printf("Bearer %s", app->config->genie_access_token);
     soup_message_headers_append(msg->request_headers, "Authorization", auth);
     g_free(auth);
+  } else if (app->config->auth_mode == AuthMode::COOKIE) {
+    soup_message_headers_append(msg->request_headers, "Cookie",
+                                app->config->genie_access_token);
   }
 
   soup_session_websocket_connect_async(

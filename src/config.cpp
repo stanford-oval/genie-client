@@ -243,6 +243,34 @@ bool genie::Config::get_bool(GKeyFile *key_file, const char *section,
   return static_cast<bool>(value);
 }
 
+static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
+  GError *error = nullptr;
+  ;
+  char *value = g_key_file_get_string(key_file, "general", "auth_mode", &error);
+  if (value == nullptr) {
+    g_warning("Failed to load [general] auth_mode from config file, using "
+              "default 'none'");
+    g_error_free(error);
+    return genie::AuthMode::NONE;
+  }
+
+  if (strcmp(value, "none") == 0) {
+    g_free(value);
+    return genie::AuthMode::NONE;
+  } else if (strcmp(value, "bearer") == 0) {
+    g_free(value);
+    return genie::AuthMode::BEARER;
+  } else if (strcmp(value, "cookie") == 0) {
+    g_free(value);
+    return genie::AuthMode::COOKIE;
+  } else {
+    g_warning("Failed to load [general] auth_mode from config file, using "
+              "default 'none'");
+    g_free(value);
+    return genie::AuthMode::NONE;
+  }
+}
+
 void genie::Config::load() {
   std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
       auto_key_file(g_key_file_new());
@@ -270,11 +298,16 @@ void genie::Config::load() {
   connect_timeout =
       get_size(key_file, "general", "connect_timeout", DEFAULT_CONNECT_TIMEOUT);
 
-  genie_access_token =
-      g_key_file_get_string(key_file, "general", "accessToken", &error);
-  if (error) {
-    g_error("Missing access token in config file");
-    return;
+  auth_mode = get_auth_mode(key_file);
+  if (auth_mode != AuthMode::NONE) {
+    genie_access_token =
+        g_key_file_get_string(key_file, "general", "accessToken", &error);
+    if (error) {
+      g_error("Missing access token in config file");
+      return;
+    }
+  } else {
+    genie_access_token = nullptr;
   }
 
   error = NULL;

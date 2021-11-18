@@ -22,6 +22,8 @@
 
 namespace genie {
 
+enum class AuthMode { NONE, BEARER, COOKIE };
+
 class Config {
 public:
   static const size_t DEFAULT_WS_RETRY_INTERVAL = 3000;
@@ -117,6 +119,7 @@ public:
   gchar *conversation_id;
   gchar *nl_url;
   gchar *locale;
+  AuthMode auth_mode;
 
   // Audio
   // -------------------------------------------------------------------------
