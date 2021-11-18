@@ -22,7 +22,7 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             out.assets = out.root / "assets"
             out.lib = out.root / "lib"
             out.config = out.root / "config.ini"
-            out.exe = out.root / "genie"
+            out.exe = out.root / "genie-client"
             out.pulseaudio = out.root / "pulseaudio"
 
             with out.configure("tools") as tools:
@@ -72,7 +72,7 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             paths.asoundrc = paths.install / ".asoundrc"
             paths.config = paths.install / "config.ini"
             paths.launch = Path("/opt/duer/dcslaunch.sh")
-            paths.exe = paths.install / "genie"
+            paths.exe = paths.install / "genie-client"
             paths.pulseaudio = paths.install / "pulseaudio"
             paths.pulseaudio_config = paths.install / ".system.pa"
             paths.profile = paths.install / ".profile"

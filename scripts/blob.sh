@@ -53,7 +53,7 @@ findDeps() {
 	done
 }
 
-findDeps build/src/genie
+findDeps build/src/genie-client
 
 DESTDIR="/out/lib"
 rm -rf "${DESTDIR}"
@@ -116,7 +116,7 @@ strip /out/{parec,paplay,pacmd,pactl}
 cp -p /usr/bin/gdbserver /out/
 strip /out/gdbserver
 
-cp -p build/src/genie /out/
+cp -p build/src/genie-client /out/
 
 mkdir -p /out/assets
 cp -p assets/* /out/assets/
