@@ -39,7 +39,8 @@ public:
   static const size_t VAD_LISTEN_TIMEOUT_MIN_MS = 1000;
   static const size_t VAD_LISTEN_TIMEOUT_MAX_MS = 100000;
 
-  static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
+  static const constexpr char *DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE = "echosink";
+  static const constexpr char *DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE = "hw:0,0";
   static const constexpr char *DEFAULT_NLP_URL =
       "https://nlp-staging.almond.stanford.edu";
   static const constexpr char *DEFAULT_LOCALE = "en-US";

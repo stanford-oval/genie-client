@@ -355,37 +355,39 @@ void genie::Config::load() {
   // =========================================================================
 
   error = NULL;
-  audio_input_device =
-      g_key_file_get_string(key_file, "audio", "input", &error);
-  if (error) {
-    g_warning("Missing audio input device in configuration file");
-    audio_input_device = g_strdup("hw:0,0");
-    g_clear_error(&error);
-  }
 
-  error = NULL;
-  audio_sink = g_key_file_get_string(key_file, "audio", "sink", &error);
-  if (error) {
+  audio_backend = get_string(key_file, "audio", "backend", "pulse");
+  if (strcmp(audio_backend, "pulse") == 0) {
+    audio_input_device = nullptr;
+    audio_output_fifo = nullptr;
+    audio_input_stereo2mono = false;
     audio_sink = g_strdup("autoaudiosink");
-    audio_output_device_music = NULL;
-    audio_output_device_voice = NULL;
-    audio_output_device_alerts = NULL;
-    g_error_free(error);
-  } else {
-    error = NULL;
 
-    gchar *output = g_key_file_get_string(key_file, "audio", "output", &error);
+    gchar *output = get_string(key_file, "audio", "output",
+                               DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE);
+    audio_output_device_music = g_strdup(output);
+    audio_output_device_voice = g_strdup(output);
+    audio_output_device_alerts = g_strdup(output);
+    g_free(output);
+  } else if (strcmp(audio_backend, "alsa") == 0) {
+    audio_input_device =
+        g_key_file_get_string(key_file, "audio", "input", &error);
     if (error) {
-      g_error_free(error);
-      output = g_strdup("hw:0,0");
+      g_warning("Missing audio input device in configuration file");
+      audio_input_device = g_strdup("hw:0,0");
+      g_clear_error(&error);
     }
+
+    audio_sink = g_strdup("alsasink");
+    audio_output_device = get_string(key_file, "audio", "output",
+                                     DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE);
 
     error = NULL;
     audio_output_device_music =
         g_key_file_get_string(key_file, "audio", "music_output", &error);
     if (error) {
       g_error_free(error);
-      audio_output_device_music = g_strdup(output);
+      audio_output_device_music = g_strdup(audio_output_device);
     }
 
     error = NULL;
@@ -393,7 +395,7 @@ void genie::Config::load() {
         g_key_file_get_string(key_file, "audio", "voice_output", &error);
     if (error) {
       g_error_free(error);
-      audio_output_device_voice = g_strdup(output);
+      audio_output_device_voice = g_strdup(audio_output_device);
     }
 
     error = NULL;
@@ -401,18 +403,27 @@ void genie::Config::load() {
         g_key_file_get_string(key_file, "audio", "alert_output", &error);
     if (error) {
       g_error_free(error);
-      audio_output_device_alerts = g_strdup(output);
+      audio_output_device_alerts = g_strdup(audio_output_device);
     }
 
-    g_free(output);
-  }
+    error = NULL;
+    audio_output_fifo =
+        g_key_file_get_string(key_file, "audio", "output_fifo", &error);
+    if (error) {
+      g_error_free(error);
+      audio_output_fifo = g_strdup("/tmp/playback.fifo");
+    }
 
-  error = NULL;
-  audio_output_fifo =
-      g_key_file_get_string(key_file, "audio", "output_fifo", &error);
-  if (error) {
-    g_error_free(error);
-    audio_output_fifo = g_strdup("/tmp/playback.fifo");
+    error = NULL;
+    audio_input_stereo2mono =
+        g_key_file_get_boolean(key_file, "audio", "stereo2mono", &error);
+    if (error) {
+      g_error_free(error);
+      audio_input_stereo2mono = false;
+    }
+  } else {
+    g_error("Invalid audio backend %s", audio_backend);
+    return;
   }
 
   error = NULL;
@@ -420,24 +431,6 @@ void genie::Config::load() {
   if (error) {
     g_error_free(error);
     audio_voice = g_strdup("female");
-  }
-
-  error = NULL;
-  audio_backend = g_key_file_get_string(key_file, "audio", "backend", &error);
-  if (error) {
-    g_error_free(error);
-    audio_backend = g_strdup("alsa");
-  }
-
-  audio_output_device =
-      get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
-
-  error = NULL;
-  audio_input_stereo2mono =
-      g_key_file_get_boolean(key_file, "audio", "stereo2mono", &error);
-  if (error) {
-    g_error_free(error);
-    audio_input_stereo2mono = false;
   }
 
   // Echo Cancellation
