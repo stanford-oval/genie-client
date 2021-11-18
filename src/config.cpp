@@ -263,6 +263,9 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
   } else if (strcmp(value, "cookie") == 0) {
     g_free(value);
     return genie::AuthMode::COOKIE;
+  } else if (strcmp(value, "home-assistant") == 0) {
+    g_free(value);
+    return genie::AuthMode::HOME_ASSISTANT;
   } else {
     g_warning("Failed to load [general] auth_mode from config file, using "
               "default 'none'");

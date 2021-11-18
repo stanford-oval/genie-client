@@ -22,7 +22,7 @@
 
 namespace genie {
 
-enum class AuthMode { NONE, BEARER, COOKIE };
+enum class AuthMode { NONE, BEARER, COOKIE, HOME_ASSISTANT };
 
 class Config {
 public:
