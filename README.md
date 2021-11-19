@@ -1,12 +1,11 @@
 # Genie Light Client
 
-This is a light-weight client for the [Genie Web API](https://wiki.almond.stanford.edu/api-references/web-almond) implemented using C++.
+This is a light-weight client for the [Genie Web API](https://wiki.genie.stanford.edu/api-references/web-almond) implemented using C++.
 
 It is designed for embedded clients with limited flash storage and RAM.
 
 Genie is a research project led by Prof. Monica Lam, from Stanford University.
-
-You can find more information at <https://almond.stanford.edu>.
+You can find more information at <https://oval.cs.stanford.edu>.
 
 ## Developer Setup
 
