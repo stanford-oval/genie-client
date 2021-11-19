@@ -40,18 +40,23 @@ genie::WakeWord::~WakeWord() {
 int genie::WakeWord::init() {
   char *library_path =
       g_build_filename(app->config->asset_dir, "libpv_porcupine.so", nullptr);
+
   char *model_path;
   if (app->config->pv_model_path[0] == '/')
     model_path = g_strdup(app->config->pv_model_path);
   else
     model_path = g_build_filename(app->config->asset_dir,
                                   app->config->pv_model_path, nullptr);
+  g_message("Loading picovoice model from %s", model_path);
+
   char *keyword_path;
   if (app->config->pv_keyword_path[0] == '/')
     keyword_path = g_strdup(app->config->pv_keyword_path);
   else
     keyword_path = g_build_filename(app->config->asset_dir,
                                     app->config->pv_keyword_path, nullptr);
+  g_message("Loading wakeword from %s", keyword_path);
+
   const float sensitivity = app->config->pv_sensitivity;
 
   porcupine_library = dlopen(library_path, RTLD_NOW);
