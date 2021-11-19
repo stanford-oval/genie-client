@@ -294,7 +294,7 @@ void genie::Config::load() {
 
   genie_url = g_key_file_get_string(key_file, "general", "url", &error);
   if (error || !genie_url || strlen(genie_url) == 0) {
-    genie_url = g_strdup("wss://almond.stanford.edu/me/api/conversation");
+    genie_url = g_strdup(DEFAULT_GENIE_URL);
   }
   g_clear_error(&error);
 
@@ -364,7 +364,7 @@ void genie::Config::load() {
     audio_input_device = nullptr;
     audio_output_fifo = nullptr;
     audio_input_stereo2mono = false;
-    audio_sink = g_strdup("autoaudiosink");
+    audio_sink = g_strdup("pulsesink");
 
     gchar *output = get_string(key_file, "audio", "output",
                                DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE);
@@ -429,12 +429,7 @@ void genie::Config::load() {
     return;
   }
 
-  error = NULL;
-  audio_voice = g_key_file_get_string(key_file, "audio", "voice", &error);
-  if (error) {
-    g_error_free(error);
-    audio_voice = g_strdup("female");
-  }
+  audio_voice = get_string(key_file, "audio", "voice", DEFAULT_VOICE);
 
   // Echo Cancellation
   // =========================================================================
@@ -507,7 +502,7 @@ void genie::Config::load() {
   buttons_enabled =
       g_key_file_get_boolean(key_file, "buttons", "enabled", &error);
   if (error) {
-    buttons_enabled = false;
+    buttons_enabled = true;
     g_error_free(error);
   }
 
