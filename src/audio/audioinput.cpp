@@ -48,11 +48,6 @@ void genie::AudioInput::close() {
 }
 
 int genie::AudioInput::init() {
-  if (!app->config->audio_input_device) {
-    g_error("no input audio device");
-    return -1;
-  }
-
   wakeword = new WakeWord(app);
   if (!wakeword->init()) {
     return -1;

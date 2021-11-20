@@ -13,7 +13,7 @@ LOG = logging.getLogger(__name__)
 
 COMMAND_PATTERNS = {
     "dcslaunch.sh": re.compile(r".*\s/opt/duer/dcslaunch.sh$"),
-    "genie": re.compile(r".*/genie$"),
+    "genie-client": re.compile(r".*/genie-client$"),
     "spotifyd": re.compile(r"^/tmp/spotifyd\s.*"),
     "pulseaudio": re.compile(r".*/pulseaudio\s.*"),
 }

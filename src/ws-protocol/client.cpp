@@ -267,8 +267,6 @@ void genie::conversation::Client::mark_ready() {
 
 genie::conversation::Client::Client(App *appInstance)
     : app(appInstance), ready(false), ping_timeout_id(0) {
-  accessToken = g_strdup(app->config->genie_access_token);
-  url = g_strdup(app->config->genie_url);
   main_parser.reset(new ConversationProtocol(this));
   ext_parsers.emplace("audio", new AudioProtocol(this));
 }
@@ -293,25 +291,113 @@ void genie::conversation::Client::retry_connect() {
   g_timeout_add(app->config->retry_interval, retry_connect_timer, this);
 }
 
-void genie::conversation::Client::connect() {
-  SoupMessage *msg;
-
-  SoupURI *uri = soup_uri_new(url);
+void genie::conversation::Client::connect(AuthMode auth_mode,
+                                          const char *access_token) {
+  SoupURI *uri = soup_uri_new(app->config->genie_url);
   soup_uri_set_query_from_fields(uri, "skip_history", "1", "sync_devices", "1",
                                  "id", app->config->conversation_id, nullptr);
 
-  msg = soup_message_new_from_uri(SOUP_METHOD_GET, uri);
+  SoupMessage *msg = soup_message_new_from_uri(SOUP_METHOD_GET, uri);
   soup_uri_free(uri);
 
-  if (accessToken) {
-    gchar *auth = g_strdup_printf("Bearer %s", accessToken);
+  if (auth_mode == AuthMode::BEARER) {
+    gchar *auth = g_strdup_printf("Bearer %s", access_token);
     soup_message_headers_append(msg->request_headers, "Authorization", auth);
     g_free(auth);
+  } else if (auth_mode == AuthMode::COOKIE) {
+    soup_message_headers_append(msg->request_headers, "Cookie", access_token);
   }
 
   soup_session_websocket_connect_async(
       app->get_soup_session(), msg, NULL, NULL, NULL,
       (GAsyncReadyCallback)genie::conversation::Client::on_connection, this);
+  g_object_unref(msg);
 
   return;
+}
+
+void genie::conversation::Client::on_access_token_ready(SoupSession *session,
+                                                        SoupMessage *msg,
+                                                        gpointer user_data) {
+  guint status_code;
+  GBytes *body;
+  gsize size;
+
+  Client *self = static_cast<Client *>(user_data);
+
+  g_object_get(msg, "status-code", &status_code, "response-body-data", &body,
+               nullptr);
+
+  g_message("Sent access token request to Home Assistant, got HTTP %u",
+            status_code);
+
+  if (status_code >= 400) {
+    g_warning("Failed to get access token from Home Assistant: %s",
+              (const char *)g_bytes_get_data(body, &size));
+    g_bytes_unref(body);
+    self->retry_connect();
+    return;
+  }
+
+  JsonParser *parser = json_parser_new();
+  GError *error = nullptr;
+  const char *data = (const char *)g_bytes_get_data(body, &size);
+  json_parser_load_from_data(parser, data, size, &error);
+  if (error) {
+    g_warning("Failed to parse access token reply from Home Assistant: %s",
+              error->message);
+    g_warning("Response data: %s", data);
+    g_error_free(error);
+    g_bytes_unref(body);
+    self->retry_connect();
+    return;
+  }
+
+  JsonReader *reader = json_reader_new(json_parser_get_root(parser));
+
+  json_reader_read_member(reader, "data");
+
+  json_reader_read_member(reader, "session");
+  const char *session_token = json_reader_get_string_value(reader);
+  gchar *cookie = g_strdup_printf("ingress_session=%s", session_token);
+  json_reader_end_member(reader); // session
+
+  json_reader_end_member(reader); // data
+
+  self->connect(AuthMode::COOKIE, cookie);
+  g_free(cookie);
+
+  g_object_unref(parser);
+  g_object_unref(reader);
+  g_bytes_unref(body);
+}
+
+void genie::conversation::Client::connect() {
+
+  if (app->config->auth_mode == AuthMode::HOME_ASSISTANT) {
+    // in Home Assistant auth mode, we must first get the session token
+
+    SoupURI *genie_url = soup_uri_new(app->config->genie_url);
+
+    SoupURI *home_assistant_url =
+        soup_uri_new_with_base(genie_url, "/api/hassio/ingress/session");
+    if (strcmp(soup_uri_get_scheme(genie_url), "wss") == 0)
+      soup_uri_set_scheme(home_assistant_url, "https");
+    else
+      soup_uri_set_scheme(home_assistant_url, "http");
+    soup_uri_free(genie_url);
+
+    SoupMessage *msg =
+        soup_message_new_from_uri(SOUP_METHOD_POST, home_assistant_url);
+    soup_uri_free(home_assistant_url);
+    soup_message_set_request(msg, nullptr, SOUP_MEMORY_STATIC, "", 0);
+    gchar *auth = g_strdup_printf("Bearer %s", app->config->genie_access_token);
+    soup_message_headers_append(msg->request_headers, "Authorization", auth);
+    g_free(auth);
+
+    soup_session_queue_message(app->get_soup_session(), msg,
+                               on_access_token_ready, this);
+  } else {
+    connect(app->config->auth_mode, app->config->genie_access_token);
+  }
 }

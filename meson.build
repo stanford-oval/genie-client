@@ -4,7 +4,7 @@ project('genie-client', 'cpp', 'c',
   default_options : [ 'warning_level=3', 'cpp_std=c++14' ]
 )
 
-app_command = 'genie'
+app_command = 'genie-client'
 app_id = meson.project_name()
 
 if [ 'x86_64' ].contains(host_machine.cpu_family())
@@ -52,3 +52,4 @@ add_global_arguments([
 ], language : 'c')
 
 subdir('src')
+install_subdir('assets', install_dir: pkglibdir)

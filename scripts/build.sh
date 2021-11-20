@@ -18,6 +18,6 @@ fi
 ninja -C build clean
 ninja -C build
 
-ls -l build/src/genie
+ls -l build/src/genie-client
 
 exit 0

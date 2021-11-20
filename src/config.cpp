@@ -36,6 +36,7 @@ genie::Config::~Config() {
   g_free(conversation_id);
   g_free(nl_url);
   g_free(locale);
+  g_free(asset_dir);
   g_free(audio_input_device);
   g_free(audio_sink);
   g_free(audio_output_device_music);
@@ -51,7 +52,6 @@ genie::Config::~Config() {
   g_free(sound_alarm_clock_elapsed);
   g_free(sound_working);
   g_free(sound_stt_error);
-  g_free(pv_library_path);
   g_free(pv_model_path);
   g_free(pv_keyword_path);
   g_free(pv_wake_word_pattern);
@@ -243,6 +243,37 @@ bool genie::Config::get_bool(GKeyFile *key_file, const char *section,
   return static_cast<bool>(value);
 }
 
+static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
+  GError *error = nullptr;
+  ;
+  char *value = g_key_file_get_string(key_file, "general", "auth_mode", &error);
+  if (value == nullptr) {
+    g_warning("Failed to load [general] auth_mode from config file, using "
+              "default 'none'");
+    g_error_free(error);
+    return genie::AuthMode::NONE;
+  }
+
+  if (strcmp(value, "none") == 0) {
+    g_free(value);
+    return genie::AuthMode::NONE;
+  } else if (strcmp(value, "bearer") == 0) {
+    g_free(value);
+    return genie::AuthMode::BEARER;
+  } else if (strcmp(value, "cookie") == 0) {
+    g_free(value);
+    return genie::AuthMode::COOKIE;
+  } else if (strcmp(value, "home-assistant") == 0) {
+    g_free(value);
+    return genie::AuthMode::HOME_ASSISTANT;
+  } else {
+    g_warning("Failed to load [general] auth_mode from config file, using "
+              "default 'none'");
+    g_free(value);
+    return genie::AuthMode::NONE;
+  }
+}
+
 void genie::Config::load() {
   std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
       auto_key_file(g_key_file_new());
@@ -258,9 +289,12 @@ void genie::Config::load() {
     return;
   }
 
+  asset_dir =
+      get_string(key_file, "general", "assets_dir", pkglibdir "/assets");
+
   genie_url = g_key_file_get_string(key_file, "general", "url", &error);
   if (error || !genie_url || strlen(genie_url) == 0) {
-    genie_url = g_strdup("wss://almond.stanford.edu/me/api/conversation");
+    genie_url = g_strdup(DEFAULT_GENIE_URL);
   }
   g_clear_error(&error);
 
@@ -270,11 +304,16 @@ void genie::Config::load() {
   connect_timeout =
       get_size(key_file, "general", "connect_timeout", DEFAULT_CONNECT_TIMEOUT);
 
-  genie_access_token =
-      g_key_file_get_string(key_file, "general", "accessToken", &error);
-  if (error) {
-    g_error("Missing access token in config file");
-    return;
+  auth_mode = get_auth_mode(key_file);
+  if (auth_mode != AuthMode::NONE) {
+    genie_access_token =
+        g_key_file_get_string(key_file, "general", "accessToken", &error);
+    if (error) {
+      g_error("Missing access token in config file");
+      return;
+    }
+  } else {
+    genie_access_token = nullptr;
   }
 
   error = NULL;
@@ -319,37 +358,39 @@ void genie::Config::load() {
   // =========================================================================
 
   error = NULL;
-  audio_input_device =
-      g_key_file_get_string(key_file, "audio", "input", &error);
-  if (error) {
-    g_warning("Missing audio input device in configuration file");
-    audio_input_device = g_strdup("hw:0,0");
-    g_clear_error(&error);
-  }
 
-  error = NULL;
-  audio_sink = g_key_file_get_string(key_file, "audio", "sink", &error);
-  if (error) {
-    audio_sink = g_strdup("autoaudiosink");
-    audio_output_device_music = NULL;
-    audio_output_device_voice = NULL;
-    audio_output_device_alerts = NULL;
-    g_error_free(error);
-  } else {
-    error = NULL;
+  audio_backend = get_string(key_file, "audio", "backend", "pulse");
+  if (strcmp(audio_backend, "pulse") == 0) {
+    audio_input_device = nullptr;
+    audio_output_fifo = nullptr;
+    audio_input_stereo2mono = false;
+    audio_sink = g_strdup("pulsesink");
 
-    gchar *output = g_key_file_get_string(key_file, "audio", "output", &error);
+    gchar *output = get_string(key_file, "audio", "output",
+                               DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE);
+    audio_output_device_music = g_strdup(output);
+    audio_output_device_voice = g_strdup(output);
+    audio_output_device_alerts = g_strdup(output);
+    g_free(output);
+  } else if (strcmp(audio_backend, "alsa") == 0) {
+    audio_input_device =
+        g_key_file_get_string(key_file, "audio", "input", &error);
     if (error) {
-      g_error_free(error);
-      output = g_strdup("hw:0,0");
+      g_warning("Missing audio input device in configuration file");
+      audio_input_device = g_strdup("hw:0,0");
+      g_clear_error(&error);
     }
+
+    audio_sink = g_strdup("alsasink");
+    audio_output_device = get_string(key_file, "audio", "output",
+                                     DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE);
 
     error = NULL;
     audio_output_device_music =
         g_key_file_get_string(key_file, "audio", "music_output", &error);
     if (error) {
       g_error_free(error);
-      audio_output_device_music = g_strdup(output);
+      audio_output_device_music = g_strdup(audio_output_device);
     }
 
     error = NULL;
@@ -357,7 +398,7 @@ void genie::Config::load() {
         g_key_file_get_string(key_file, "audio", "voice_output", &error);
     if (error) {
       g_error_free(error);
-      audio_output_device_voice = g_strdup(output);
+      audio_output_device_voice = g_strdup(audio_output_device);
     }
 
     error = NULL;
@@ -365,44 +406,30 @@ void genie::Config::load() {
         g_key_file_get_string(key_file, "audio", "alert_output", &error);
     if (error) {
       g_error_free(error);
-      audio_output_device_alerts = g_strdup(output);
+      audio_output_device_alerts = g_strdup(audio_output_device);
     }
 
-    g_free(output);
+    error = NULL;
+    audio_output_fifo =
+        g_key_file_get_string(key_file, "audio", "output_fifo", &error);
+    if (error) {
+      g_error_free(error);
+      audio_output_fifo = g_strdup("/tmp/playback.fifo");
+    }
+
+    error = NULL;
+    audio_input_stereo2mono =
+        g_key_file_get_boolean(key_file, "audio", "stereo2mono", &error);
+    if (error) {
+      g_error_free(error);
+      audio_input_stereo2mono = false;
+    }
+  } else {
+    g_error("Invalid audio backend %s", audio_backend);
+    return;
   }
 
-  error = NULL;
-  audio_output_fifo =
-      g_key_file_get_string(key_file, "audio", "output_fifo", &error);
-  if (error) {
-    g_error_free(error);
-    audio_output_fifo = g_strdup("/tmp/playback.fifo");
-  }
-
-  error = NULL;
-  audio_voice = g_key_file_get_string(key_file, "audio", "voice", &error);
-  if (error) {
-    g_error_free(error);
-    audio_voice = g_strdup("female");
-  }
-
-  error = NULL;
-  audio_backend = g_key_file_get_string(key_file, "audio", "backend", &error);
-  if (error) {
-    g_error_free(error);
-    audio_backend = g_strdup("alsa");
-  }
-
-  audio_output_device =
-      get_string(key_file, "audio", "output", DEFAULT_AUDIO_OUTPUT_DEVICE);
-
-  error = NULL;
-  audio_input_stereo2mono =
-      g_key_file_get_boolean(key_file, "audio", "stereo2mono", &error);
-  if (error) {
-    g_error_free(error);
-    audio_input_stereo2mono = false;
-  }
+  audio_voice = get_string(key_file, "audio", "voice", DEFAULT_VOICE);
 
   // Echo Cancellation
   // =========================================================================
@@ -438,9 +465,6 @@ void genie::Config::load() {
 
   // Picovoice
   // =========================================================================
-
-  pv_library_path =
-      get_string(key_file, "picovoice", "library", DEFAULT_PV_LIBRARY_PATH);
 
   pv_model_path =
       get_string(key_file, "picovoice", "model", DEFAULT_PV_MODEL_PATH);
@@ -478,7 +502,7 @@ void genie::Config::load() {
   buttons_enabled =
       g_key_file_get_boolean(key_file, "buttons", "enabled", &error);
   if (error) {
-    buttons_enabled = false;
+    buttons_enabled = true;
     g_error_free(error);
   }
 

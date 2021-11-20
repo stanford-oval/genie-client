@@ -22,25 +22,31 @@
 
 namespace genie {
 
+enum class AuthMode { NONE, BEARER, COOKIE, HOME_ASSISTANT };
+
 class Config {
 public:
   static const size_t DEFAULT_WS_RETRY_INTERVAL = 3000;
   static const size_t DEFAULT_CONNECT_TIMEOUT = 5000;
   static const size_t VAD_MIN_MS = 100;
   static const size_t VAD_MAX_MS = 5000;
-  static const size_t DEFAULT_VAD_START_SPEAKING_MS = 2000;
-  static const size_t DEFAULT_VAD_DONE_SPEAKING_MS = 300;
-  static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 300;
+  static const size_t DEFAULT_VAD_START_SPEAKING_MS = 3000;
+  static const size_t DEFAULT_VAD_DONE_SPEAKING_MS = 500;
+  static const size_t DEFAULT_VAD_INPUT_DETECTED_NOISE_MS = 600;
 
   // Max time spent in AudioInput LISTENING state
   static const size_t DEFAULT_VAD_LISTEN_TIMEOUT_MS = 10000;
   static const size_t VAD_LISTEN_TIMEOUT_MIN_MS = 1000;
   static const size_t VAD_LISTEN_TIMEOUT_MAX_MS = 100000;
 
-  static const constexpr char *DEFAULT_AUDIO_OUTPUT_DEVICE = "hw:audiocodec";
+  static const constexpr char *DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE = "echosink";
+  static const constexpr char *DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE = "hw:0,0";
+  static const constexpr char *DEFAULT_GENIE_URL =
+      "ws://127.0.0.1:3000/api/conversation";
   static const constexpr char *DEFAULT_NLP_URL =
       "https://nlp-staging.almond.stanford.edu";
   static const constexpr char *DEFAULT_LOCALE = "en-US";
+  static const constexpr char *DEFAULT_VOICE = "male";
 
   // Hacks Defaults
   // ---------------------------------------------------------------------------
@@ -52,11 +58,9 @@ public:
   // Picovoice Defaults
   // -------------------------------------------------------------------------
 
-  static const constexpr char *DEFAULT_PV_LIBRARY_PATH =
-      "assets/libpv_porcupine.so";
-  static const constexpr char *DEFAULT_PV_MODEL_PATH =
-      "assets/porcupine_params.pv";
-  static const constexpr char *DEFAULT_PV_KEYWORD_PATH = "assets/keyword.ppn";
+  static const constexpr char *DEFAULT_PV_LIBRARY_PATH = "libpv_porcupine.so";
+  static const constexpr char *DEFAULT_PV_MODEL_PATH = "porcupine_params.pv";
+  static const constexpr char *DEFAULT_PV_KEYWORD_PATH = "keyword.ppn";
   static const constexpr float DEFAULT_PV_SENSITIVITY = 0.7f;
   static const constexpr char *DEFAULT_PV_WAKE_WORD_PATTERN =
       "^computers?[.,!?]?";
@@ -85,12 +89,12 @@ public:
   static const constexpr char *DEFAULT_LEDS_SLEEPING_EFFECT = "none";
   static const constexpr char *DEFAULT_LEDS_SLEEPING_COLOR = "000000";
   static const constexpr char *DEFAULT_LEDS_LISTENING_EFFECT = "pulse";
-  static const constexpr char *DEFAULT_LEDS_LISTENING_COLOR = "00ff00";
+  static const constexpr char *DEFAULT_LEDS_LISTENING_COLOR = "ffffff";
   static const constexpr char *DEFAULT_LEDS_PROCESSING_EFFECT = "circular";
-  static const constexpr char *DEFAULT_LEDS_PROCESSING_COLOR = "0000ff";
+  static const constexpr char *DEFAULT_LEDS_PROCESSING_COLOR = "ffffff";
   static const constexpr char *DEFAULT_LEDS_SAYING_EFFECT = "pulse";
-  static const constexpr char *DEFAULT_LEDS_SAYING_COLOR = "8f00ff";
-  static const constexpr char *DEFAULT_LEDS_ERROR_EFFECT = "solid";
+  static const constexpr char *DEFAULT_LEDS_SAYING_COLOR = "00ff00";
+  static const constexpr char *DEFAULT_LEDS_ERROR_EFFECT = "pulse";
   static const constexpr char *DEFAULT_LEDS_ERROR_COLOR = "ff0000";
   static const constexpr char *DEFAULT_LEDS_NET_ERROR_EFFECT = "circular";
   static const constexpr char *DEFAULT_LEDS_NET_ERROR_COLOR = "ffa500";
@@ -117,6 +121,8 @@ public:
   gchar *conversation_id;
   gchar *nl_url;
   gchar *locale;
+  gchar *asset_dir;
+  AuthMode auth_mode;
 
   // Audio
   // -------------------------------------------------------------------------
@@ -192,7 +198,6 @@ public:
   // Picovoice (Wake-Word Detection)
   // -------------------------------------------------------------------------
 
-  gchar *pv_library_path;
   gchar *pv_model_path;
   gchar *pv_keyword_path;
   float pv_sensitivity;

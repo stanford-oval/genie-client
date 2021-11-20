@@ -66,6 +66,9 @@ protected:
 
 private:
   void connect();
+  void connect(AuthMode auth_mode, const char *access_token);
+  static void on_access_token_ready(SoupSession *session, SoupMessage *msg,
+                                    gpointer user_data);
   static gboolean retry_connect_timer(gpointer data);
   void retry_connect();
   void maybe_flush_queue();
@@ -79,8 +82,6 @@ private:
   static void on_close(SoupWebsocketConnection *conn, gpointer data);
   static gboolean send_ping(gpointer data);
 
-  gchar *url;
-  const gchar *accessToken;
   auto_gobject_ptr<SoupWebsocketConnection> m_connection;
   std::deque<auto_gobject_ptr<JsonBuilder>> m_outgoing_queue;
   bool ready;
