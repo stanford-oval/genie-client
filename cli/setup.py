@@ -14,7 +14,7 @@ setuptools.setup(
     python_requires=">=3.8,<4",
     install_requires=[
         "splatlog>=0.1.0",
-        "clavier>=0.1.2",
+        "clavier==0.1.3a3",
         # Fails to build in arm32v7 container :/
         # "paramiko>=2.7.2",
     ],

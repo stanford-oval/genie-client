@@ -1,7 +1,8 @@
 from typing import Literal
 from argparse import BooleanOptionalAction
 
-from clavier import log as logging, sh
+import splatlog as logging
+from clavier import sh
 
 from genie_client_cpp.config import CONFIG
 

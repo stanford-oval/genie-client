@@ -1,6 +1,7 @@
 from typing import List, Union
 
-from clavier import log as logging, CFG, sh
+import splatlog as logging
+from clavier import sh
 
 from genie_client_cpp.context import Context
 

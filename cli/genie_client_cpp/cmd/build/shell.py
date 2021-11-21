@@ -1,4 +1,5 @@
-from clavier import CFG, log as logging, sh
+import splatlog as logging
+from clavier import sh
 
 from genie_client_cpp.config import CONFIG
 from genie_client_cpp.cmd.build import DEFAULT_ARCH, TArch

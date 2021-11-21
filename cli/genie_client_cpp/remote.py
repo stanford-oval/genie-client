@@ -7,7 +7,8 @@ import os
 from subprocess import DEVNULL, PIPE, Popen
 import shlex
 
-from clavier import sh, log as logging
+import splatlog as logging
+from clavier import sh
 
 
 LOG = logging.getLogger(__name__)

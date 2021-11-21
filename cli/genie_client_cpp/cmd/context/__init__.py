@@ -1,8 +1,10 @@
 from genie_client_cpp.context import Context
 
+
 def add_to(subparsers):
     parser = subparsers.add_parser(
         "context",
+        aliases=["ctx"],
         target=run,
         help="List available contexts (in repo's Git config)",
     )

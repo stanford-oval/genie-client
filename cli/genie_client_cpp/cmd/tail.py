@@ -1,8 +1,7 @@
 import re
 from typing import Union
 
-from clavier import log as logging, CFG, io
-from rich.table import Table
+import splatlog as logging
 
 from genie_client_cpp.remote import Remote
 from genie_client_cpp.context import Context

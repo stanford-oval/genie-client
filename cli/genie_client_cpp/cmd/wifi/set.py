@@ -1,10 +1,11 @@
 from argparse import BooleanOptionalAction
 from typing import List
 
-from clavier import CFG, log as logging
+import splatlog as logging
 
 from genie_client_cpp.remote import Remote
 from genie_client_cpp.context import Context
+from genie_client_cpp.config import CONFIG
 
 
 LOG = logging.getLogger(__name__)
@@ -64,7 +65,7 @@ def run(
     remote = Remote.create(target)
     if wifi_name is not None and wifi_password is not None:
         remote.write_lines(
-            CFG.genie_client_cpp.xiaodu.paths.wifi_config,
+            CONFIG.xiaodu.paths.wifi_config,
             "ctrl_interface=/var/run/wpa_supplicant",
             "update_config=1",
             "network={",
@@ -79,6 +80,6 @@ def run(
 
     if dns_servers:
         remote.write_lines(
-            CFG.genie_client_cpp.xiaodu.paths.dns_config,
+            CONFIG.xiaodu.paths.dns_config,
             *(f"nameserver {server}" for server in dns_servers)
         )

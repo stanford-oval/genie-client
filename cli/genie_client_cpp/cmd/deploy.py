@@ -2,7 +2,7 @@ import re
 from argparse import BooleanOptionalAction
 from typing import List, Union, Optional
 
-from clavier import log as logging
+import splatlog as logging
 
 from genie_client_cpp.config import CONFIG
 from genie_client_cpp.remote import Remote

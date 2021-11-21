@@ -4,7 +4,8 @@ from typing import Callable, Iterable, List, Optional, Union
 from subprocess import CalledProcessError
 from functools import wraps
 
-from clavier import sh, log as logging
+import splatlog as logging
+from clavier import sh
 
 LOG = logging.getLogger(__name__)
 
@@ -98,12 +99,13 @@ class Context:
             "--list",
         ).splitlines()
 
-        return sorted({
-            parts[1]
-            for parts
-            in (name.split(".") for name in config_names)
-            if parts[0] == cls.GIT_CONFIG_PREFIX and len(parts) > 2
-        })
+        return sorted(
+            {
+                parts[1]
+                for parts in (name.split(".") for name in config_names)
+                if parts[0] == cls.GIT_CONFIG_PREFIX and len(parts) > 2
+            }
+        )
 
     @classmethod
     def get_current_name(cls):
@@ -143,4 +145,5 @@ class Context:
                         context_value = getattr(current, name)
                         kwds[name] = context_value
             return fn(*args, **kwds)
+
         return wrapped

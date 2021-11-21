@@ -1,4 +1,4 @@
-from clavier import log as logging
+import splatlog as logging
 
 from genie_client_cpp.config import CONFIG
 from genie_client_cpp.remote import Remote
@@ -8,11 +8,11 @@ from genie_client_cpp.context import Context
 LOG = logging.getLogger(__name__)
 
 
-def add_to(subparsers):
+def add_parser(subparsers):
     parser = subparsers.add_parser(
-        "configure",
-        target=configure,
-        help=f"Configure a device",
+        "apply",
+        target=apply,
+        help=f"Apply configuration to a device",
     )
 
     parser.add_argument(
@@ -27,13 +27,11 @@ def add_to(subparsers):
     parser.add_argument("access_token", help="Access token to configure")
 
 
-def configure(
+def apply(
     config: str,
     target: str,
     access_token: str,
 ):
-    context = Context.load(config)
-
     if not target.startswith("root@"):
         target = f"root@{target}"
 

@@ -1,6 +1,9 @@
 from pathlib import Path
 from typing import List
-from clavier import CFG, log as logging, io
+
+import splatlog as logging
+
+from genie_client_cpp.config import CONFIG
 
 
 # Constants
@@ -66,7 +69,7 @@ def missing_paths() -> List[Path]:
     return [
         path
         for path
-        in CFG.genie_client_cpp.paths.src.root.glob("**/*.[hc]pp")
+        in CONFIG.paths.src.root.glob("**/*.[hc]pp")
         if not has_license(path)
     ]
 

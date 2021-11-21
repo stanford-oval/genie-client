@@ -1,4 +1,4 @@
-from clavier import sh, log as logging
+import splatlog as logging
 
 from genie_client_cpp.context import Context
 

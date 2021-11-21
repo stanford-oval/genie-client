@@ -1,5 +1,5 @@
-import shlex
-from clavier import log as logging, sh
+import splatlog as logging
+from clavier import sh
 
 from genie_client_cpp.config import CONFIG
 from genie_client_cpp.remote import Remote

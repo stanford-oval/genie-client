@@ -1,9 +1,11 @@
-from clavier import log as logging, CFG
+import splatlog as logging
+from clavier import CFG
 
 from genie_client_cpp.remote import Remote
 from . import kill
 
 LOG = logging.getLogger(__name__)
+
 
 def add_to(subparsers):
     parser = subparsers.add_parser(

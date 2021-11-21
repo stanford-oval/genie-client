@@ -1,8 +1,9 @@
-from clavier import sh, log as logging
+import splatlog as logging
 
 from genie_client_cpp.context import Context
 
 LOG = logging.getLogger(__name__)
+
 
 def add_to(subparsers):
     parser = subparsers.add_parser(
@@ -30,13 +31,14 @@ def add_to(subparsers):
         "-d",
         "--dns-servers",
         action="append",
-        help="DNS servers to set in resolv.conf"
+        help="DNS servers to set in resolv.conf",
     )
 
     parser.add_argument(
         "context",
         help="Name of context",
     )
+
 
 def set_in_context(context, **values):
     for name, value in values.items():
