@@ -73,6 +73,7 @@ class Spotifyd;
 class STT;
 class TTS;
 class DNSController;
+class WebServer;
 namespace conversation {
 class Client;
 }
@@ -189,6 +190,7 @@ private:
   std::unique_ptr<Leds> leds;
   std::unique_ptr<Spotifyd> spotifyd;
   std::unique_ptr<STT> stt;
+  std::unique_ptr<WebServer> webserver;
 
   // ### Performance Tracking ###
 

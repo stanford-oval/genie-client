@@ -92,6 +92,7 @@ executable(
   'state/saying.cpp',
   'state/sleeping.cpp',
   'state/state.cpp',
+  'webserver.cpp',
   'ws-protocol/client.cpp',
   'ws-protocol/conversation.cpp',
   'ws-protocol/audio.cpp',

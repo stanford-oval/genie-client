@@ -101,6 +101,10 @@ public:
   static const constexpr char *DEFAULT_LEDS_DISABLED_EFFECT = "solid";
   static const constexpr char *DEFAULT_LEDS_DISABLED_COLOR = "ff0000";
 
+  // Web UI Defaults
+  // -------------------------------------------------------------------------
+  static const constexpr int DEFAULT_WEBUI_PORT = 8000;
+
   Config();
   ~Config();
   void load();
@@ -259,6 +263,10 @@ public:
   size_t vad_done_speaking_ms;
   size_t vad_input_detected_noise_ms;
   size_t vad_listen_timeout_ms;
+
+  // Web UI
+  // -------------------------------------------------------------------------
+  int webui_port;
 
 protected:
 private:

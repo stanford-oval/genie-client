@@ -637,4 +637,9 @@ void genie::Config::load() {
   vad_listen_timeout_ms = get_bounded_size(
       key_file, "vad", "listen_timeout_ms", DEFAULT_VAD_LISTEN_TIMEOUT_MS,
       VAD_LISTEN_TIMEOUT_MIN_MS, VAD_LISTEN_TIMEOUT_MAX_MS);
+
+  // Web UI
+  // =========================================================================
+  webui_port = get_bounded_size(key_file, "webui", "port", DEFAULT_WEBUI_PORT,
+                                1024, 65535);
 }

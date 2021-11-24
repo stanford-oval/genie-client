@@ -7,6 +7,7 @@ assets/*
 !assets/magic.oga
 !assets/news-intro.oga
 !assets/ca-certificates.crt
+!assets/webui
 # Meson build directory
 /build/
 # Build output directory
@@ -17,5 +18,5 @@ assets/*
 # macOS Finder artifact
 .DS_Store
 
-# IDK where this comes from, appears when using VSCode dev containers 
+# IDK where this comes from, appears when using VSCode dev containers
 null.d
