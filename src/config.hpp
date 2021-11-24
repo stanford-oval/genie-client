@@ -108,6 +108,7 @@ public:
   Config();
   ~Config();
   void load();
+  void save();
 
   // Configuration File Values
   // =========================================================================
@@ -270,25 +271,25 @@ public:
 
 protected:
 private:
-  int get_leds_effect_string(GKeyFile *key_file, const char *section,
-                             const char *key, const gchar *default_value);
-  int get_dec_color_from_hex_string(GKeyFile *key_file, const char *section,
-                                    const char *key,
+  GKeyFile *key_file = nullptr;
+
+  int get_leds_effect_string(const char *section, const char *key,
+                             const gchar *default_value);
+  int get_dec_color_from_hex_string(const char *section, const char *key,
                                     const gchar *default_value);
-  gchar *get_string(GKeyFile *key_file, const char *section, const char *key,
+  gchar *get_string(const char *section, const char *key,
                     const gchar *default_value);
-  size_t get_size(GKeyFile *key_file, const char *section, const char *key,
+  size_t get_size(const char *section, const char *key,
                   const size_t default_value);
-  size_t get_bounded_size(GKeyFile *key_file, const char *section,
-                          const char *key, const size_t default_value,
-                          const size_t min, const size_t max);
-  double get_double(GKeyFile *key_file, const char *section, const char *key,
+  size_t get_bounded_size(const char *section, const char *key,
+                          const size_t default_value, const size_t min,
+                          const size_t max);
+  double get_double(const char *section, const char *key,
                     const double default_value);
-  double get_bounded_double(GKeyFile *key_file, const char *section,
-                            const char *key, const double default_value,
-                            const double min, const double max);
-  bool get_bool(GKeyFile *key_file, const char *section, const char *key,
-                const bool default_value);
+  double get_bounded_double(const char *section, const char *key,
+                            const double default_value, const double min,
+                            const double max);
+  bool get_bool(const char *section, const char *key, const bool default_value);
 };
 
 } // namespace genie

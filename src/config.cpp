@@ -61,10 +61,12 @@ genie::Config::~Config() {
   g_free(leds_path);
   g_free(leds_type);
   g_free(cache_dir);
+
+  g_key_file_unref(key_file);
 }
 
-gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
-                                 const char *key, const char *default_value) {
+gchar *genie::Config::get_string(const char *section, const char *key,
+                                 const char *default_value) {
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
@@ -76,8 +78,7 @@ gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
   return value;
 }
 
-int genie::Config::get_leds_effect_string(GKeyFile *key_file,
-                                          const char *section, const char *key,
+int genie::Config::get_leds_effect_string(const char *section, const char *key,
                                           const char *default_value) {
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
@@ -106,8 +107,7 @@ int genie::Config::get_leds_effect_string(GKeyFile *key_file,
   return i;
 }
 
-int genie::Config::get_dec_color_from_hex_string(GKeyFile *key_file,
-                                                 const char *section,
+int genie::Config::get_dec_color_from_hex_string(const char *section,
                                                  const char *key,
                                                  const char *default_value) {
   GError *error = NULL;
@@ -139,8 +139,8 @@ int genie::Config::get_dec_color_from_hex_string(GKeyFile *key_file,
  *
  * Gets an integer, checks it's zero or higher, and casts it
  */
-size_t genie::Config::get_size(GKeyFile *key_file, const char *section,
-                               const char *key, const size_t default_value) {
+size_t genie::Config::get_size(const char *section, const char *key,
+                               const size_t default_value) {
   GError *error = NULL;
   ssize_t value = g_key_file_get_integer(key_file, section, key, &error);
   if (error != NULL) {
@@ -163,15 +163,14 @@ size_t genie::Config::get_size(GKeyFile *key_file, const char *section,
  * @brief Like the `get_size` helper, but also checks that the retrieved value
  * is within a `min` and `max` (inclusive).
  */
-size_t genie::Config::get_bounded_size(GKeyFile *key_file, const char *section,
-                                       const char *key,
+size_t genie::Config::get_bounded_size(const char *section, const char *key,
                                        const size_t default_value,
                                        const size_t min, const size_t max) {
   g_assert(min <= max);
   g_assert(default_value >= min);
   g_assert(default_value <= max);
 
-  ssize_t value = get_size(key_file, section, key, default_value);
+  ssize_t value = get_size(section, key, default_value);
 
   if (value < (ssize_t)min) {
     g_warning("CONFIG [%s] %s must be %zd or greater, found %zd. "
@@ -190,8 +189,8 @@ size_t genie::Config::get_bounded_size(GKeyFile *key_file, const char *section,
   return value;
 }
 
-double genie::Config::get_double(GKeyFile *key_file, const char *section,
-                                 const char *key, const double default_value) {
+double genie::Config::get_double(const char *section, const char *key,
+                                 const double default_value) {
   GError *error = NULL;
   double value = g_key_file_get_double(key_file, section, key, &error);
   if (error != NULL) {
@@ -203,15 +202,14 @@ double genie::Config::get_double(GKeyFile *key_file, const char *section,
   return value;
 }
 
-double genie::Config::get_bounded_double(GKeyFile *key_file,
-                                         const char *section, const char *key,
+double genie::Config::get_bounded_double(const char *section, const char *key,
                                          const double default_value,
                                          const double min, const double max) {
   g_assert(min <= max);
   g_assert(default_value >= min);
   g_assert(default_value <= max);
 
-  double value = get_double(key_file, section, key, default_value);
+  double value = get_double(section, key, default_value);
 
   if (value < min) {
     g_warning("CONFIG [%s] %s must be %f or greater, found %f. "
@@ -230,8 +228,8 @@ double genie::Config::get_bounded_double(GKeyFile *key_file,
   return value;
 }
 
-bool genie::Config::get_bool(GKeyFile *key_file, const char *section,
-                             const char *key, const bool default_value) {
+bool genie::Config::get_bool(const char *section, const char *key,
+                             const bool default_value) {
   GError *error = NULL;
   gboolean value = g_key_file_get_boolean(key_file, section, key, &error);
   if (error != NULL) {
@@ -274,23 +272,31 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
   }
 }
 
-void genie::Config::load() {
-  std::unique_ptr<GKeyFile, fn_deleter<GKeyFile, g_key_file_free>>
-      auto_key_file(g_key_file_new());
-  GKeyFile *key_file = auto_key_file.get();
+void genie::Config::save() {
   GError *error = NULL;
+  g_key_file_save_to_file(key_file, "config.ini", &error);
+  if (error) {
+    g_critical("Failed to save configuration file to disk: %s\n",
+               error->message);
+    g_error_free(error);
+  }
+}
 
+void genie::Config::load() {
+  key_file = g_key_file_new();
+
+  GError *error = NULL;
   if (!g_key_file_load_from_file(key_file, "config.ini",
                                  (GKeyFileFlags)(G_KEY_FILE_KEEP_COMMENTS |
                                                  G_KEY_FILE_KEEP_TRANSLATIONS),
                                  &error)) {
-    g_critical("config load error: %s\n", error->message);
+    if (error->domain != G_FILE_ERROR || error->code != G_FILE_ERROR_NOENT)
+      g_critical("config load error: %s\n", error->message);
     g_error_free(error);
     return;
   }
 
-  asset_dir =
-      get_string(key_file, "general", "assets_dir", pkglibdir "/assets");
+  asset_dir = get_string("general", "assets_dir", pkglibdir "/assets");
 
   genie_url = g_key_file_get_string(key_file, "general", "url", &error);
   if (error || !genie_url || strlen(genie_url) == 0) {
@@ -298,11 +304,11 @@ void genie::Config::load() {
   }
   g_clear_error(&error);
 
-  retry_interval = get_size(key_file, "general", "retry_interval",
-                            DEFAULT_WS_RETRY_INTERVAL);
+  retry_interval =
+      get_size("general", "retry_interval", DEFAULT_WS_RETRY_INTERVAL);
 
   connect_timeout =
-      get_size(key_file, "general", "connect_timeout", DEFAULT_CONNECT_TIMEOUT);
+      get_size("general", "connect_timeout", DEFAULT_CONNECT_TIMEOUT);
 
   auth_mode = get_auth_mode(key_file);
   if (auth_mode != AuthMode::NONE) {
@@ -359,15 +365,15 @@ void genie::Config::load() {
 
   error = NULL;
 
-  audio_backend = get_string(key_file, "audio", "backend", "pulse");
+  audio_backend = get_string("audio", "backend", "pulse");
   if (strcmp(audio_backend, "pulse") == 0) {
     audio_input_device = nullptr;
     audio_output_fifo = nullptr;
     audio_input_stereo2mono = false;
     audio_sink = g_strdup("pulsesink");
 
-    gchar *output = get_string(key_file, "audio", "output",
-                               DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE);
+    gchar *output =
+        get_string("audio", "output", DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE);
     audio_output_device_music = g_strdup(output);
     audio_output_device_voice = g_strdup(output);
     audio_output_device_alerts = g_strdup(output);
@@ -382,8 +388,8 @@ void genie::Config::load() {
     }
 
     audio_sink = g_strdup("alsasink");
-    audio_output_device = get_string(key_file, "audio", "output",
-                                     DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE);
+    audio_output_device =
+        get_string("audio", "output", DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE);
 
     error = NULL;
     audio_output_device_music =
@@ -429,7 +435,7 @@ void genie::Config::load() {
     return;
   }
 
-  audio_voice = get_string(key_file, "audio", "voice", DEFAULT_VOICE);
+  audio_voice = get_string("audio", "voice", DEFAULT_VOICE);
 
   // Echo Cancellation
   // =========================================================================
@@ -452,49 +458,42 @@ void genie::Config::load() {
   // Hacks
   // =========================================================================
 
-  hacks_wake_word_verification =
-      get_bool(key_file, "hacks", "wake_word_verification",
-               DEFAULT_HACKS_WAKE_WORD_VERIFICATION);
+  hacks_wake_word_verification = get_bool("hacks", "wake_word_verification",
+                                          DEFAULT_HACKS_WAKE_WORD_VERIFICATION);
 
   hacks_surpress_repeated_notifs =
-      get_bool(key_file, "hacks", "surpress_repeated_notifs",
+      get_bool("hacks", "surpress_repeated_notifs",
                DEFAULT_HACKS_SURPRESS_REPEATED_NOTIFS);
 
   hacks_dns_server =
-      get_string(key_file, "hacks", "dns_server", DEFAULT_HACKS_DNS_SERVER);
+      get_string("hacks", "dns_server", DEFAULT_HACKS_DNS_SERVER);
 
   // Picovoice
   // =========================================================================
 
-  pv_model_path =
-      get_string(key_file, "picovoice", "model", DEFAULT_PV_MODEL_PATH);
+  pv_model_path = get_string("picovoice", "model", DEFAULT_PV_MODEL_PATH);
 
-  pv_keyword_path =
-      get_string(key_file, "picovoice", "keyword", DEFAULT_PV_KEYWORD_PATH);
+  pv_keyword_path = get_string("picovoice", "keyword", DEFAULT_PV_KEYWORD_PATH);
 
-  pv_sensitivity = (float)get_bounded_double(
-      key_file, "picovoice", "sensitivity", DEFAULT_PV_SENSITIVITY, 0, 1);
+  pv_sensitivity = (float)get_bounded_double("picovoice", "sensitivity",
+                                             DEFAULT_PV_SENSITIVITY, 0, 1);
 
-  pv_wake_word_pattern = get_string(key_file, "picovoice", "wake_word_pattern",
+  pv_wake_word_pattern = get_string("picovoice", "wake_word_pattern",
                                     DEFAULT_PV_WAKE_WORD_PATTERN);
 
   // Sounds
   // =========================================================================
 
-  sound_wake = get_string(key_file, "sound", "wake", DEFAULT_SOUND_WAKE);
-  sound_no_input =
-      get_string(key_file, "sound", "no_input", DEFAULT_SOUND_NO_INPUT);
-  sound_too_much_input = get_string(key_file, "sound", "too_much_input",
-                                    DEFAULT_SOUND_TOO_MUCH_INPUT);
+  sound_wake = get_string("sound", "wake", DEFAULT_SOUND_WAKE);
+  sound_no_input = get_string("sound", "no_input", DEFAULT_SOUND_NO_INPUT);
+  sound_too_much_input =
+      get_string("sound", "too_much_input", DEFAULT_SOUND_TOO_MUCH_INPUT);
   sound_news_intro =
-      get_string(key_file, "sound", "news_intro", DEFAULT_SOUND_NEWS_INTRO);
-  sound_alarm_clock_elapsed =
-      get_string(key_file, "sound", "alarm_clock_elapsed",
-                 DEFAULT_SOUND_ALARM_CLOCK_ELAPSED);
-  sound_working =
-      get_string(key_file, "sound", "working", DEFAULT_SOUND_WORKING);
-  sound_stt_error =
-      get_string(key_file, "sound", "stt_error", DEFAULT_SOUND_STT_ERROR);
+      get_string("sound", "news_intro", DEFAULT_SOUND_NEWS_INTRO);
+  sound_alarm_clock_elapsed = get_string("sound", "alarm_clock_elapsed",
+                                         DEFAULT_SOUND_ALARM_CLOCK_ELAPSED);
+  sound_working = get_string("sound", "working", DEFAULT_SOUND_WORKING);
+  sound_stt_error = get_string("sound", "stt_error", DEFAULT_SOUND_STT_ERROR);
 
   // Buttons
   // =========================================================================
@@ -507,8 +506,7 @@ void genie::Config::load() {
   }
 
   if (buttons_enabled) {
-    evinput_device =
-        get_string(key_file, "buttons", "evinput_dev", DEFAULT_EVINPUT_DEV);
+    evinput_device = get_string("buttons", "evinput_dev", DEFAULT_EVINPUT_DEV);
   } else {
     evinput_device = nullptr;
   }
@@ -540,38 +538,38 @@ void genie::Config::load() {
       g_error_free(error);
     }
 
-    leds_starting_effect = get_leds_effect_string(
-        key_file, "leds", "starting_effect", DEFAULT_LEDS_STARTING_EFFECT);
+    leds_starting_effect = get_leds_effect_string("leds", "starting_effect",
+                                                  DEFAULT_LEDS_STARTING_EFFECT);
     leds_starting_color = get_dec_color_from_hex_string(
-        key_file, "leds", "starting_color", DEFAULT_LEDS_STARTING_COLOR);
-    leds_sleeping_effect = get_leds_effect_string(
-        key_file, "leds", "sleeping_effect", DEFAULT_LEDS_SLEEPING_EFFECT);
+        "leds", "starting_color", DEFAULT_LEDS_STARTING_COLOR);
+    leds_sleeping_effect = get_leds_effect_string("leds", "sleeping_effect",
+                                                  DEFAULT_LEDS_SLEEPING_EFFECT);
     leds_sleeping_color = get_dec_color_from_hex_string(
-        key_file, "leds", "sleeping_color", DEFAULT_LEDS_SLEEPING_COLOR);
+        "leds", "sleeping_color", DEFAULT_LEDS_SLEEPING_COLOR);
     leds_listening_effect = get_leds_effect_string(
-        key_file, "leds", "listening_effect", DEFAULT_LEDS_LISTENING_EFFECT);
+        "leds", "listening_effect", DEFAULT_LEDS_LISTENING_EFFECT);
     leds_listening_color = get_dec_color_from_hex_string(
-        key_file, "leds", "listening_color", DEFAULT_LEDS_LISTENING_COLOR);
+        "leds", "listening_color", DEFAULT_LEDS_LISTENING_COLOR);
     leds_processing_effect = get_leds_effect_string(
-        key_file, "leds", "processing_effect", DEFAULT_LEDS_PROCESSING_EFFECT);
+        "leds", "processing_effect", DEFAULT_LEDS_PROCESSING_EFFECT);
     leds_processing_color = get_dec_color_from_hex_string(
-        key_file, "leds", "processing_color", DEFAULT_LEDS_PROCESSING_COLOR);
-    leds_saying_effect = get_leds_effect_string(
-        key_file, "leds", "saying_effect", DEFAULT_LEDS_SAYING_EFFECT);
+        "leds", "processing_color", DEFAULT_LEDS_PROCESSING_COLOR);
+    leds_saying_effect = get_leds_effect_string("leds", "saying_effect",
+                                                DEFAULT_LEDS_SAYING_EFFECT);
     leds_saying_color = get_dec_color_from_hex_string(
-        key_file, "leds", "saying_color", DEFAULT_LEDS_SAYING_COLOR);
-    leds_error_effect = get_leds_effect_string(key_file, "leds", "error_effect",
+        "leds", "saying_color", DEFAULT_LEDS_SAYING_COLOR);
+    leds_error_effect = get_leds_effect_string("leds", "error_effect",
                                                DEFAULT_LEDS_ERROR_EFFECT);
-    leds_error_color = get_dec_color_from_hex_string(
-        key_file, "leds", "error_color", DEFAULT_LEDS_ERROR_COLOR);
+    leds_error_color = get_dec_color_from_hex_string("leds", "error_color",
+                                                     DEFAULT_LEDS_ERROR_COLOR);
     leds_net_error_effect = get_leds_effect_string(
-        key_file, "leds", "net_error_effect", DEFAULT_LEDS_NET_ERROR_EFFECT);
+        "leds", "net_error_effect", DEFAULT_LEDS_NET_ERROR_EFFECT);
     leds_net_error_color = get_dec_color_from_hex_string(
-        key_file, "leds", "net_error_color", DEFAULT_LEDS_NET_ERROR_COLOR);
-    leds_disabled_effect = get_leds_effect_string(
-        key_file, "leds", "disabled_effect", DEFAULT_LEDS_DISABLED_EFFECT);
+        "leds", "net_error_color", DEFAULT_LEDS_NET_ERROR_COLOR);
+    leds_disabled_effect = get_leds_effect_string("leds", "disabled_effect",
+                                                  DEFAULT_LEDS_DISABLED_EFFECT);
     leds_disabled_color = get_dec_color_from_hex_string(
-        key_file, "leds", "diabled_color", DEFAULT_LEDS_DISABLED_COLOR);
+        "leds", "diabled_color", DEFAULT_LEDS_DISABLED_COLOR);
   } else {
     leds_type = nullptr;
     leds_path = nullptr;
@@ -623,23 +621,23 @@ void genie::Config::load() {
   // =========================================================================
 
   vad_start_speaking_ms =
-      get_bounded_size(key_file, "vad", "start_speaking_ms",
+      get_bounded_size("vad", "start_speaking_ms",
                        DEFAULT_VAD_START_SPEAKING_MS, VAD_MIN_MS, VAD_MAX_MS);
 
   vad_done_speaking_ms =
-      get_bounded_size(key_file, "vad", "done_speaking_ms",
-                       DEFAULT_VAD_DONE_SPEAKING_MS, VAD_MIN_MS, VAD_MAX_MS);
+      get_bounded_size("vad", "done_speaking_ms", DEFAULT_VAD_DONE_SPEAKING_MS,
+                       VAD_MIN_MS, VAD_MAX_MS);
 
   vad_input_detected_noise_ms = get_bounded_size(
-      key_file, "vad", "input_detected_noise_ms",
-      DEFAULT_VAD_INPUT_DETECTED_NOISE_MS, VAD_MIN_MS, VAD_MAX_MS);
+      "vad", "input_detected_noise_ms", DEFAULT_VAD_INPUT_DETECTED_NOISE_MS,
+      VAD_MIN_MS, VAD_MAX_MS);
 
   vad_listen_timeout_ms = get_bounded_size(
-      key_file, "vad", "listen_timeout_ms", DEFAULT_VAD_LISTEN_TIMEOUT_MS,
+      "vad", "listen_timeout_ms", DEFAULT_VAD_LISTEN_TIMEOUT_MS,
       VAD_LISTEN_TIMEOUT_MIN_MS, VAD_LISTEN_TIMEOUT_MAX_MS);
 
   // Web UI
   // =========================================================================
-  webui_port = get_bounded_size(key_file, "webui", "port", DEFAULT_WEBUI_PORT,
-                                1024, 65535);
+  webui_port =
+      get_bounded_size("webui", "port", DEFAULT_WEBUI_PORT, 1024, 65535);
 }
