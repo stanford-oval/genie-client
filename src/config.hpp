@@ -269,6 +269,25 @@ public:
   // -------------------------------------------------------------------------
   int webui_port;
 
+  void set_genie_url(const char *url) {
+    char *old = genie_url;
+    genie_url = g_strdup(url);
+    g_free(old);
+    g_key_file_set_string(key_file, "general", "url", url);
+  }
+  void set_genie_access_token(const char *access_token) {
+    char *old = genie_access_token;
+    genie_access_token = g_strdup(access_token);
+    g_free(old);
+    g_key_file_set_string(key_file, "general", "accessToken", access_token);
+  }
+  void set_conversation_id(const char *new_id) {
+    char *old = conversation_id;
+    conversation_id = g_strdup(new_id);
+    g_free(old);
+    g_key_file_set_string(key_file, "general", "conversationId", new_id);
+  }
+
 protected:
 private:
   GKeyFile *key_file = nullptr;

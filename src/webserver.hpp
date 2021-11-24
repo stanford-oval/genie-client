@@ -20,6 +20,7 @@
 
 #include "utils/autoptrs.hpp"
 #include <libsoup/soup.h>
+#include <string>
 
 namespace genie {
 
@@ -32,15 +33,24 @@ public:
 private:
   App *app;
   auto_gobject_ptr<SoupServer> server;
+  std::string csrf_token;
 
-  void log_request(const char *path, int status);
+  void log_request(SoupMessage *msg, const char *path, int status);
 
   void send_html(SoupMessage *msg, int status, const char *page_title,
                  const char *page_body);
 
+  enum class AllowedMethod { NONE = 0, GET = 1, POST = 2 };
+  AllowedMethod check_method(SoupMessage *msg, const char *path,
+                             int allowed_methods);
+
   void handle_asset(SoupMessage *msg, const char *path);
+
   void handle_index(SoupMessage *msg);
+  void handle_index_post(SoupMessage *msg);
+  void handle_index_get(SoupMessage *msg);
   void handle_404(SoupMessage *msg, const char *path);
+  void handle_405(SoupMessage *msg, const char *path);
 };
 
 } // namespace genie
