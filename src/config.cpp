@@ -372,12 +372,11 @@ void genie::Config::load() {
     audio_input_stereo2mono = false;
     audio_sink = g_strdup("pulsesink");
 
-    gchar *output =
+    audio_output_device =
         get_string("audio", "output", DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE);
-    audio_output_device_music = g_strdup(output);
-    audio_output_device_voice = g_strdup(output);
-    audio_output_device_alerts = g_strdup(output);
-    g_free(output);
+    audio_output_device_music = g_strdup(audio_output_device);
+    audio_output_device_voice = g_strdup(audio_output_device);
+    audio_output_device_alerts = g_strdup(audio_output_device);
   } else if (strcmp(audio_backend, "alsa") == 0) {
     audio_input_device =
         g_key_file_get_string(key_file, "audio", "input", &error);
