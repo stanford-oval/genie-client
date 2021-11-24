@@ -28,35 +28,6 @@
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::WebServer"
 
-static const char *html_template_1 = "<!DOCTYPE html>"
-                                     "<html>"
-                                     "<head>"
-                                     "<title>";
-static const char *html_template_2 =
-    "</title>"
-    "<meta charset=\"utf-8\" />"
-    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />"
-    "<link "
-    "href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/"
-    "bootstrap.min.css\" rel=\"stylesheet\" "
-    "integrity=\"sha384-"
-    "1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3\" "
-    "crossorigin=\"anonymous\" />"
-    "<link href=\"/css/style.css\" rel=\"stylesheet\" />"
-    "</head>"
-    "<body>"
-    "<div class=\"container\">";
-static const char *html_template_3 =
-    "</div>"
-    "<script "
-    "src=\"https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/"
-    "bootstrap.bundle.min.js\" "
-    "integrity=\"sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+"
-    "8nbTov4+1p\" crossorigin=\"anonymous\"></script>"
-    "<script src=\"/js/shared.js\"></script>"
-    "</body>"
-    "</html>";
-
 static const char *title_error = N_("Genie - Error");
 static const char *title_normal = N_("Genie Configuration");
 
@@ -77,11 +48,21 @@ static gchar *gen_random(size_t size) {
   return base64;
 }
 
+static genie::TemplateString load_html_template(genie::App *app,
+                                                const char *filename) {
+  gchar *pathname =
+      g_build_filename(app->config->asset_dir, "webui", filename, nullptr);
+  auto tmpl = genie::TemplateString::from_file(pathname);
+  g_free(pathname);
+  return tmpl;
+}
+
 genie::WebServer::WebServer(App *app)
     : app(app),
       server(soup_server_new("server-header",
                              PACKAGE_NAME "/" PACKAGE_VERSION " ", nullptr),
-             adopt_mode::owned) {
+             adopt_mode::owned),
+      page_layout(load_html_template(app, "layout.html")) {
 
   gchar *tmp = gen_random(32);
   csrf_token = tmp;
@@ -154,6 +135,7 @@ void genie::WebServer::handle_asset(SoupMessage *msg, const char *path) {
   gsize length;
   if (!g_file_get_contents(filename, &contents, &length, &error)) {
     g_free(filename);
+    g_error_free(error);
 
     if (error->code == G_FILE_ERROR_ACCES || error->code == G_FILE_ERROR_PERM) {
       log_request(msg, path, 403);
@@ -289,59 +271,32 @@ out:
 void genie::WebServer::handle_index_get(SoupMessage *msg) {
   SoupURI *genie_url = soup_uri_new(app->config->genie_url);
 
-  gchar *body = g_strdup_printf(
-      "<h1>%s</h1>"
-      "<form method=\"POST\" action=\"/\">"
-      "<input type=\"hidden\" name=\"_csrf\" value=\"%s\" />"
-      "<div class=\"mb-3\">"
-      "<label for=\"config-url\" class=\"form-label\">%s</label>"
-      "<input type=\"text\" id=\"config-url\" name=\"url\" value=\"%s\" "
-      "class=\"form-control\" />"
-      "</div>"
-      "<div class=\"mb-3\">"
-      "<label for=\"config-access-token\" class=\"form-label\">%s</label>"
-      "<input type=\"text\" id=\"config-access-token\" name=\"access_token\" "
-      "value=\"%s\" class=\"form-control\" />"
-      "</div>"
-      "<div class=\"mb-3\">"
-      "<label for=\"config-conversation-id\" class=\"form-label\">%s</label>"
-      "<input type=\"text\" id=\"config-conversation-id\" "
-      "name=\"conversation_id\" "
-      "value=\"%s\" class=\"form-control\" />"
-      "</div>"
-      "<button type=\"submit\" class=\"btn btn-primary\">Save</button>",
-      _("Genie Configuration"), csrf_token.c_str(), _("URL"),
-      app->config->genie_url, _("Access Token"),
-      app->config->genie_access_token ? app->config->genie_access_token : "",
-      _("Conversation ID"), app->config->conversation_id);
+  auto body =
+      load_html_template(app, "config.html")
+          .render({{"page_title", _("Genie Configuration")},
+                   {"csrf_token", csrf_token.c_str()},
+                   {"url_label", _("URL")},
+                   {"url", app->config->genie_url},
+                   {"access_token_label", _("Access Token")},
+                   {"access_token", app->config->genie_access_token
+                                        ? app->config->genie_access_token
+                                        : ""},
+                   {"conversation_id_label", _("Conversation ID")},
+                   {"conversation_id", app->config->conversation_id}});
 
   log_request(msg, "/", 200);
-  send_html(msg, 200, title_normal, body);
-  g_free(body);
+  send_html(msg, 200, title_normal, body.c_str());
 }
 
 void genie::WebServer::send_html(SoupMessage *msg, int status,
                                  const char *page_title,
                                  const char *page_body) {
-  gchar *buffer = (gchar *)g_malloc(
-      strlen(html_template_1) + strlen(page_title) + strlen(html_template_2) +
-      strlen(page_body) + strlen(html_template_3) + 1);
-
-  gchar *write_at = buffer;
-  strcpy(write_at, html_template_1);
-  write_at += strlen(html_template_1);
-  strcpy(write_at, page_title);
-  write_at += strlen(page_title);
-  strcpy(write_at, html_template_2);
-  write_at += strlen(html_template_2);
-  strcpy(write_at, page_body);
-  write_at += strlen(page_body);
-  strcpy(write_at, html_template_3);
-  write_at += strlen(html_template_3);
+  auto rendered = page_layout.render(
+      {{"page_title", page_title}, {"page_body", page_body}});
 
   soup_message_set_status(msg, status);
-  soup_message_set_response(msg, "text/html", SOUP_MEMORY_TAKE, buffer,
-                            write_at - buffer);
+  soup_message_set_response(msg, "text/html", SOUP_MEMORY_COPY, rendered.data(),
+                            rendered.size());
 }
 
 void genie::WebServer::log_request(SoupMessage *msg, const char *path,

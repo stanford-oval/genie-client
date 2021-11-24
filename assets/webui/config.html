@@ -1,0 +1,16 @@
+<h1>{{page_title}}</h1>
+<form method="POST" action="/">
+<input type="hidden" name="_csrf" value="{{csrf_token}}" />
+<div class="mb-3">
+    <label for="config-url" class="form-label">{{url_label}}</label>
+    <input type="text" id="config-url" name="url" value="{{url}}" class="form-control" />
+</div>
+<div class="mb-3">
+    <label for="config-access-token" class="form-label">{{access_token_label}}</label>
+    <input type="text" id="config-access-token" name="access_token" value="{{access_token}}" class="form-control" />
+</div>
+<div class="mb-3">
+    <label for="config-conversation-id" class="form-label">{{conversation_id_label}}</label>
+    <input type="text" id="config-conversation-id" name="conversation_id" value="{{conversation_id}}" class="form-control" />
+</div>
+<button type="submit" class="btn btn-primary">Save</button>

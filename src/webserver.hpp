@@ -19,6 +19,7 @@
 #pragma once
 
 #include "utils/autoptrs.hpp"
+#include "utils/template-string.hpp"
 #include <libsoup/soup.h>
 #include <string>
 
@@ -34,6 +35,7 @@ private:
   App *app;
   auto_gobject_ptr<SoupServer> server;
   std::string csrf_token;
+  TemplateString page_layout;
 
   void log_request(SoupMessage *msg, const char *path, int status);
 
