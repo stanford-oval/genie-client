@@ -32,6 +32,8 @@
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::WebServer"
 
+using namespace kainjow;
+
 static const char *title_error = N_("Genie - Error");
 static const char *title_normal = N_("Genie Configuration");
 
@@ -52,11 +54,23 @@ static gchar *gen_random(size_t size) {
   return base64;
 }
 
-static genie::TemplateString load_html_template(genie::App *app,
-                                                const char *filename) {
+static mustache::mustache load_html_template(genie::App *app,
+                                             const char *filename) {
   gchar *pathname =
       g_build_filename(app->config->asset_dir, "webui", filename, nullptr);
-  auto tmpl = genie::TemplateString::from_file(pathname);
+  GError *error = nullptr;
+  gchar *contents;
+  gsize length;
+  if (!g_file_get_contents(pathname, &contents, &length, &error)) {
+    g_critical("Failed to load template file from %s: %s", filename,
+               error->message);
+    g_free(pathname);
+    g_error_free(error);
+    return mustache::mustache("");
+  }
+
+  mustache::mustache tmpl{contents};
+  g_free(contents);
   g_free(pathname);
   return tmpl;
 }
@@ -431,17 +445,21 @@ out:
 }
 
 void genie::WebServer::handle_index_get(SoupMessage *msg) {
+  const char *auth_mode = Config::auth_mode_to_string(app->config->auth_mode);
 
-  auto body =
-      load_html_template(app, "config.html")
-          .render({{"csrf_token", csrf_token.c_str()},
-                   {"url", app->config->genie_url},
-                   {"auth_mode",
-                    Config::auth_mode_to_string(app->config->auth_mode)},
-                   {"access_token", app->config->genie_access_token
-                                        ? app->config->genie_access_token
-                                        : ""},
-                   {"conversation_id", app->config->conversation_id}});
+  mustache::object data{
+      {"csrf_token", csrf_token.c_str()},
+      {"url", app->config->genie_url},
+      {"auth_mode_checked", mustache::lambda([auth_mode](const std::string &s) {
+         if (s == auth_mode)
+           return "selected";
+         else
+           return "";
+       })},
+      {"access_token",
+       app->config->genie_access_token ? app->config->genie_access_token : ""},
+      {"conversation_id", app->config->conversation_id}};
+  auto body = load_html_template(app, "config.html").render(data);
 
   log_request(msg, "/", 200);
   send_html(msg, 200, title_normal, body.c_str());
@@ -450,8 +468,8 @@ void genie::WebServer::handle_index_get(SoupMessage *msg) {
 void genie::WebServer::send_html(SoupMessage *msg, int status,
                                  const char *page_title,
                                  const char *page_body) {
-  auto rendered = page_layout.render(
-      {{"page_title", page_title}, {"page_body", page_body}});
+  mustache::object data{{"page_title", page_title}, {"page_body", page_body}};
+  auto rendered = page_layout.render(data);
 
   soup_message_set_status(msg, status);
   soup_message_set_response(msg, "text/html", SOUP_MEMORY_COPY, rendered.data(),

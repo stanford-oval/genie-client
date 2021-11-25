@@ -8,12 +8,6 @@
             document.getElementById('config-access-token-group').classList.add('d-none');
     }
 
-    {
-        // sync the option selected initially
-        const authModeSelector = document.getElementById('config-auth-mode');
-        authModeSelector.value = authModeSelector.dataset.value;
-    }
-
     updateAuthMode();
     document.getElementById('config-auth-mode').onchange = function() {
         updateAuthMode();

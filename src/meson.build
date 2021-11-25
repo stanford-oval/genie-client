@@ -92,7 +92,6 @@ executable(
   'state/saying.cpp',
   'state/sleeping.cpp',
   'state/state.cpp',
-  'utils/template-string.cpp',
   'webserver.cpp',
   'ws-protocol/client.cpp',
   'ws-protocol/conversation.cpp',
