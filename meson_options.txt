@@ -2,3 +2,6 @@ option('static', type: 'boolean', value: false)
 
 option('alsa', type: 'boolean', value: true)
 option('pulseaudio', type: 'boolean', value: false)
+
+option('oauth_client_id', type: 'string', value: '')
+option('oauth_client_secret', type: 'string', value: '')

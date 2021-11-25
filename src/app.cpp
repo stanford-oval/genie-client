@@ -254,3 +254,9 @@ void genie::App::replay_deferred_events() {
     copy.pop();
   }
 }
+
+void genie::App::force_reconnect() { conversation_client->force_reconnect(); }
+
+void genie::App::set_temporary_access_token(const char *token) {
+  conversation_client->set_temporary_access_token(token);
+}

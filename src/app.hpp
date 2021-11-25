@@ -147,6 +147,9 @@ public:
     deferred_events.emplace(event);
   }
 
+  void force_reconnect();
+  void set_temporary_access_token(const char *token);
+
 private:
   // =========================================================================
 

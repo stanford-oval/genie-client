@@ -19,7 +19,11 @@
 #include "webserver.hpp"
 #include "app.hpp"
 #include "string.h"
+#include "utils/c-style-callback.hpp"
+#include "utils/soup-utils.hpp"
 #include <fcntl.h>
+#include <functional>
+#include <json-glib/json-glib.h>
 
 #include "config.h"
 #define GETTEXT_PACKAGE "genie-client"
@@ -99,6 +103,14 @@ genie::WebServer::WebServer(App *app)
          GHashTable *query, SoupClientContext *context, gpointer data) {
         WebServer *self = static_cast<WebServer *>(data);
         self->handle_asset(msg, path);
+      },
+      this, nullptr);
+  soup_server_add_handler(
+      server.get(), "/oauth-redirect",
+      [](SoupServer *server, SoupMessage *msg, const char *path,
+         GHashTable *query, SoupClientContext *context, gpointer data) {
+        WebServer *self = static_cast<WebServer *>(data);
+        self->handle_oauth_redirect(msg, query);
       },
       this, nullptr);
   soup_server_add_handler(
@@ -195,6 +207,108 @@ void genie::WebServer::handle_405(SoupMessage *msg, const char *path) {
   send_html(msg, 405, title_error, reply_405);
 }
 
+void genie::WebServer::handle_oauth_redirect(SoupMessage *msg,
+                                             GHashTable *query) {
+  if (check_method(msg, "/oauth-redirect", (int)AllowedMethod::GET) ==
+      AllowedMethod::NONE)
+    return;
+
+  const char *code = (const char *)g_hash_table_lookup(query, "code");
+  if (code == nullptr) {
+    // user cancelled authentication
+    log_request(msg, "/oauth-redirect", 303);
+    soup_message_set_redirect(msg, 303, "/");
+    return;
+  }
+
+  soup_server_pause_message(server.get(), msg);
+
+  SoupURI *token_uri = soup_uri_new(app->config->genie_url);
+  if (strcmp(soup_uri_get_scheme(token_uri), "wss") == 0)
+    soup_uri_set_scheme(token_uri, "https");
+  else
+    soup_uri_set_scheme(token_uri, "http");
+  soup_uri_set_path(token_uri, "/me/api/oauth2/token");
+
+  SoupMessage *token_request =
+      soup_message_new_from_uri(SOUP_METHOD_POST, token_uri);
+  soup_uri_free(token_uri);
+
+  SoupURI *redirect_uri = soup_uri_copy(soup_message_get_uri(msg));
+  soup_uri_set_path(redirect_uri, "/oauth-redirect");
+  soup_uri_set_query(redirect_uri, nullptr);
+  char *redirect_uri_str = soup_uri_to_string(redirect_uri, false);
+  soup_uri_free(redirect_uri);
+
+  char *body =
+      soup_form_encode("client_id", OAUTH_CLIENT_ID, "client_secret",
+                       OAUTH_CLIENT_SECRET, "grant_type", "authorization_code",
+                       "code", code, "redirect_uri", redirect_uri_str, nullptr);
+  g_free(redirect_uri_str);
+
+  soup_message_set_request(token_request, "application/x-www-form-urlencoded",
+                           SOUP_MEMORY_TAKE, body, strlen(body));
+
+  send_soup_message(
+      app->get_soup_session(), token_request,
+      [msg, this](SoupSession *session, SoupMessage *response) {
+        guint status_code;
+        GBytes *body;
+        gsize size;
+
+        g_object_get(response, "status-code", &status_code,
+                     "response-body-data", &body, nullptr);
+
+        g_message("Sent access token request to Genie Cloud, got HTTP %u",
+                  status_code);
+
+        if (status_code >= 400) {
+          g_warning("Failed to get access token from Genie Cloud: %s",
+                    (const char *)g_bytes_get_data(body, &size));
+          send_error(msg, 500, "Failed to obtain access token");
+          soup_server_unpause_message(server.get(), msg);
+          return;
+        }
+
+        JsonParser *parser = json_parser_new();
+        GError *error = nullptr;
+        const char *data = (const char *)g_bytes_get_data(body, &size);
+        json_parser_load_from_data(parser, data, size, &error);
+        if (error) {
+          g_warning("Failed to parse access token reply from Genie: %s",
+                    error->message);
+          g_warning("Response data: %s", data);
+          send_error(msg, 500, error->message);
+          soup_server_unpause_message(server.get(), msg);
+          return;
+        }
+
+        app->config->set_auth_mode(AuthMode::OAUTH2);
+
+        JsonReader *reader = json_reader_new(json_parser_get_root(parser));
+
+        json_reader_read_member(reader, "access_token");
+        const char *access_token = json_reader_get_string_value(reader);
+        app->set_temporary_access_token(access_token);
+        json_reader_end_member(reader); // access_token
+
+        json_reader_read_member(reader, "refresh_token");
+        const char *refresh_token = json_reader_get_string_value(reader);
+        json_reader_end_member(reader); // refresh_token
+        app->config->set_genie_access_token(refresh_token);
+
+        app->config->save();
+        app->force_reconnect();
+
+        g_object_unref(parser);
+        g_object_unref(reader);
+        g_bytes_unref(body);
+
+        soup_message_set_redirect(msg, 303, "/");
+        soup_server_unpause_message(server.get(), msg);
+      });
+}
+
 void genie::WebServer::handle_index(SoupMessage *msg) {
   auto method = check_method(
       msg, "/", (int)AllowedMethod::GET | (int)AllowedMethod::POST);
@@ -210,6 +324,8 @@ void genie::WebServer::handle_index_post(SoupMessage *msg) {
   gsize body_size;
   GHashTable *fields = nullptr;
   bool any_change = false;
+  bool needs_reconnect = false;
+  bool needs_oauth_redirect = false;
 
   g_object_get(msg, "request-headers", &headers, "request-body-data",
                &request_body, nullptr);
@@ -235,6 +351,22 @@ void genie::WebServer::handle_index_post(SoupMessage *msg) {
     if (url && *url && g_strcmp0(url, app->config->genie_url) != 0) {
       app->config->set_genie_url(url);
       any_change = true;
+      needs_reconnect = true;
+    }
+  }
+  {
+    const char *auth_mode =
+        (const char *)g_hash_table_lookup(fields, "auth_mode");
+    if (auth_mode && *auth_mode) {
+      AuthMode parsed = Config::parse_auth_mode(auth_mode);
+      if (parsed != app->config->auth_mode) {
+        app->config->set_auth_mode(parsed);
+        any_change = true;
+        needs_reconnect = true;
+
+        if (parsed == AuthMode::OAUTH2)
+          needs_oauth_redirect = true;
+      }
     }
   }
   {
@@ -244,6 +376,7 @@ void genie::WebServer::handle_index_post(SoupMessage *msg) {
         g_strcmp0(access_token, app->config->genie_access_token) != 0) {
       app->config->set_genie_access_token(access_token);
       any_change = true;
+      needs_reconnect = true;
     }
   }
   {
@@ -253,11 +386,40 @@ void genie::WebServer::handle_index_post(SoupMessage *msg) {
         g_strcmp0(conversation_id, app->config->conversation_id) != 0) {
       app->config->set_conversation_id(conversation_id);
       any_change = true;
+      needs_reconnect = true;
     }
   }
 
   if (any_change)
     app->config->save();
+  if (app->config->auth_mode == AuthMode::OAUTH2 &&
+      (!app->config->genie_access_token || !*app->config->genie_access_token))
+    needs_oauth_redirect = true;
+
+  if (needs_oauth_redirect) {
+    SoupURI *redirect_uri = soup_uri_copy(soup_message_get_uri(msg));
+    soup_uri_set_path(redirect_uri, "/oauth-redirect");
+    char *redirect_uri_str = soup_uri_to_string(redirect_uri, false);
+    soup_uri_free(redirect_uri);
+
+    SoupURI *oauth_login_url = soup_uri_new(app->config->genie_url);
+    soup_uri_set_scheme(oauth_login_url, "http");
+    soup_uri_set_path(oauth_login_url, "/me/api/oauth2/authorize");
+    soup_uri_set_query_from_fields(oauth_login_url, "response_type", "code",
+                                   "client_id", OAUTH_CLIENT_ID, "redirect_uri",
+                                   redirect_uri_str, "scope",
+                                   "profile user-exec-command", nullptr);
+    char *oauth_login_url_str = soup_uri_to_string(oauth_login_url, false);
+    soup_uri_free(oauth_login_url);
+    g_free(redirect_uri_str);
+
+    soup_message_set_redirect(msg, 303, oauth_login_url_str);
+    g_free(oauth_login_url_str);
+    return;
+  }
+
+  if (needs_reconnect)
+    app->force_reconnect();
 
   handle_index_get(msg);
 
@@ -269,19 +431,16 @@ out:
 }
 
 void genie::WebServer::handle_index_get(SoupMessage *msg) {
-  SoupURI *genie_url = soup_uri_new(app->config->genie_url);
 
   auto body =
       load_html_template(app, "config.html")
-          .render({{"page_title", _("Genie Configuration")},
-                   {"csrf_token", csrf_token.c_str()},
-                   {"url_label", _("URL")},
+          .render({{"csrf_token", csrf_token.c_str()},
                    {"url", app->config->genie_url},
-                   {"access_token_label", _("Access Token")},
+                   {"auth_mode",
+                    Config::auth_mode_to_string(app->config->auth_mode)},
                    {"access_token", app->config->genie_access_token
                                         ? app->config->genie_access_token
                                         : ""},
-                   {"conversation_id_label", _("Conversation ID")},
                    {"conversation_id", app->config->conversation_id}});
 
   log_request(msg, "/", 200);
@@ -297,6 +456,14 @@ void genie::WebServer::send_html(SoupMessage *msg, int status,
   soup_message_set_status(msg, status);
   soup_message_set_response(msg, "text/html", SOUP_MEMORY_COPY, rendered.data(),
                             rendered.size());
+}
+
+void genie::WebServer::send_error(SoupMessage *msg, int status,
+                                  const char *error) {
+  auto body = g_strdup_printf(
+      _("<h1>Error</h1><p>Sorry, that did not work: %s</p>"), error);
+  send_html(msg, status, title_error, body);
+  g_free(body);
 }
 
 void genie::WebServer::log_request(SoupMessage *msg, const char *path,

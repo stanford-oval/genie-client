@@ -41,6 +41,7 @@ private:
 
   void send_html(SoupMessage *msg, int status, const char *page_title,
                  const char *page_body);
+  void send_error(SoupMessage *msg, int status, const char *error);
 
   enum class AllowedMethod { NONE = 0, GET = 1, POST = 2 };
   AllowedMethod check_method(SoupMessage *msg, const char *path,
@@ -51,6 +52,7 @@ private:
   void handle_index(SoupMessage *msg);
   void handle_index_post(SoupMessage *msg);
   void handle_index_get(SoupMessage *msg);
+  void handle_oauth_redirect(SoupMessage *msg, GHashTable *query);
   void handle_404(SoupMessage *msg, const char *path);
   void handle_405(SoupMessage *msg, const char *path);
 };

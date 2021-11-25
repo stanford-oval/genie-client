@@ -1,16 +1,25 @@
-<h1>{{page_title}}</h1>
+<h1>Genie Configuration</h1>
 <form method="POST" action="/">
 <input type="hidden" name="_csrf" value="{{csrf_token}}" />
 <div class="mb-3">
-    <label for="config-url" class="form-label">{{url_label}}</label>
+    <label for="config-url" class="form-label">URL</label>
     <input type="text" id="config-url" name="url" value="{{url}}" class="form-control" />
 </div>
 <div class="mb-3">
-    <label for="config-access-token" class="form-label">{{access_token_label}}</label>
+    <label for="config-auth-mode" class="form-label">Authentication Mode</label>
+    <select id="config-auth-mode" name="auth_mode" class="form-control" data-value="{{auth_mode}}">
+        <option value="none">None</option>
+        <option value="bearer">Genie Server (standalone)</option>
+        <option value="home-assistant">Home Assistant</option>
+        <option value="oauth2">Cloud Login</option>
+    </select>
+</div>
+<div class="mb-3" id="config-access-token-group">
+    <label for="config-access-token" class="form-label">Access Token</label>
     <input type="text" id="config-access-token" name="access_token" value="{{access_token}}" class="form-control" />
 </div>
 <div class="mb-3">
-    <label for="config-conversation-id" class="form-label">{{conversation_id_label}}</label>
+    <label for="config-conversation-id" class="form-label">Conversation ID</label>
     <input type="text" id="config-conversation-id" name="conversation_id" value="{{conversation_id}}" class="form-control" />
 </div>
 <button type="submit" class="btn btn-primary">Save</button>

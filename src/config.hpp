@@ -22,7 +22,7 @@
 
 namespace genie {
 
-enum class AuthMode { NONE, BEARER, COOKIE, HOME_ASSISTANT };
+enum class AuthMode { NONE, BEARER, COOKIE, HOME_ASSISTANT, OAUTH2 };
 
 class Config {
 public:
@@ -275,6 +275,11 @@ public:
     g_free(old);
     g_key_file_set_string(key_file, "general", "url", url);
   }
+  void set_auth_mode(AuthMode mode) {
+    auth_mode = mode;
+    g_key_file_set_string(key_file, "general", "auth_mode",
+                          auth_mode_to_string(mode));
+  }
   void set_genie_access_token(const char *access_token) {
     char *old = genie_access_token;
     genie_access_token = g_strdup(access_token);
@@ -287,6 +292,9 @@ public:
     g_free(old);
     g_key_file_set_string(key_file, "general", "conversationId", new_id);
   }
+
+  static AuthMode parse_auth_mode(const char *auth_mode);
+  static const char *auth_mode_to_string(AuthMode mode);
 
 protected:
 private:

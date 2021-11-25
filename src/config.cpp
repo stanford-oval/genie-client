@@ -241,9 +241,43 @@ bool genie::Config::get_bool(const char *section, const char *key,
   return static_cast<bool>(value);
 }
 
+genie::AuthMode genie::Config::parse_auth_mode(const char *auth_mode) {
+  if (strcmp(auth_mode, "none") == 0) {
+    return genie::AuthMode::NONE;
+  } else if (strcmp(auth_mode, "bearer") == 0) {
+    return genie::AuthMode::BEARER;
+  } else if (strcmp(auth_mode, "cookie") == 0) {
+    return genie::AuthMode::COOKIE;
+  } else if (strcmp(auth_mode, "home-assistant") == 0) {
+    return genie::AuthMode::HOME_ASSISTANT;
+  } else if (strcmp(auth_mode, "oauth2") == 0) {
+    return genie::AuthMode::OAUTH2;
+  } else {
+    g_warning("Invalid authentication mode %s, using default 'none'",
+              auth_mode);
+    return genie::AuthMode::NONE;
+  }
+}
+
+const char *genie::Config::auth_mode_to_string(genie::AuthMode mode) {
+  switch (mode) {
+    case genie::AuthMode::BEARER:
+      return "bearer";
+    case genie::AuthMode::COOKIE:
+      return "cookie";
+    case genie::AuthMode::HOME_ASSISTANT:
+      return "home-assistant";
+    case genie::AuthMode::OAUTH2:
+      return "oauth2";
+    case genie::AuthMode::NONE:
+    default:
+      return "none";
+  }
+}
+
 static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
   GError *error = nullptr;
-  ;
+
   char *value = g_key_file_get_string(key_file, "general", "auth_mode", &error);
   if (value == nullptr) {
     g_warning("Failed to load [general] auth_mode from config file, using "
@@ -252,24 +286,10 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
     return genie::AuthMode::NONE;
   }
 
-  if (strcmp(value, "none") == 0) {
-    g_free(value);
-    return genie::AuthMode::NONE;
-  } else if (strcmp(value, "bearer") == 0) {
-    g_free(value);
-    return genie::AuthMode::BEARER;
-  } else if (strcmp(value, "cookie") == 0) {
-    g_free(value);
-    return genie::AuthMode::COOKIE;
-  } else if (strcmp(value, "home-assistant") == 0) {
-    g_free(value);
-    return genie::AuthMode::HOME_ASSISTANT;
-  } else {
-    g_warning("Failed to load [general] auth_mode from config file, using "
-              "default 'none'");
-    g_free(value);
-    return genie::AuthMode::NONE;
-  }
+  auto parsed = genie::Config::parse_auth_mode(value);
+  g_free(value);
+
+  return parsed;
 }
 
 void genie::Config::save() {
@@ -315,8 +335,8 @@ void genie::Config::load() {
     genie_access_token =
         g_key_file_get_string(key_file, "general", "accessToken", &error);
     if (error) {
-      g_error("Missing access token in config file");
-      return;
+      g_warning("Missing access token in config file");
+      g_error_free(error);
     }
   } else {
     genie_access_token = nullptr;

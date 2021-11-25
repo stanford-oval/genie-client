@@ -52,9 +52,14 @@ public:
   ~Client();
 
   int init();
+  void force_reconnect();
   void send_command(const std::string text);
   void send_thingtalk(const char *data);
   void request_subprotocol(const char *extension, const char *const *caps);
+
+  void set_temporary_access_token(const char *token) {
+    temporary_access_token = token;
+  }
 
 protected:
   void send_json(auto_gobject_ptr<JsonBuilder> builder);
@@ -66,9 +71,12 @@ protected:
 
 private:
   void connect();
-  void connect(AuthMode auth_mode, const char *access_token);
-  static void on_access_token_ready(SoupSession *session, SoupMessage *msg,
-                                    gpointer user_data);
+  void connect_home_assistant();
+  void connect_oauth2();
+  void connect_direct(AuthMode auth_mode, const char *access_token);
+  void refresh_oauth2_token();
+  std::string temporary_access_token;
+
   static gboolean retry_connect_timer(gpointer data);
   void retry_connect();
   void maybe_flush_queue();
