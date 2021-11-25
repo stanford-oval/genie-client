@@ -42,7 +42,8 @@ public:
   static const constexpr char *DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE = "echosink";
   static const constexpr char *DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE = "hw:0,0";
   static const constexpr char *DEFAULT_GENIE_URL =
-      "ws://127.0.0.1:3000/api/conversation";
+      "wss://dev.genie.stanford.edu/me/api/conversation";
+  static const constexpr AuthMode DEFAULT_AUTH_MODE = AuthMode::OAUTH2;
   static const constexpr char *DEFAULT_NLP_URL =
       "https://nlp-staging.almond.stanford.edu";
   static const constexpr char *DEFAULT_LOCALE = "en-US";

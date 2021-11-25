@@ -281,9 +281,9 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
   char *value = g_key_file_get_string(key_file, "general", "auth_mode", &error);
   if (value == nullptr) {
     g_warning("Failed to load [general] auth_mode from config file, using "
-              "default 'none'");
+              "default 'oauth2'");
     g_error_free(error);
-    return genie::AuthMode::NONE;
+    return genie::Config::DEFAULT_AUTH_MODE;
   }
 
   auto parsed = genie::Config::parse_auth_mode(value);

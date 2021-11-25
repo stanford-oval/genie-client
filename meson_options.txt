@@ -3,5 +3,5 @@ option('static', type: 'boolean', value: false)
 option('alsa', type: 'boolean', value: true)
 option('pulseaudio', type: 'boolean', value: false)
 
-option('oauth_client_id', type: 'string', value: '')
-option('oauth_client_secret', type: 'string', value: '')
+option('oauth_client_id', type: 'string', value: 'c93f9c7579e7f319')
+option('oauth_client_secret', type: 'string', value: 'c4f4d4a06b1470f0707b97f8b07f92c51e85903d6accd5ae7fd9627c6824656a')
