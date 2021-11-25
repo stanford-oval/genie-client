@@ -35,12 +35,21 @@ meson ./build/
 ninja -C ./build/
 ```
 
-The compiled binary is located in ./build/src/genie
+The compiled binary is located in ./build/src/genie-client
+
+To use in a normal Linux installation, the binary should be installed with
+```bash
+ninja -C ./build/ install
+```
 
 ### Step 4: Configure
 
-The default config.ini is optimized for a specific hardware. To customize for development use, edit config.ini and set:
+The default config.ini is optimized for use in a general purpose Linux device (such as a laptop or Raspberry Pi), against
+a cloud instance of Genie.
 
-- `sink`: set this to the GStreamer element to use for audio output; on a normal Linux installation, this should be commented out
-- `input`: set this to the ALSA input device to use for input; use `arecord -L` to list available devices. This must be a real ALSA device, it cannot be `pulse` or `pipewire`
-- `url` + `accessToken`: set this to the URL and access token of the Almond instance to access
+While Genie is running, limited configuration is possible by connecting to the client web interface, hosted on port 8000.
+The web interface allows to login to the cloud instance, or connect to a local Genie server.
+
+Advanced customization to target a specific hardward is possible by editing the file config.ini
+in the same directory as where the client is run. The config.ini in the repository is an example and shows the default
+values.
