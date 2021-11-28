@@ -80,7 +80,7 @@ def run(
     plain: bool = False,
 ):
     if build:
-        build_cmd.run(exe_only=("exe" in deployables), plain=plain)
+        build_cmd.run(exe_only=len(deployables) > 0 and not ("lib" in deployables or "assets" in deployables or "pulse.exe" in deployables or any("tools" in x for x in deployables)), plain=plain)
 
     kill.run(target)
 
