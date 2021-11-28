@@ -13,6 +13,8 @@ from clavier import sh, log as logging
 LOG = logging.getLogger(__name__)
 DEFAULT_ENCODING = "utf-8"
 
+TTarget = Union[str, "Remote"]
+
 
 class Remote(ABC):
     """\
@@ -22,7 +24,7 @@ class Remote(ABC):
     """
 
     @classmethod
-    def create(cls, target: Union[str, Remote]):
+    def create(cls, target: TTarget):
         if isinstance(target, cls):
             return target
         if not isinstance(target, str):

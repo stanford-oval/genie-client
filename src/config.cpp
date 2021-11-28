@@ -68,8 +68,7 @@ gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default '%s'",
-              section, key, default_value);
+    g_debug("Using default %s:%s = '%s'", section, key, default_value);
     g_error_free(error);
     return strdup(default_value);
   }
@@ -82,8 +81,7 @@ int genie::Config::get_leds_effect_string(GKeyFile *key_file,
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default '%s'",
-              section, key, default_value);
+    g_debug("Using default %s:%s = '%s'", section, key, default_value);
     g_error_free(error);
     value = strdup(default_value);
   }
@@ -98,7 +96,7 @@ int genie::Config::get_leds_effect_string(GKeyFile *key_file,
   } else if (strcmp(value, "pulse") == 0) {
     i = (int)LedsAnimation_t::Pulse;
   } else {
-    g_warning("Failed to parse [%s] %s from config file, using 'none'", section,
+    g_warning("Failed to parse %s:%s from config file, using 'none'", section,
               key);
     i = (int)LedsAnimation_t::None;
   }
@@ -113,16 +111,15 @@ int genie::Config::get_dec_color_from_hex_string(GKeyFile *key_file,
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default '%s'",
-              section, key, default_value);
+    g_debug("Using default %s:%s = '%s'", section, key, default_value);
     g_error_free(error);
     value = strdup(default_value);
   }
 
   unsigned short r, g, b;
   if (sscanf(value, "%02hx%02hx%02hx", &r, &g, &b) != 3) {
-    g_warning("Failed to parse [%s] %s from config file, using default '%s'",
-              section, key, default_value);
+    g_debug("Failed to parse %s:%s from config file, using default '%s'",
+            section, key, default_value);
     value = strdup(default_value);
     sscanf(value, "%02hx%02hx%02hx", &r, &g, &b);
   }
@@ -144,13 +141,12 @@ size_t genie::Config::get_size(GKeyFile *key_file, const char *section,
   GError *error = NULL;
   ssize_t value = g_key_file_get_integer(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default %zd",
-              section, key, default_value);
+    g_debug("Using default %s:%s = %zd", section, key, default_value);
     g_error_free(error);
     return default_value;
   }
   if (value < 0) {
-    g_warning("Failed to load [%s] %s from config file. Value must be 0 or "
+    g_warning("Failed to load %s:%s from config file. Value must be 0 or "
               "greater, found %zd. Using default %zd",
               section, key, value, default_value);
     g_error_free(error);
@@ -174,14 +170,14 @@ size_t genie::Config::get_bounded_size(GKeyFile *key_file, const char *section,
   ssize_t value = get_size(key_file, section, key, default_value);
 
   if (value < (ssize_t)min) {
-    g_warning("CONFIG [%s] %s must be %zd or greater, found %zd. "
+    g_warning("CONFIG %s:%s must be %zd or greater, found %zd. "
               "Setting to minimum.",
               section, key, min, value);
     return min;
   }
 
   if (value > (ssize_t)max) {
-    g_warning("CONFIG [%s] %s must be %zd or less, found %zd. "
+    g_warning("CONFIG %s:%s must be %zd or less, found %zd. "
               "Setting to maximum.",
               section, key, max, value);
     return max;
@@ -195,8 +191,7 @@ double genie::Config::get_double(GKeyFile *key_file, const char *section,
   GError *error = NULL;
   double value = g_key_file_get_double(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default %f",
-              section, key, default_value);
+    g_debug("Using default %s:%s = %f", section, key, default_value);
     g_error_free(error);
     return default_value;
   }
@@ -214,14 +209,14 @@ double genie::Config::get_bounded_double(GKeyFile *key_file,
   double value = get_double(key_file, section, key, default_value);
 
   if (value < min) {
-    g_warning("CONFIG [%s] %s must be %f or greater, found %f. "
+    g_warning("CONFIG %s:%s must be %f or greater, found %f. "
               "Setting to default (%f).",
               section, key, min, value, default_value);
     return default_value;
   }
 
   if (value > max) {
-    g_warning("CONFIG [%s] %s must be %f or less, found %f. "
+    g_warning("CONFIG %s:%s must be %f or less, found %f. "
               "Setting to default (%f).",
               section, key, max, value, default_value);
     return default_value;
@@ -235,8 +230,8 @@ bool genie::Config::get_bool(GKeyFile *key_file, const char *section,
   GError *error = NULL;
   gboolean value = g_key_file_get_boolean(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default %s",
-              section, key, default_value ? "true" : "false");
+    g_debug("Using default %s:%s = %s", section, key,
+            default_value ? "true" : "false");
     g_error_free(error);
     return default_value;
   }
@@ -248,8 +243,7 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
   ;
   char *value = g_key_file_get_string(key_file, "general", "auth_mode", &error);
   if (value == nullptr) {
-    g_warning("Failed to load [general] auth_mode from config file, using "
-              "default 'none'");
+    g_debug("Using default general:auth_mode = 'none'");
     g_error_free(error);
     return genie::AuthMode::NONE;
   }
@@ -267,7 +261,7 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
     g_free(value);
     return genie::AuthMode::HOME_ASSISTANT;
   } else {
-    g_warning("Failed to load [general] auth_mode from config file, using "
+    g_warning("Failed to load general:auth_mode from config file, using "
               "default 'none'");
     g_free(value);
     return genie::AuthMode::NONE;

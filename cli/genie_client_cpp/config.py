@@ -26,7 +26,7 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             out.pulseaudio = out.root / "pulseaudio"
 
             with out.configure("tools") as tools:
-                tools.root = out.root / "tools"
+                tools.root = out.root
                 tools.gdbserver = tools.root / "gdbserver"
                 tools.pactl = tools.root / "pactl"
                 tools.parec = tools.root / "parec"
@@ -62,8 +62,12 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
     with client.configure("container") as container:
         container.name = "genie-builder"
 
+    with client.configure("device") as device:
+        device.default_type = "xiaodu"
+
     with client.configure("xiaodu") as xiaodu:
         xiaodu.network_interface = "wlan0"
+        xiaodu.arch = "arm32v7"
 
         with xiaodu.configure("paths") as paths:
             paths.install = Path("/opt/genie")
@@ -79,6 +83,9 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
 
             paths.wifi_config = Path("/data/wifi/wpa_supplicant.conf")
             paths.dns_config = Path("/data/wifi/resolv.conf")
+
+            with paths.configure("tools") as dev:
+                tools.bin = Path("/opt/bin")
 
             with paths.configure("tmp") as tmp:
                 tmp.root = Path("/tmp")
@@ -118,18 +125,22 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             "pulse.tools.pactl": {
                 "src": client.paths.out.tools.pactl,
                 "dest": paths.pulse.pactl,
+                "default": False,
             },
             "pulse.tools.parec": {
                 "src": client.paths.out.tools.parec,
                 "dest": paths.pulse.parec,
+                "default": False,
             },
             "pulse.tools.pacmd": {
                 "src": client.paths.out.tools.pacmd,
                 "dest": paths.pulse.pacmd,
+                "default": False,
             },
             "pulse.tools.pacat": {
                 "src": client.paths.out.tools.pacat,
                 "dest": paths.pulse.pacat,
+                "default": False,
             },
             "profile": {
                 "src": client.paths.scripts.profile,

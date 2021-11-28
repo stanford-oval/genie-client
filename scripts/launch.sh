@@ -5,9 +5,9 @@ export HOME=/opt/genie
 if [ -z "$(pidof ntpd)" ]; then
 	/usr/bin/start_ntp.sh &
 fi
-amixer -D hw:audiocodec cset name='LINEOUT volume' 9
-amixer -D hw:audiocodec cset name='MIC1 gain volume' 6.5
-amixer -D hw:audiocodec cset name='MIC2 gain volume' 6.5
+amixer -D hw:audiocodec cset name='LINEOUT volume' 4 > /dev/null
+amixer -D hw:audiocodec cset name='MIC1 gain volume' 6.5 > /dev/null
+amixer -D hw:audiocodec cset name='MIC2 gain volume' 6.5 > /dev/null
 
 export GIO_EXTRA_MODULES=/opt/genie/lib/gio/modules
 export LD_LIBRARY_PATH=/opt/genie/lib/pulseaudio:/opt/genie/lib/:/lib:/usr/lib

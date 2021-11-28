@@ -7,9 +7,9 @@ from clavier import log as logging
 from genie_client_cpp.config import CONFIG
 from genie_client_cpp.remote import Remote
 from genie_client_cpp.context import Context
-from . import remove
-from . import kill
-from . import build as build_cmd
+from .. import remove
+from .. import kill
+from .. import build as build_cmd
 
 
 LOG = logging.getLogger(__name__)
@@ -70,6 +70,8 @@ def add_to(subparsers):
         help="List of what to deploy. If empty, deploy everything.",
     )
 
+    parser.add_children(__name__, __path__)
+
 
 @Context.inject_current
 def run(
@@ -88,7 +90,11 @@ def run(
 
     if len(deployables) == 0:
         LOG.info("Deploying EVERYTHING!")
-        deployables = CONFIG.xiaodu.deployables.keys()
+        deployables = [
+            key
+            for key, value in CONFIG.xiaodu.deployables.items()
+            if value.get("default", True)
+        ]
 
     for deployable_name in deployables:
         deployable = CONFIG.xiaodu.deployables[deployable_name]
