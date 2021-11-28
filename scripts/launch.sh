@@ -17,8 +17,7 @@ export GST_PLUGIN_SCANNER=/opt/genie/lib/gstreamer-1.0/gst-plugin-scanner
 export XDG_CONFIG_HOME=/tmp/.config
 
 mkdir -p /tmp/.config
-grep -qe '^backend=pulse' config.ini
-if [ $? -eq 0 ]; then
+if ! grep -qE '^backend=alsa' config.ini ; then
 	./pulseaudio --start -v -F /opt/genie/.system.pa -p /opt/genie/lib/pulseaudio --exit-idle-time=-1 --log-target=file:/tmp/pa.log
 fi
 
