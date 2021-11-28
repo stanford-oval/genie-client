@@ -63,13 +63,24 @@ genie::Config::~Config() {
   g_free(cache_dir);
 }
 
+static inline bool is_key_not_found_error(GError *error) {
+  return error->domain == G_KEY_FILE_ERROR &&
+         (error->code == G_KEY_FILE_ERROR_GROUP_NOT_FOUND ||
+          error->code == G_KEY_FILE_ERROR_KEY_NOT_FOUND);
+}
+
 gchar *genie::Config::get_string(GKeyFile *key_file, const char *section,
                                  const char *key, const char *default_value) {
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default '%s'",
-              section, key, default_value);
+    if (is_key_not_found_error(error)) {
+      g_message("Config key [%s] %s missing, using default '%s'", section, key,
+                default_value);
+    } else {
+      g_warning("Failed to load [%s] %s from config file, using default '%s'",
+                section, key, default_value);
+    }
     g_error_free(error);
     return strdup(default_value);
   }
@@ -82,8 +93,13 @@ int genie::Config::get_leds_effect_string(GKeyFile *key_file,
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default '%s'",
-              section, key, default_value);
+    if (is_key_not_found_error(error)) {
+      g_message("Config key [%s] %s missing, using default '%s'", section, key,
+                default_value);
+    } else {
+      g_warning("Failed to load [%s] %s from config file, using default '%s'",
+                section, key, default_value);
+    }
     g_error_free(error);
     value = strdup(default_value);
   }
@@ -113,8 +129,13 @@ int genie::Config::get_dec_color_from_hex_string(GKeyFile *key_file,
   GError *error = NULL;
   gchar *value = g_key_file_get_string(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default '%s'",
-              section, key, default_value);
+    if (is_key_not_found_error(error)) {
+      g_message("Config key [%s] %s missing, using default '%s'", section, key,
+                default_value);
+    } else {
+      g_warning("Failed to load [%s] %s from config file, using default '%s'",
+                section, key, default_value);
+    }
     g_error_free(error);
     value = strdup(default_value);
   }
@@ -144,8 +165,13 @@ size_t genie::Config::get_size(GKeyFile *key_file, const char *section,
   GError *error = NULL;
   ssize_t value = g_key_file_get_integer(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default %zd",
-              section, key, default_value);
+    if (is_key_not_found_error(error)) {
+      g_message("Config key [%s] %s missing, using default '%zd'", section, key,
+                default_value);
+    } else {
+      g_warning("Failed to load [%s] %s from config file, using default '%zd'",
+                section, key, default_value);
+    }
     g_error_free(error);
     return default_value;
   }
@@ -195,8 +221,13 @@ double genie::Config::get_double(GKeyFile *key_file, const char *section,
   GError *error = NULL;
   double value = g_key_file_get_double(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default %f",
-              section, key, default_value);
+    if (is_key_not_found_error(error)) {
+      g_message("Config key [%s] %s missing, using default '%g'", section, key,
+                default_value);
+    } else {
+      g_warning("Failed to load [%s] %s from config file, using default %f",
+                section, key, default_value);
+    }
     g_error_free(error);
     return default_value;
   }
@@ -235,8 +266,13 @@ bool genie::Config::get_bool(GKeyFile *key_file, const char *section,
   GError *error = NULL;
   gboolean value = g_key_file_get_boolean(key_file, section, key, &error);
   if (error != NULL) {
-    g_warning("Failed to load [%s] %s from config file, using default %s",
-              section, key, default_value ? "true" : "false");
+    if (is_key_not_found_error(error)) {
+      g_message("Config key [%s] %s missing, using default '%s'", section, key,
+                default_value ? "true" : "false");
+    } else {
+      g_warning("Failed to load [%s] %s from config file, using default %s",
+                section, key, default_value ? "true" : "false");
+    }
     g_error_free(error);
     return default_value;
   }
@@ -248,8 +284,12 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
   ;
   char *value = g_key_file_get_string(key_file, "general", "auth_mode", &error);
   if (value == nullptr) {
-    g_warning("Failed to load [general] auth_mode from config file, using "
-              "default 'none'");
+    if (is_key_not_found_error(error)) {
+      g_message("Config key [general] auth_mode missing, using default 'none'");
+    } else {
+      g_warning("Failed to load [general] auth_mode from config file, using "
+                "default 'none'");
+    }
     g_error_free(error);
     return genie::AuthMode::NONE;
   }
@@ -524,13 +564,7 @@ void genie::Config::load() {
   }
 
   if (leds_enabled) {
-    error = NULL;
-    leds_type = g_key_file_get_string(key_file, "leds", "type", &error);
-    if (error) {
-      g_warning("Missing leds control type in configuration file, disabling");
-      leds_enabled = false;
-      g_error_free(error);
-    }
+    leds_type = get_string(key_file, "leds", "type", "aw");
 
     error = NULL;
     leds_path = g_key_file_get_string(key_file, "leds", "path", &error);
