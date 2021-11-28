@@ -26,29 +26,21 @@
  */
 namespace genie {
 
-template <typename Ret, typename... Args> struct CStyleCallback {
-  Ret (*callback)(Args..., void *);
-  void *user_data;
-};
-
-template <typename Ret, typename... Args, typename Lambda>
-CStyleCallback<Ret, Args...> make_c_callback(Lambda lambda) {
+template <typename... Args, typename Lambda>
+auto make_c_async_callback(Lambda lambda) {
   // move into a dynamically allocated std::function
-  std::function<Ret(Args...)> *fn =
-      new std::function<Ret(Args...)>(std::move(lambda));
-
+  auto fn = new std::function<void(Args...)>(std::move(lambda));
+  using fntype = decltype(fn);
   // the trick we're playing here is that a C++ lambda with no captures
   // is equivalent to a plain C function, and we can pass it by function
   // pointer
-  CStyleCallback<Ret, Args...> callback{
+  return std::make_pair(
       [](Args... args, void *user_data) {
-        auto fn = static_cast<std::function<Ret(Args...)> *>(user_data);
+        auto fn = static_cast<fntype>(user_data);
         (*fn)(args...);
         delete fn;
       },
-      fn};
-
-  return callback;
+      fn);
 }
 
 } // namespace genie

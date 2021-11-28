@@ -28,9 +28,8 @@
 namespace genie {
 template <typename Callback>
 void send_soup_message(SoupSession *session, SoupMessage *msg, Callback cb) {
-  auto c_callback =
-      make_c_callback<void, SoupSession *, SoupMessage *>(std::move(cb));
-  soup_session_queue_message(session, msg, c_callback.callback,
-                             c_callback.user_data);
+  auto callback = make_c_async_callback<SoupSession *, SoupMessage *>(
+      std::forward<Callback>(cb));
+  soup_session_queue_message(session, msg, callback.first, callback.second);
 }
 } // namespace genie
