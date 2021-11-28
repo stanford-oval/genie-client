@@ -135,6 +135,10 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
                 "src": client.paths.scripts.profile,
                 "dest": paths.profile,
             },
+            "gdbserver": {
+                "src": client.paths.out.tools.gdbserver,
+                "dest": paths.gdbserver
+            }
         }
 
 with CFG.configure(io.rel, src=__file__) as rel:

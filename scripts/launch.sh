@@ -25,7 +25,9 @@ fi
 RET=1
 while [ $RET -ne 0 ]; do
 	if test "$1" = "--gdb" ; then
-		./gdbserver 0.0.0.0:${GDB_PORT:-1234} ./genie-client
+		exec /tmp/bin/gdbserver 0.0.0.0:${GDB_PORT:-1234} ./genie-client
+	elif test "$1" = "--no-daemon" ; then
+		exec ./genie-client
 	else
 		./genie-client >>/tmp/genie.log 2>&1
 	fi
