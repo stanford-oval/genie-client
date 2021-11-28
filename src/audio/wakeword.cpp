@@ -61,7 +61,7 @@ int genie::WakeWord::init() {
 
   porcupine_library = dlopen(library_path, RTLD_NOW);
   if (!porcupine_library) {
-    g_error("failed to open library: %s", library_path);
+    g_error("failed to open library %s: %s", library_path, dlerror());
     return false;
   }
   g_free(library_path);
