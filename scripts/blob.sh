@@ -110,11 +110,12 @@ cp /lib/arm-linux-gnueabihf/libnss_* /out/lib/
 cp -p /usr/local/bin/pulseaudio /out/
 strip /out/pulseaudio
 
-cp -p /usr/local/bin/{parec,paplay,pacmd,pactl} /out/
-strip /out/{parec,paplay,pacmd,pactl}
+mkdir -p /out/tools
+cp -p /usr/local/bin/{pacat,parec,paplay,pacmd,pactl} /out/tools
+strip /out/tools/{pacat,parec,paplay,pacmd,pactl}
 
-cp -p /usr/bin/gdbserver /out/
-strip /out/gdbserver
+cp -p /usr/bin/gdbserver /out/tools
+strip /out/tools/gdbserver
 
 cp -p build/src/genie-client /out/
 
