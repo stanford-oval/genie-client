@@ -8,10 +8,13 @@ fi
 
 if [ "${ARCH}" == "amd64" ] || [ "${ARCH}" == "amd64/" ] || [ "${ARCH}" == "x86_64" ]; then
     LIB_PATH="linux/x86_64"
+    PICOVOICE_VERSION=v2.0
 elif [ "${ARCH}" == "armhf" ] || [ "${ARCH}" == "arm32v7/" ] || [ "${ARCH}" == "armv7l" ] || [ "${ARCH}" == "armv7" ]; then
     LIB_PATH="raspberry-pi/cortex-a72"
+    PICOVOICE_VERSION=v1.9
 elif [ "${ARCH}" == "arm64" ] || [ "${ARCH}" == "arm64v8/" ] || [ "${ARCH}" == "aarch64" ]; then
     LIB_PATH="raspberry-pi/cortex-a72-aarch64"
+    PICOVOICE_VERSION=v2.0
 else
     echo "Unsupported: ${ARCH}"
     exit 1
@@ -22,9 +25,9 @@ KEYWORD="computer"
 DESTDIR="assets/"
 
 mkdir -p ${DESTDIR}
-wget https://github.com/Picovoice/porcupine/raw/v1.9/resources/keyword_files/${LIB_DIST}/${KEYWORD}_${LIB_DIST}.ppn -O ${DESTDIR}/keyword.ppn
-wget https://github.com/Picovoice/porcupine/raw/v1.9/lib/${LIB_PATH}/libpv_porcupine.so -O ${DESTDIR}/libpv_porcupine.so
-wget https://github.com/Picovoice/porcupine/raw/v1.9/lib/common/porcupine_params.pv -O ${DESTDIR}/porcupine_params.pv
+wget https://github.com/Picovoice/porcupine/raw/${PICOVOICE_VERSION}/resources/keyword_files/${LIB_DIST}/${KEYWORD}_${LIB_DIST}.ppn -O ${DESTDIR}/keyword.ppn
+wget https://github.com/Picovoice/porcupine/raw/${PICOVOICE_VERSION}/lib/${LIB_PATH}/libpv_porcupine.so -O ${DESTDIR}/libpv_porcupine.so
+wget https://github.com/Picovoice/porcupine/raw/${PICOVOICE_VERSION}/lib/common/porcupine_params.pv -O ${DESTDIR}/porcupine_params.pv
 
 # audio (vorbis vs raw)
 #ffmpeg -y -i /usr/share/sounds/freedesktop/stereo/message-new-instant.oga -ar 22050 -ac 1 ${DESTDIR}/match.wav

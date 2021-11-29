@@ -1,0 +1,16 @@
+Source: genie-client
+Maintainer: Giovanni Campagna <gcampagn@cs.stanford.edu>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.2
+Build-Depends: debhelper (>= 12), wget,
+ pkg-config, meson, ninja-build, libasound2-dev, libglib2.0-dev,
+ libjson-glib-dev, libsoup2.4-dev, libpulse-dev, libevdev-dev, libgstreamer1.0-dev,
+ sound-theme-freedesktop, libwebrtc-audio-processing-dev, libspeex-dev, libspeexdsp-dev
+
+Package: genie-client
+Architecture: armhf arm64 amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Client for the Genie virtual assistant
+ Interacts with the Genie assistant over the network
+ and provides voice functionality.
