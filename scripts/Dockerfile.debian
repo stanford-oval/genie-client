@@ -1,0 +1,16 @@
+ARG ARCH=amd64
+FROM ${ARCH}/debian:buster-slim
+
+RUN apt-get update
+RUN apt-get -y install \
+    debhelper devscripts wget \
+    pkg-config meson ninja-build libasound2-dev libglib2.0-dev libjson-glib-dev \
+    libsoup2.4-dev libpulse-dev libevdev-dev libgstreamer1.0-dev sound-theme-freedesktop \
+    libwebrtc-audio-processing-dev libspeex-dev libspeexdsp-dev
+
+RUN mkdir /src
+WORKDIR /src
+COPY . /src
+
+RUN ./scripts/get-assets.sh ${ARCH}
+RUN debuild -us -uc
