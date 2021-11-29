@@ -30,13 +30,12 @@ template <typename... Args, typename Lambda>
 auto make_c_async_callback(Lambda lambda) {
   // move into a dynamically allocated std::function
   auto fn = new std::function<void(Args...)>(std::move(lambda));
-  using fntype = decltype(fn);
   // the trick we're playing here is that a C++ lambda with no captures
   // is equivalent to a plain C function, and we can pass it by function
   // pointer
   return std::make_pair(
       [](Args... args, void *user_data) {
-        auto fn = static_cast<fntype>(user_data);
+        auto fn = static_cast<std::function<void(Args...)> *>(user_data);
         (*fn)(args...);
         delete fn;
       },
