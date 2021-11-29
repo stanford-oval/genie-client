@@ -73,6 +73,7 @@ class Spotifyd;
 class STT;
 class TTS;
 class DNSController;
+class WebServer;
 namespace conversation {
 class Client;
 }
@@ -146,6 +147,9 @@ public:
     deferred_events.emplace(event);
   }
 
+  void force_reconnect();
+  void set_temporary_access_token(const char *token);
+
 private:
   // =========================================================================
 
@@ -189,6 +193,7 @@ private:
   std::unique_ptr<Leds> leds;
   std::unique_ptr<Spotifyd> spotifyd;
   std::unique_ptr<STT> stt;
+  std::unique_ptr<WebServer> webserver;
 
   // ### Performance Tracking ###
 

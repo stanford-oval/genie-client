@@ -25,6 +25,8 @@ config_h = configuration_data()
 config_h.set_quoted('PACKAGE_NAME', app_id)
 config_h.set_quoted('PACKAGE_VERSION', meson.project_version())
 config_h.set_quoted('PREFIX', get_option('prefix'))
+config_h.set_quoted('OAUTH_CLIENT_ID', get_option('oauth_client_id'))
+config_h.set_quoted('OAUTH_CLIENT_SECRET', get_option('oauth_client_secret'))
 
 pkgdatadir = join_paths(get_option('prefix'), get_option('datadir'), app_id)
 pkglibdir = join_paths(get_option('prefix'), 'lib', app_id)

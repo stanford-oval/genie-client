@@ -25,6 +25,8 @@
 #include <string.h>
 
 #include "../spotifyd.hpp"
+#include "../utils/c-style-callback.hpp"
+#include "../utils/soup-utils.hpp"
 #include "audio/audioplayer.hpp"
 
 #include "audio.hpp"
@@ -291,8 +293,8 @@ void genie::conversation::Client::retry_connect() {
   g_timeout_add(app->config->retry_interval, retry_connect_timer, this);
 }
 
-void genie::conversation::Client::connect(AuthMode auth_mode,
-                                          const char *access_token) {
+void genie::conversation::Client::connect_direct(AuthMode auth_mode,
+                                                 const char *access_token) {
   SoupURI *uri = soup_uri_new(app->config->genie_url);
   soup_uri_set_query_from_fields(uri, "skip_history", "1", "sync_devices", "1",
                                  "id", app->config->conversation_id, nullptr);
@@ -316,88 +318,196 @@ void genie::conversation::Client::connect(AuthMode auth_mode,
   return;
 }
 
-void genie::conversation::Client::on_access_token_ready(SoupSession *session,
-                                                        SoupMessage *msg,
-                                                        gpointer user_data) {
-  guint status_code;
-  GBytes *body;
-  gsize size;
+void genie::conversation::Client::connect_home_assistant() {
+  // in Home Assistant auth mode, we must first get the session token
+  SoupURI *home_assistant_url = soup_uri_new(app->config->genie_url);
 
-  Client *self = static_cast<Client *>(user_data);
+  soup_uri_set_path(home_assistant_url, "/api/hassio/ingress/session");
+  if (strcmp(soup_uri_get_scheme(home_assistant_url), "wss") == 0)
+    soup_uri_set_scheme(home_assistant_url, "https");
+  else
+    soup_uri_set_scheme(home_assistant_url, "http");
 
-  g_object_get(msg, "status-code", &status_code, "response-body-data", &body,
-               nullptr);
+  SoupMessage *msg =
+      soup_message_new_from_uri(SOUP_METHOD_POST, home_assistant_url);
+  soup_uri_free(home_assistant_url);
+  soup_message_set_request(msg, nullptr, SOUP_MEMORY_STATIC, "", 0);
+  gchar *auth = g_strdup_printf("Bearer %s", app->config->genie_access_token);
+  soup_message_headers_append(msg->request_headers, "Authorization", auth);
+  g_free(auth);
 
-  g_message("Sent access token request to Home Assistant, got HTTP %u",
-            status_code);
+  send_soup_message(
+      app->get_soup_session(), msg,
+      [this](SoupSession *session, SoupMessage *msg) {
+        gsize size;
 
-  if (status_code >= 400) {
-    g_warning("Failed to get access token from Home Assistant: %s",
-              (const char *)g_bytes_get_data(body, &size));
-    g_bytes_unref(body);
-    self->retry_connect();
-    return;
-  }
+        g_message("Sent access token request to Home Assistant, got HTTP %u",
+                  msg->status_code);
 
-  JsonParser *parser = json_parser_new();
-  GError *error = nullptr;
-  const char *data = (const char *)g_bytes_get_data(body, &size);
-  json_parser_load_from_data(parser, data, size, &error);
-  if (error) {
-    g_warning("Failed to parse access token reply from Home Assistant: %s",
+        if (msg->status_code >= 400) {
+          g_warning("Failed to get access token from Home Assistant: %s",
+                    msg->response_body->data);
+          retry_connect();
+          return;
+        }
+
+        JsonParser *parser = json_parser_new();
+        GError *error = nullptr;
+        json_parser_load_from_data(parser, msg->response_body->data,
+                                   msg->response_body->length, &error);
+        if (error) {
+          g_warning(
+              "Failed to parse access token reply from Home Assistant: %s",
               error->message);
-    g_warning("Response data: %s", data);
-    g_error_free(error);
-    g_bytes_unref(body);
-    self->retry_connect();
+          g_warning("Response data: %s", msg->response_body->data);
+          g_error_free(error);
+          retry_connect();
+          return;
+        }
+
+        JsonReader *reader = json_reader_new(json_parser_get_root(parser));
+
+        json_reader_read_member(reader, "data");
+
+        json_reader_read_member(reader, "session");
+        const char *session_token = json_reader_get_string_value(reader);
+        gchar *cookie = g_strdup_printf("ingress_session=%s", session_token);
+        json_reader_end_member(reader); // session
+
+        json_reader_end_member(reader); // data
+
+        connect_direct(AuthMode::COOKIE, cookie);
+        g_free(cookie);
+
+        g_object_unref(parser);
+        g_object_unref(reader);
+      });
+}
+
+void genie::conversation::Client::refresh_oauth2_token() {
+  SoupURI *refresh_url = soup_uri_new(app->config->genie_url);
+
+  soup_uri_set_path(refresh_url, "/me/api/oauth2/token");
+  if (strcmp(soup_uri_get_scheme(refresh_url), "wss") == 0)
+    soup_uri_set_scheme(refresh_url, "https");
+  else
+    soup_uri_set_scheme(refresh_url, "http");
+
+  SoupMessage *msg = soup_message_new_from_uri(SOUP_METHOD_POST, refresh_url);
+  soup_uri_free(refresh_url);
+
+  gchar *body = soup_form_encode("client_id", OAUTH_CLIENT_ID, "client_secret",
+                                 OAUTH_CLIENT_SECRET, "grant_type",
+                                 "refresh_token", "refresh_token",
+                                 app->config->genie_access_token, nullptr);
+  soup_message_set_request(msg, "application/x-www-form-urlencoded",
+                           SOUP_MEMORY_TAKE, body, strlen(body));
+  send_soup_message(
+      app->get_soup_session(), msg,
+      [this](SoupSession *session, SoupMessage *msg) {
+        gsize size;
+
+        g_message("Sent access token refresh to Genie, got HTTP %u",
+                  msg->status_code);
+
+        if (msg->status_code >= 400) {
+          g_warning("Failed to get access token from Genie: %s",
+                    msg->response_body->data);
+          retry_connect();
+          return;
+        }
+
+        JsonParser *parser = json_parser_new();
+        GError *error = nullptr;
+        json_parser_load_from_data(parser, msg->response_body->data,
+                                   msg->response_body->length, &error);
+        if (error) {
+          g_warning("Failed to parse access token reply from Genie: %s",
+                    error->message);
+          g_warning("Response data: %s", msg->response_body->data);
+          g_error_free(error);
+          retry_connect();
+          return;
+        }
+
+        JsonReader *reader = json_reader_new(json_parser_get_root(parser));
+
+        json_reader_read_member(reader, "access_token");
+        temporary_access_token = json_reader_get_string_value(reader);
+        json_reader_end_member(reader); // access_token
+
+        connect_direct(AuthMode::BEARER, temporary_access_token.c_str());
+
+        g_object_unref(parser);
+        g_object_unref(reader);
+      });
+}
+
+void genie::conversation::Client::connect_oauth2() {
+  if (!app->config->genie_access_token || !*app->config->genie_access_token) {
+    g_warning("Missing OAuth token, refusing to connect");
     return;
   }
 
-  JsonReader *reader = json_reader_new(json_parser_get_root(parser));
+  if (!temporary_access_token.size()) {
+    // if we don't have a token, go straight into refreshing the token
+    refresh_oauth2_token();
+    return;
+  }
 
-  json_reader_read_member(reader, "data");
+  // verify that the token is correct first, because if we connect
+  // to WebSocket with a bad token we won't get a good error
+  SoupURI *verify_url = soup_uri_new(app->config->genie_url);
 
-  json_reader_read_member(reader, "session");
-  const char *session_token = json_reader_get_string_value(reader);
-  gchar *cookie = g_strdup_printf("ingress_session=%s", session_token);
-  json_reader_end_member(reader); // session
+  soup_uri_set_path(verify_url, "/me/api/profile");
+  if (strcmp(soup_uri_get_scheme(verify_url), "wss") == 0)
+    soup_uri_set_scheme(verify_url, "https");
+  else
+    soup_uri_set_scheme(verify_url, "http");
 
-  json_reader_end_member(reader); // data
+  SoupMessage *msg = soup_message_new_from_uri(SOUP_METHOD_GET, verify_url);
+  soup_uri_free(verify_url);
+  gchar *auth = g_strdup_printf("Bearer %s", temporary_access_token.c_str());
+  soup_message_headers_append(msg->request_headers, "Authorization", auth);
+  g_free(auth);
 
-  self->connect(AuthMode::COOKIE, cookie);
-  g_free(cookie);
+  send_soup_message(app->get_soup_session(), msg,
+                    [this](SoupSession *session, SoupMessage *msg) {
+                      if (msg->status_code == 401) {
+                        // refresh the token
+                        refresh_oauth2_token();
+                        return;
+                      }
 
-  g_object_unref(parser);
-  g_object_unref(reader);
-  g_bytes_unref(body);
+                      if (msg->status_code != 200) {
+                        g_warning("Got unexpected HTTP status %d while "
+                                  "checking if OAuth token is valid: %s",
+                                  msg->status_code, msg->response_body->data);
+                        retry_connect();
+                        return;
+                      }
+
+                      // the token is valid, let's use it
+                      connect_direct(AuthMode::BEARER,
+                                     temporary_access_token.c_str());
+                    });
 }
 
 void genie::conversation::Client::connect() {
-
   if (app->config->auth_mode == AuthMode::HOME_ASSISTANT) {
-    // in Home Assistant auth mode, we must first get the session token
-
-    SoupURI *genie_url = soup_uri_new(app->config->genie_url);
-
-    SoupURI *home_assistant_url =
-        soup_uri_new_with_base(genie_url, "/api/hassio/ingress/session");
-    if (strcmp(soup_uri_get_scheme(genie_url), "wss") == 0)
-      soup_uri_set_scheme(home_assistant_url, "https");
-    else
-      soup_uri_set_scheme(home_assistant_url, "http");
-    soup_uri_free(genie_url);
-
-    SoupMessage *msg =
-        soup_message_new_from_uri(SOUP_METHOD_POST, home_assistant_url);
-    soup_uri_free(home_assistant_url);
-    soup_message_set_request(msg, nullptr, SOUP_MEMORY_STATIC, "", 0);
-    gchar *auth = g_strdup_printf("Bearer %s", app->config->genie_access_token);
-    soup_message_headers_append(msg->request_headers, "Authorization", auth);
-    g_free(auth);
-
-    soup_session_queue_message(app->get_soup_session(), msg,
-                               on_access_token_ready, this);
+    connect_home_assistant();
+  } else if (app->config->auth_mode == AuthMode::OAUTH2) {
+    connect_oauth2();
   } else {
-    connect(app->config->auth_mode, app->config->genie_access_token);
+    connect_direct(app->config->auth_mode, app->config->genie_access_token);
   }
+}
+
+void genie::conversation::Client::force_reconnect() {
+  if (is_connected()) {
+    soup_websocket_connection_close(m_connection.get(), 0, nullptr);
+    m_connection = nullptr;
+  }
+
+  connect();
 }

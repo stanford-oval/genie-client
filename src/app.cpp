@@ -29,6 +29,7 @@
 #include "leds.hpp"
 #include "spotifyd.hpp"
 #include "stt.hpp"
+#include "webserver.hpp"
 #include "ws-protocol/client.hpp"
 
 double time_diff(struct timeval x, struct timeval y) {
@@ -145,6 +146,8 @@ int genie::App::exec(int argc, char *argv[]) {
   ev_input = std::make_unique<EVInput>(this);
   ev_input->init();
 
+  webserver = std::make_unique<WebServer>(this);
+
   if (config->dns_controller_enabled) {
     dns_controller = std::make_unique<DNSController>(config->hacks_dns_server);
   }
@@ -250,4 +253,10 @@ void genie::App::replay_deferred_events() {
     current_event = nullptr;
     copy.pop();
   }
+}
+
+void genie::App::force_reconnect() { conversation_client->force_reconnect(); }
+
+void genie::App::set_temporary_access_token(const char *token) {
+  conversation_client->set_temporary_access_token(token);
 }

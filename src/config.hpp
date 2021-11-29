@@ -22,7 +22,7 @@
 
 namespace genie {
 
-enum class AuthMode { NONE, BEARER, COOKIE, HOME_ASSISTANT };
+enum class AuthMode { NONE, BEARER, COOKIE, HOME_ASSISTANT, OAUTH2 };
 
 class Config {
 public:
@@ -42,7 +42,8 @@ public:
   static const constexpr char *DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE = "echosink";
   static const constexpr char *DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE = "hw:0,0";
   static const constexpr char *DEFAULT_GENIE_URL =
-      "ws://127.0.0.1:3000/api/conversation";
+      "wss://dev.genie.stanford.edu/me/api/conversation";
+  static const constexpr AuthMode DEFAULT_AUTH_MODE = AuthMode::OAUTH2;
   static const constexpr char *DEFAULT_NLP_URL =
       "https://nlp-staging.almond.stanford.edu";
   static const constexpr char *DEFAULT_LOCALE = "en-US";
@@ -101,9 +102,14 @@ public:
   static const constexpr char *DEFAULT_LEDS_DISABLED_EFFECT = "solid";
   static const constexpr char *DEFAULT_LEDS_DISABLED_COLOR = "ff0000";
 
+  // Web UI Defaults
+  // -------------------------------------------------------------------------
+  static const constexpr int DEFAULT_WEBUI_PORT = 8000;
+
   Config();
   ~Config();
   void load();
+  void save();
 
   // Configuration File Values
   // =========================================================================
@@ -260,27 +266,58 @@ public:
   size_t vad_input_detected_noise_ms;
   size_t vad_listen_timeout_ms;
 
+  // Web UI
+  // -------------------------------------------------------------------------
+  int webui_port;
+
+  void set_genie_url(const char *url) {
+    char *old = genie_url;
+    genie_url = g_strdup(url);
+    g_free(old);
+    g_key_file_set_string(key_file, "general", "url", url);
+  }
+  void set_auth_mode(AuthMode mode) {
+    auth_mode = mode;
+    g_key_file_set_string(key_file, "general", "auth_mode",
+                          auth_mode_to_string(mode));
+  }
+  void set_genie_access_token(const char *access_token) {
+    char *old = genie_access_token;
+    genie_access_token = g_strdup(access_token);
+    g_free(old);
+    g_key_file_set_string(key_file, "general", "accessToken", access_token);
+  }
+  void set_conversation_id(const char *new_id) {
+    char *old = conversation_id;
+    conversation_id = g_strdup(new_id);
+    g_free(old);
+    g_key_file_set_string(key_file, "general", "conversationId", new_id);
+  }
+
+  static AuthMode parse_auth_mode(const char *auth_mode);
+  static const char *auth_mode_to_string(AuthMode mode);
+
 protected:
 private:
-  int get_leds_effect_string(GKeyFile *key_file, const char *section,
-                             const char *key, const gchar *default_value);
-  int get_dec_color_from_hex_string(GKeyFile *key_file, const char *section,
-                                    const char *key,
+  GKeyFile *key_file = nullptr;
+
+  int get_leds_effect_string(const char *section, const char *key,
+                             const gchar *default_value);
+  int get_dec_color_from_hex_string(const char *section, const char *key,
                                     const gchar *default_value);
-  gchar *get_string(GKeyFile *key_file, const char *section, const char *key,
+  gchar *get_string(const char *section, const char *key,
                     const gchar *default_value);
-  size_t get_size(GKeyFile *key_file, const char *section, const char *key,
+  size_t get_size(const char *section, const char *key,
                   const size_t default_value);
-  size_t get_bounded_size(GKeyFile *key_file, const char *section,
-                          const char *key, const size_t default_value,
-                          const size_t min, const size_t max);
-  double get_double(GKeyFile *key_file, const char *section, const char *key,
+  size_t get_bounded_size(const char *section, const char *key,
+                          const size_t default_value, const size_t min,
+                          const size_t max);
+  double get_double(const char *section, const char *key,
                     const double default_value);
-  double get_bounded_double(GKeyFile *key_file, const char *section,
-                            const char *key, const double default_value,
-                            const double min, const double max);
-  bool get_bool(GKeyFile *key_file, const char *section, const char *key,
-                const bool default_value);
+  double get_bounded_double(const char *section, const char *key,
+                            const double default_value, const double min,
+                            const double max);
+  bool get_bool(const char *section, const char *key, const bool default_value);
 };
 
 } // namespace genie
