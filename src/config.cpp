@@ -317,7 +317,8 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
   char *value = g_key_file_get_string(key_file, "general", "auth_mode", &error);
   if (value == nullptr) {
     if (is_key_not_found_error(error)) {
-      g_message("Config key [general] auth_mode missing, using default 'oauth2'");
+      g_message(
+          "Config key [general] auth_mode missing, using default 'oauth2'");
     } else {
       g_warning("Failed to load [general] auth_mode from config file, using "
                 "default 'oauth2'");
@@ -581,7 +582,7 @@ void genie::Config::load() {
   }
 
   if (leds_enabled) {
-    leds_type = get_string(key_file, "leds", "type", "aw");
+    leds_type = get_string("leds", "type", "aw");
 
     error = NULL;
     leds_path = g_key_file_get_string(key_file, "leds", "path", &error);
