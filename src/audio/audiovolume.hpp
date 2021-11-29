@@ -19,6 +19,7 @@
 #pragma once
 
 #include "app.hpp"
+#include "pulseaudio.hpp"
 
 #include <alsa/asoundlib.h>
 #include <pulse/simple.h>
@@ -40,10 +41,11 @@ public:
   int decrement_playback_volume();
 
 private:
-  pa_simple *pulse_handle = NULL;
-
   App *app;
   bool ducked;
+
+  pa_simple *pulse_handle = NULL;
+  PulseAudioClient *pulseaudio_client;
 
   snd_mixer_elem_t *get_mixer_element(snd_mixer_t *handle,
                                       const char *selem_name);
