@@ -120,6 +120,6 @@ strip /out/tools/gdbserver
 cp -p build/src/genie-client /out/
 
 mkdir -p /out/assets
-cp -p assets/* /out/assets/
+cp -pr assets/* /out/assets/
 
 exit 0
