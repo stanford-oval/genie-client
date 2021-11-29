@@ -9,8 +9,9 @@ assets/*
 !assets/ca-certificates.crt
 # Meson build directory
 /build/
-# Build output directory
+# Build output directories
 /out/
+/debian/out/
 # Place for assorted temporary files
 /tmp/
 
