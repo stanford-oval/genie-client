@@ -4,6 +4,7 @@ from argparse import BooleanOptionalAction
 from clavier import log as logging, sh
 
 from genie_client_cpp.config import CONFIG
+from genie_client_cpp.cmd.clean import clean as clean_cmd
 
 LOG = logging.getLogger(__name__)
 DEFAULT_ARCH = "arm32v7"
@@ -50,6 +51,14 @@ def add_to(subparsers):
         help="Pass `--progress plain` to `docker build` (real Docker only!)",
     )
 
+    parser.add_argument(
+        "-c",
+        "--clean",
+        action=BooleanOptionalAction,
+        default=False,
+        help="Clean first (remove output directory)",
+    )
+
     parser.add_children(__name__, __path__)
 
 
@@ -58,7 +67,11 @@ def run(
     static: bool = False,
     exe_only: bool = False,
     plain: bool = False,
+    clean: bool = False,
 ):
+    if clean:
+        clean_cmd()
+
     tag = f"genie-builder:{arch}"
 
     opts = {
