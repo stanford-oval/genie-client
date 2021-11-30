@@ -64,6 +64,7 @@ else
 endif
 
 _deps += dependency('libpulse-simple')
+_deps += dependency('libpulse-mainloop-glib')
 
 _deps += dependency('speex')
 _deps += dependency('speexdsp')
@@ -79,6 +80,7 @@ executable(
   'leds.cpp',
   'audio/alsa.cpp',
   'audio/pulsesimple.cpp',
+  'audio/pulseaudio.cpp',
   'audio/audioinput.cpp',
   'audio/audioplayer.cpp',
   'audio/audiovolume.cpp',

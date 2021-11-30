@@ -18,12 +18,20 @@
 
 #include "audiovolume.hpp"
 
-genie::AudioVolumeController::AudioVolumeController(App *appInstance)
-    : app(appInstance), ducked(false) {}
+genie::AudioVolumeController::AudioVolumeController(App *app)
+    : app(app), ducked(false), pulseaudio_client(NULL) {
+  if (strcmp(app->config->audio_backend, "pulse") == 0) {
+    pulseaudio_client = new PulseAudioClient(app);
+    pulseaudio_client->init();
+  }
+}
 
 genie::AudioVolumeController::~AudioVolumeController() {
   if (pulse_handle != nullptr) {
     pa_simple_free(pulse_handle);
+  }
+  if (pulseaudio_client) {
+    delete pulseaudio_client;
   }
 }
 
@@ -78,57 +86,67 @@ genie::AudioVolumeController::get_mixer_element(snd_mixer_t *handle,
 }
 
 void genie::AudioVolumeController::set_volume(long volume) {
-  int err = 0;
-  snd_mixer_t *handle = NULL;
-  snd_mixer_selem_id_t *sid;
+  if (strcmp(app->config->audio_backend, "alsa") == 0) {
+    snd_mixer_t *handle = NULL;
+    snd_mixer_selem_id_t *sid;
 
-  snd_mixer_open(&handle, 0);
-  snd_mixer_attach(handle, app->config->audio_output_device);
-  snd_mixer_selem_register(handle, NULL, NULL);
-  snd_mixer_load(handle);
+    snd_mixer_open(&handle, 0);
+    snd_mixer_attach(handle, app->config->audio_output_device);
+    snd_mixer_selem_register(handle, NULL, NULL);
+    snd_mixer_load(handle);
 
-  snd_mixer_selem_id_alloca(&sid);
-  snd_mixer_selem_id_set_index(sid, 0);
-  snd_mixer_selem_id_set_name(sid, "LINEOUT volume");
-  snd_mixer_elem_t *elem = snd_mixer_find_selem(handle, sid);
+    snd_mixer_selem_id_alloca(&sid);
+    snd_mixer_selem_id_set_index(sid, 0);
+    snd_mixer_selem_id_set_name(sid, "LINEOUT volume");
+    snd_mixer_elem_t *elem = snd_mixer_find_selem(handle, sid);
 
-  snd_mixer_selem_set_playback_volume_all(elem, volume);
-
+    snd_mixer_selem_set_playback_volume_all(elem, volume);
+    snd_mixer_close(handle);
+  } else if (strcmp(app->config->audio_backend, "pulse") == 0) {
+    pulseaudio_client->set_default_volume(volume);
+  }
   g_message("Updated playback volume to %ld", volume);
-
-  snd_mixer_close(handle);
 }
 
 int genie::AudioVolumeController::adjust_playback_volume(long delta) {
   long min, max, current, updated;
   int err = 0;
-  snd_mixer_t *handle = NULL;
-  snd_mixer_selem_id_t *sid;
+  if (strcmp(app->config->audio_backend, "alsa") == 0) {
+    snd_mixer_t *handle = NULL;
+    snd_mixer_elem_t *elem;
+    snd_mixer_selem_id_t *sid;
 
-  snd_mixer_open(&handle, 0);
-  snd_mixer_attach(handle, app->config->audio_output_device);
-  snd_mixer_selem_register(handle, NULL, NULL);
-  snd_mixer_load(handle);
+    snd_mixer_open(&handle, 0);
+    snd_mixer_attach(handle, app->config->audio_output_device);
+    snd_mixer_selem_register(handle, NULL, NULL);
+    snd_mixer_load(handle);
 
-  snd_mixer_selem_id_alloca(&sid);
-  snd_mixer_selem_id_set_index(sid, 0);
-  snd_mixer_selem_id_set_name(sid, "LINEOUT volume");
-  snd_mixer_elem_t *elem = snd_mixer_find_selem(handle, sid);
+    snd_mixer_selem_id_alloca(&sid);
+    snd_mixer_selem_id_set_index(sid, 0);
+    snd_mixer_selem_id_set_name(sid, "LINEOUT volume");
+    elem = snd_mixer_find_selem(handle, sid);
 
-  err = snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-  if (err != 0) {
-    g_warning("Error getting playback volume range, code=%d", err);
+    err = snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+    if (err != 0) {
+      g_warning("Error getting playback volume range, code=%d", err);
+      snd_mixer_close(handle);
+      return err;
+    }
+
+    err = snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_MONO,
+                                              &current);
+    if (err != 0) {
+      g_warning("Error getting current playback volume, code=%d", err);
+      snd_mixer_close(handle);
+      return err;
+    }
     snd_mixer_close(handle);
-    return err;
+  } else if (strcmp(app->config->audio_backend, "pulse") == 0) {
+    min = 0;
+    max = 100;
+    current = pulseaudio_client->get_default_volume();
   }
-
-  err =
-      snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_MONO, &current);
-  if (err != 0) {
-    g_warning("Error getting current playback volume, code=%d", err);
-    snd_mixer_close(handle);
-    return err;
-  }
+  delta *= 5;
 
   updated = current + delta;
 
@@ -146,15 +164,10 @@ int genie::AudioVolumeController::adjust_playback_volume(long delta) {
 
   if (updated == current) {
     g_message("Volume already at %ld", current);
-    snd_mixer_close(handle);
     return 0;
   }
 
-  snd_mixer_selem_set_playback_volume_all(elem, updated);
-
-  g_message("Updated playback volume to %ld", updated);
-
-  snd_mixer_close(handle);
+  set_volume(updated);
   return 0;
 }
 

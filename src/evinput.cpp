@@ -64,10 +64,10 @@ gboolean genie::EVInput::event_dispatch(GSource *g_source, GSourceFunc callback,
         //
         switch (ev.code) {
           case KEY_VOLUMEUP:
-            // ev_input->app->dispatch(new state::events::AdjustVolume(1));
+            ev_input->app->dispatch(new state::events::AdjustVolume(1));
             break;
           case KEY_VOLUMEDOWN:
-            // ev_input->app->dispatch(new state::events::AdjustVolume(-1));
+            ev_input->app->dispatch(new state::events::AdjustVolume(-1));
             break;
           case KEY_MUTE:
             ev_input->app->dispatch(new state::events::ToggleDisabled());
