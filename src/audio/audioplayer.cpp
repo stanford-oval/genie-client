@@ -86,7 +86,7 @@ void genie::SayAudioTask::say_post() {
 void genie::SayAudioTask::say_get() {
   std::unique_ptr<SoupURI, fn_deleter<SoupURI, soup_uri_free>> uri(
       soup_uri_new(base_tts_url.c_str()));
-  soup_uri_set_query_from_fields(uri.get(), "text", text.c_str(), "voice",
+  soup_uri_set_query_from_fields(uri.get(), "text", text.c_str(), "gender",
                                  voice, nullptr);
 
   gchar *uristr = soup_uri_to_string(uri.get(), false);
