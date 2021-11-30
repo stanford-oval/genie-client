@@ -19,6 +19,7 @@
 #pragma once
 
 #include "app.hpp"
+#include "audiodriver.hpp"
 #include "audioplayer.hpp"
 #include "stt.hpp"
 #include "utils/webrtc_vad.h"
@@ -27,7 +28,6 @@
 #include <glib.h>
 #include <queue>
 #include <thread>
-#include "audiodriver.hpp"
 
 #define AUDIO_INPUT_VAD_FRAME_LENGTH 480
 
@@ -57,8 +57,8 @@ private:
   // initialized once and never overwritten
   App *const app;
   VadInst *const vad_instance;
-  WakeWord *wakeword;
-  AudioInputDriver *input;
+  std::unique_ptr<WakeWord> wakeword;
+  std::unique_ptr<AudioInputDriver> input;
 
   // thread safe, accessed from both threads
   std::thread input_thread;

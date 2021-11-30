@@ -61,6 +61,7 @@ genie::Config::~Config() {
   g_free(leds_path);
   g_free(leds_type);
   g_free(cache_dir);
+  g_free(hacks_dns_server);
 
   g_key_file_unref(key_file);
 }
@@ -389,16 +390,6 @@ void genie::Config::load() {
     nl_url = g_strdup(DEFAULT_NLP_URL);
     g_clear_error(&error);
   }
-
-  error = NULL;
-  locale = g_key_file_get_string(key_file, "general", "locale", &error);
-  if (error) {
-    locale = g_strdup(DEFAULT_LOCALE);
-    g_clear_error(&error);
-  }
-
-  g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\nlocale: %s\n",
-          genie_url, genie_access_token, nl_url, locale);
 
   error = NULL;
   locale = g_key_file_get_string(key_file, "general", "locale", &error);

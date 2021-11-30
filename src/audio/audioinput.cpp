@@ -32,15 +32,7 @@ genie::AudioInput::AudioInput(App *app)
     : app(app), vad_instance(WebRtcVad_Create()), wakeword(nullptr),
       input(nullptr), state(State::WAITING) {}
 
-genie::AudioInput::~AudioInput() {
-  WebRtcVad_Free(vad_instance);
-  if (wakeword) {
-    delete wakeword;
-  }
-  if (input) {
-    delete input;
-  }
-}
+genie::AudioInput::~AudioInput() { WebRtcVad_Free(vad_instance); }
 
 void genie::AudioInput::close() {
   state.store(State::CLOSED);
@@ -48,7 +40,7 @@ void genie::AudioInput::close() {
 }
 
 int genie::AudioInput::init() {
-  wakeword = new WakeWord(app);
+  wakeword = std::make_unique<WakeWord>(app);
   if (!wakeword->init()) {
     return -1;
   }
@@ -60,9 +52,9 @@ int genie::AudioInput::init() {
   channels = 1;
 
   if (strcmp(app->config->audio_backend, "alsa") == 0) {
-    input = new AudioInputAlsa(app);
+    input = std::make_unique<AudioInputAlsa>(app);
   } else if (strcmp(app->config->audio_backend, "pulse") == 0) {
-    input = new AudioInputPulseSimple(app);
+    input = std::make_unique<AudioInputPulseSimple>(app);
   } else {
     g_error("invalid audio backend: %s", app->config->audio_backend);
     return -1;

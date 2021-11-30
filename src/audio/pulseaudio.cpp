@@ -20,8 +20,8 @@
 #include <string.h>
 
 genie::PulseAudioClient::PulseAudioClient(App *app)
-    : app(app), _mainloop(nullptr), _mainloop_api(nullptr),
-    _context(nullptr), default_sink_name(nullptr), sink_volume(0) {}
+    : app(app), _mainloop(nullptr), _mainloop_api(nullptr), _context(nullptr),
+      default_sink_name(nullptr), sink_volume(0) {}
 
 genie::PulseAudioClient::~PulseAudioClient() {
   if (default_sink_name) {
@@ -66,6 +66,7 @@ bool genie::PulseAudioClient::init() {
 void genie::PulseAudioClient::context_state_cb(pa_context *c, void *userdata) {
   PulseAudioClient *pa = (PulseAudioClient *)userdata;
 
+  pa_operation *op = NULL;
   switch (pa_context_get_state(c)) {
     case PA_CONTEXT_CONNECTING:
     case PA_CONTEXT_AUTHORIZING:
@@ -73,9 +74,15 @@ void genie::PulseAudioClient::context_state_cb(pa_context *c, void *userdata) {
       break;
     case PA_CONTEXT_READY:
       g_print("PulseAudio connection established\n");
-      pa_context_get_server_info(c, server_info_cb, userdata);
+      op = pa_context_get_server_info(c, server_info_cb, userdata);
+      if (op) {
+        pa_operation_unref(op);
+      }
       pa_context_set_subscribe_callback(c, subscribe_cb, userdata);
-      pa_context_subscribe(c, PA_SUBSCRIPTION_MASK_SINK, NULL, NULL);
+      op = pa_context_subscribe(c, PA_SUBSCRIPTION_MASK_SINK, NULL, NULL);
+      if (op) {
+        pa_operation_unref(op);
+      }
       break;
     case PA_CONTEXT_TERMINATED:
       g_error("PulseAudio connection terminated\n");
@@ -95,8 +102,7 @@ void genie::PulseAudioClient::subscribe_cb(pa_context *c,
   pa_operation *op = NULL;
   switch (facility) {
     case PA_SUBSCRIPTION_EVENT_SINK:
-      op = pa_context_get_sink_info_by_index(c, idx, sink_info_cb,
-                                             userdata);
+      op = pa_context_get_sink_info_by_index(c, idx, sink_info_cb, userdata);
       break;
     default:
       break;
@@ -126,11 +132,16 @@ void genie::PulseAudioClient::volume_cb(pa_context *c, int success,
   }
 }
 
-void genie::PulseAudioClient::set_volume(char *device, int channels, int volume) {
+void genie::PulseAudioClient::set_volume(char *device, int channels,
+                                         int volume) {
   struct pa_cvolume v;
   pa_cvolume_init(&v);
   pa_cvolume_set(&v, channels, (65535 / 100) * volume);
-  pa_context_set_sink_volume_by_name(_context, device, &v, volume_cb, NULL);
+  pa_operation *op =
+      pa_context_set_sink_volume_by_name(_context, device, &v, volume_cb, NULL);
+  if (op) {
+    pa_operation_unref(op);
+  }
 }
 
 void genie::PulseAudioClient::server_info_cb(pa_context *ctx,
@@ -140,7 +151,11 @@ void genie::PulseAudioClient::server_info_cb(pa_context *ctx,
   g_debug("pulse default sink name = %s\n", i->default_sink_name);
   self->default_sink_name = strdup(i->default_sink_name);
   self->sink_num_channels = 1;
-  pa_context_get_sink_info_by_name(ctx, i->default_sink_name, sink_info_cb, userdata);
+  pa_operation *op = pa_context_get_sink_info_by_name(ctx, i->default_sink_name,
+                                                      sink_info_cb, userdata);
+  if (op) {
+    pa_operation_unref(op);
+  }
 }
 
 void genie::PulseAudioClient::set_default_volume(int volume) {
@@ -148,9 +163,11 @@ void genie::PulseAudioClient::set_default_volume(int volume) {
   pa_cvolume_init(&v);
   pa_cvolume_set(&v, sink_num_channels, (65535 / 100) * volume);
   g_debug("pulse set sink %s, volume = %d\n", default_sink_name, volume);
-  pa_context_set_sink_volume_by_name(_context, default_sink_name, &v, volume_cb, NULL);
+  pa_operation *op = pa_context_set_sink_volume_by_name(
+      _context, default_sink_name, &v, volume_cb, NULL);
+  if (op) {
+    pa_operation_unref(op);
+  }
 }
 
-int genie::PulseAudioClient::get_default_volume() {
-  return sink_volume;
-}
+int genie::PulseAudioClient::get_default_volume() { return sink_volume; }
