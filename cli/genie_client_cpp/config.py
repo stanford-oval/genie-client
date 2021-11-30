@@ -47,6 +47,7 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
         with paths.configure("container") as container:
             # When you mount the repo into the build container, where it goes
             container.repo = Path("/src")
+
             # When you mount the out directory into the build container, where
             # it goes
             container.out = Path("/out")
@@ -61,6 +62,7 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
 
     with client.configure("container") as container:
         container.name = "genie-builder"
+        container.tag_template = "genie-builder:buster-{arch}"
 
     with client.configure("xiaodu") as xiaodu:
         xiaodu.network_interface = "wlan0"
@@ -137,8 +139,8 @@ with CFG.configure("genie_client_cpp", src=__file__) as client:
             },
             "gdbserver": {
                 "src": client.paths.out.tools.gdbserver,
-                "dest": paths.gdbserver
-            }
+                "dest": paths.gdbserver,
+            },
         }
 
 with CFG.configure(io.rel, src=__file__) as rel:

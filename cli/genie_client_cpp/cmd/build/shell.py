@@ -56,5 +56,5 @@ def run(arch: str, mount: str, **_kwds):
         # IDK what this does to be honest..
         "--security-opt", "label=disable",
         *mount_args(mount),
-        f"{CONFIG.container.name}:{arch}"
+        CONFIG.container.tag_template.format(arch=arch)
     )

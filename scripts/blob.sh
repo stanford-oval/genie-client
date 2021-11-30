@@ -23,7 +23,8 @@ export LD_LIBRARY_PATH="/usr/local/lib/${SEARCH_ARCH}"
 
 deps=""
 # blocklistDeps="libicudata.* libasound.* libxml2.* libpthread.so.0 libc.so.6 libm.so.6 librt.so.1 libdl.so.2 libresolv.so.2"
-blocklistDeps="libicudata.* libasound.* libxml2.*"
+# blocklistDeps="libicudata.* libasound.* libxml2.*"
+blocklistDeps=""
 
 findDeps() {
 	local src="${1}"

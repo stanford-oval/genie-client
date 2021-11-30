@@ -72,7 +72,7 @@ def run(
     if clean:
         clean_cmd()
 
-    tag = f"genie-builder:{arch}"
+    tag = CONFIG.container.tag_template.format(arch=arch)
 
     opts = {
         "build-arg": [
