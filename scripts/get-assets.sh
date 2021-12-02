@@ -25,7 +25,8 @@ KEYWORD="computer"
 DESTDIR="assets/"
 
 mkdir -p ${DESTDIR}
-wget https://github.com/Picovoice/porcupine/raw/${PICOVOICE_VERSION}/resources/keyword_files/${LIB_DIST}/${KEYWORD}_${LIB_DIST}.ppn -O ${DESTDIR}/keyword.ppn
+mkdir -p ${DESTDIR}/${KEYWORD}
+wget https://github.com/Picovoice/porcupine/raw/${PICOVOICE_VERSION}/resources/keyword_files/${LIB_DIST}/${KEYWORD}_${LIB_DIST}.ppn -O ${DESTDIR}/${KEYWORD}/keyword.ppn
 wget https://github.com/Picovoice/porcupine/raw/${PICOVOICE_VERSION}/lib/${LIB_PATH}/libpv_porcupine.so -O ${DESTDIR}/libpv_porcupine.so
 wget https://github.com/Picovoice/porcupine/raw/${PICOVOICE_VERSION}/lib/common/porcupine_params.pv -O ${DESTDIR}/porcupine_params.pv
 
