@@ -26,6 +26,9 @@
 genie::WakeWord::WakeWord(App *app) : app(app) {
   porcupine = nullptr;
   porcupine_library = nullptr;
+  pv_porcupine_delete_func = nullptr;
+  pv_porcupine_process_func = nullptr;
+  pv_status_to_string_func = nullptr;
 }
 
 genie::WakeWord::~WakeWord() {
@@ -75,8 +78,8 @@ int genie::WakeWord::init() {
     return false;
   }
 
-  int32_t (*pv_sample_rate_func)() =
-      (int32_t(*)())dlsym(porcupine_library, "pv_sample_rate");
+  auto pv_sample_rate_func =
+      (decltype(pv_sample_rate) *)dlsym(porcupine_library, "pv_sample_rate");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_sample_rate' with '%s'.\n", error);
     return false;
@@ -86,34 +89,30 @@ int genie::WakeWord::init() {
   g_assert(sample_rate_signed > 0);
   sample_rate = (size_t)sample_rate_signed;
 
-  pv_status_t (*pv_porcupine_init_func)(const char *, int32_t,
-                                        const char *const *, const float *,
-                                        pv_porcupine_t **) =
-      (pv_status_t(*)(const char *, int32_t, const char *const *, const float *,
-                      pv_porcupine_t **))dlsym(porcupine_library,
-                                               "pv_porcupine_init");
+  auto pv_porcupine_init_func = (decltype(pv_porcupine_init) *)dlsym(
+      porcupine_library, "pv_porcupine_init");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_init' with '%s'.\n", error);
     return false;
   }
 
-  pv_porcupine_delete_func = (void (*)(pv_porcupine_t *))dlsym(
+  pv_porcupine_delete_func = (decltype(pv_porcupine_delete) *)dlsym(
       porcupine_library, "pv_porcupine_delete");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_delete' with '%s'.\n", error);
     return false;
   }
 
-  pv_porcupine_process_func =
-      (pv_status_t(*)(pv_porcupine_t *, const int16_t *, int32_t *))dlsym(
-          porcupine_library, "pv_porcupine_process");
+  pv_porcupine_process_func = (decltype(pv_porcupine_process) *)dlsym(
+      porcupine_library, "pv_porcupine_process");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_process' with '%s'.\n", error);
     return false;
   }
 
-  int32_t (*pv_porcupine_frame_length_func)() =
-      (int32_t(*)())dlsym(porcupine_library, "pv_porcupine_frame_length");
+  auto pv_porcupine_frame_length_func =
+      (decltype(pv_porcupine_frame_length) *)dlsym(porcupine_library,
+                                                   "pv_porcupine_frame_length");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_frame_length' with '%s'.\n", error);
     return false;

@@ -10,7 +10,10 @@ _onlySharedDeps = [ 'gstreamer-1.0', 'alsa' ]
 _alwaysSharedDeps = [ 'gio-2.0' ]
 
 _linkArgs = []
-_incDirs = []
+_incDirs = [
+  include_directories('../submodules/mustache'),
+  include_directories('../submodules/porcupine/include')
+]
 _deps = []
 
 _deps += dependency('threads')

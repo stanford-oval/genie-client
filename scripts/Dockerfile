@@ -56,11 +56,7 @@ RUN ./scripts/build-pulse.sh
 COPY scripts/gst /src/scripts/gst
 RUN ./scripts/gst/build.sh
 
-# assets
-COPY assets /src/assets
-COPY scripts/get-assets.sh /src/scripts
-RUN ./scripts/get-assets.sh ${ARCH}
-
 # our actual build
 COPY . /src/
+RUN ./scripts/get-assets.sh ${ARCH}
 RUN ./scripts/build.sh

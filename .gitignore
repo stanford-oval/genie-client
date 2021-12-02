@@ -1,7 +1,7 @@
 .vscode/
 assets/computer/keyword.ppn
 assets/libpv_porcupine.so
-assets/porcupine-module.pv
+assets/porcupine_params.pv
 assets/match.oga
 assets/no-match.oga
 assets/alarm-clock-elapsed.oga

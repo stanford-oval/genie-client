@@ -21,20 +21,14 @@ else
 fi
 
 LIB_DIST=$(echo ${LIB_PATH} | cut -d'/' -f1)
-KEYWORD="computer"
-DESTDIR="assets/"
 
-mkdir -p ${DESTDIR}
-mkdir -p ${DESTDIR}/${KEYWORD}
-wget https://github.com/Picovoice/porcupine/raw/${PICOVOICE_VERSION}/resources/keyword_files/${LIB_DIST}/${KEYWORD}_${LIB_DIST}.ppn -O ${DESTDIR}/${KEYWORD}/keyword.ppn
-wget https://github.com/Picovoice/porcupine/raw/${PICOVOICE_VERSION}/lib/${LIB_PATH}/libpv_porcupine.so -O ${DESTDIR}/libpv_porcupine.so
-wget https://github.com/Picovoice/porcupine/raw/${PICOVOICE_VERSION}/lib/common/porcupine_params.pv -O ${DESTDIR}/porcupine_params.pv
+mkdir -p assets assets/computer
+cp submodules/porcupine/resources/keyword_files/${LIB_DIST}/computer_${LIB_DIST}.ppn assets/computer/keyword.ppn
+cp submodules/porcupine/lib/${LIB_PATH}/libpv_porcupine.so assets/libpv_porcupine.so
+cp submodules/porcupine/lib/common/porcupine_params.pv assets/porcupine_params.pv
 
-# audio (vorbis vs raw)
-#ffmpeg -y -i /usr/share/sounds/freedesktop/stereo/message-new-instant.oga -ar 22050 -ac 1 ${DESTDIR}/match.wav
-#ffmpeg -y -i /usr/share/sounds/freedesktop/stereo/dialog-warning.oga -ar 22050 -ac 1 ${DESTDIR}/no-match.wav
-cp /usr/share/sounds/freedesktop/stereo/message-new-instant.oga ${DESTDIR}/match.oga
-cp /usr/share/sounds/freedesktop/stereo/dialog-warning.oga ${DESTDIR}/no-match.oga
-cp /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga ${DESTDIR}/alarm-clock-elapsed.oga
+cp /usr/share/sounds/freedesktop/stereo/message-new-instant.oga assets/match.oga
+cp /usr/share/sounds/freedesktop/stereo/dialog-warning.oga assets/no-match.oga
+cp /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga assets/alarm-clock-elapsed.oga
 
 exit 0
