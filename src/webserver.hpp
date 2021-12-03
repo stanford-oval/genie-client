@@ -19,8 +19,8 @@
 #pragma once
 
 #include "utils/autoptrs.hpp"
-#include "utils/mustache/mustache.hpp"
 #include <libsoup/soup.h>
+#include <mustache.hpp>
 #include <string>
 
 namespace genie {

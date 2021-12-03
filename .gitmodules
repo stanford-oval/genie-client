@@ -1,3 +1,6 @@
 [submodule "src/utils/mustache"]
-	path = src/utils/mustache
+	path = submodules/mustache
 	url = https://github.com/kainjow/Mustache
+[submodule "submodules/porcupine"]
+	path = submodules/porcupine
+	url = https://github.com/Picovoice/porcupine

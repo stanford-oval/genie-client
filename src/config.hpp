@@ -59,12 +59,17 @@ public:
   // Picovoice Defaults
   // -------------------------------------------------------------------------
 
-  static const constexpr char *DEFAULT_PV_LIBRARY_PATH = "libpv_porcupine.so";
   static const constexpr char *DEFAULT_PV_MODEL_PATH = "porcupine_params.pv";
-  static const constexpr char *DEFAULT_PV_KEYWORD_PATH = "keyword.ppn";
+#ifdef __x86_64__
+  static const constexpr char *DEFAULT_PV_KEYWORD_PATH =
+      "hey-genie/keyword_linux.ppn";
+#elif defined(__arm__)
+  static const constexpr char *DEFAULT_PV_KEYWORD_PATH =
+      "hey-genie/keyword_raspberry-pi.ppn";
+#endif
   static const constexpr float DEFAULT_PV_SENSITIVITY = 0.7f;
   static const constexpr char *DEFAULT_PV_WAKE_WORD_PATTERN =
-      "^computers?[.,!?]?";
+      "^[A-Za-z]+[ .,]? (gene|genie|jeannie|jenny|jennie|ragini|dean)[.,]?";
 
   // Sound Defaults
   // -------------------------------------------------------------------------
