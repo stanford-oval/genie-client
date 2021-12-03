@@ -8,13 +8,10 @@ fi
 
 if [ "${ARCH}" == "amd64" ] || [ "${ARCH}" == "amd64/" ] || [ "${ARCH}" == "x86_64" ]; then
     LIB_PATH="linux/x86_64"
-    PICOVOICE_VERSION=v2.0
 elif [ "${ARCH}" == "armhf" ] || [ "${ARCH}" == "arm32v7/" ] || [ "${ARCH}" == "armv7l" ] || [ "${ARCH}" == "armv7" ]; then
     LIB_PATH="raspberry-pi/cortex-a72"
-    PICOVOICE_VERSION=v1.9
 elif [ "${ARCH}" == "arm64" ] || [ "${ARCH}" == "arm64v8/" ] || [ "${ARCH}" == "aarch64" ]; then
     LIB_PATH="raspberry-pi/cortex-a72-aarch64"
-    PICOVOICE_VERSION=v2.0
 else
     echo "Unsupported: ${ARCH}"
     exit 1
