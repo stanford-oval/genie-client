@@ -63,9 +63,11 @@ public:
 #ifdef __x86_64__
   static const constexpr char *DEFAULT_PV_KEYWORD_PATH =
       "hey-genie/keyword_linux.ppn";
-#elif defined(__arm__)
+#elif defined(__arm__) || defined(__aarch64__)
   static const constexpr char *DEFAULT_PV_KEYWORD_PATH =
       "hey-genie/keyword_raspberry-pi.ppn";
+#else
+#error "Unsupported architecture"
 #endif
   static const constexpr float DEFAULT_PV_SENSITIVITY = 0.7f;
   static const constexpr char *DEFAULT_PV_WAKE_WORD_PATTERN =

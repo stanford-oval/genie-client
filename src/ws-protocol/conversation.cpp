@@ -115,8 +115,7 @@ void genie::conversation::ConversationProtocol::handleText(gint64 id,
   }
 
   if (g_str_has_prefix(text, "Notification")) {
-    g_message("Skipping message ID=%" G_GINT64_FORMAT " (Notification)", id,
-              id);
+    g_message("Skipping message ID=%" G_GINT64_FORMAT " (Notification)", id);
     return;
   }
 
