@@ -10,6 +10,8 @@ if [ "${ARCH}" == "amd64" ] || [ "${ARCH}" == "amd64/" ] || [ "${ARCH}" == "x86_
     LIB_PATH="linux/x86_64"
 elif [ "${ARCH}" == "armhf" ] || [ "${ARCH}" == "arm32v7/" ] || [ "${ARCH}" == "armv7l" ] || [ "${ARCH}" == "armv7" ]; then
     LIB_PATH="raspberry-pi/cortex-a72"
+elif [ "${ARCH}" == "arm32v6/" ] || [ "${ARCH}" == "armv6l" ] || [ "${ARCH}" == "armv6" ]; then
+    LIB_PATH="raspberry-pi/arm11"
 elif [ "${ARCH}" == "arm64" ] || [ "${ARCH}" == "arm64v8/" ] || [ "${ARCH}" == "aarch64" ]; then
     LIB_PATH="raspberry-pi/cortex-a72-aarch64"
 else
