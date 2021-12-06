@@ -6,13 +6,13 @@ else
     ARCH="${1}"
 fi
 
-if [ "${ARCH}" == "amd64" ] || [ "${ARCH}" == "amd64/" ] || [ "${ARCH}" == "x86_64" ]; then
+if [ "${ARCH}" == "amd64" ] || [ "${ARCH}" == "amd64" ] || [ "${ARCH}" == "x86_64" ]; then
     LIB_PATH="linux/x86_64"
-elif [ "${ARCH}" == "armhf" ] || [ "${ARCH}" == "arm32v7/" ] || [ "${ARCH}" == "armv7l" ] || [ "${ARCH}" == "armv7" ]; then
+elif [ "${ARCH}" == "armhf" ] || [ "${ARCH}" == "arm32v7" ] || [ "${ARCH}" == "armv7l" ] || [ "${ARCH}" == "armv7" ]; then
     LIB_PATH="raspberry-pi/cortex-a72"
-elif [ "${ARCH}" == "arm32v6/" ] || [ "${ARCH}" == "armv6l" ] || [ "${ARCH}" == "armv6" ]; then
+elif [ "${ARCH}" == "arm32v6" ] || [ "${ARCH}" == "armv6l" ] || [ "${ARCH}" == "armv6" ]; then
     LIB_PATH="raspberry-pi/arm11"
-elif [ "${ARCH}" == "arm64" ] || [ "${ARCH}" == "arm64v8/" ] || [ "${ARCH}" == "aarch64" ]; then
+elif [ "${ARCH}" == "arm64" ] || [ "${ARCH}" == "arm64v8" ] || [ "${ARCH}" == "aarch64" ]; then
     LIB_PATH="raspberry-pi/cortex-a72-aarch64"
 else
     echo "Unsupported: ${ARCH}"

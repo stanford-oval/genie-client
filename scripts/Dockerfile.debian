@@ -1,5 +1,5 @@
-ARG ARCH=amd64
-FROM ${ARCH}/debian:bullseye-slim
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}/debian:bullseye-slim
 
 RUN apt-get update
 RUN apt-get -y install \
@@ -12,5 +12,7 @@ RUN mkdir /src
 WORKDIR /src
 COPY . /src
 
+ARG ARCH
+ARG CXXFLAGS
 RUN ./scripts/get-assets.sh ${ARCH}
 RUN debuild -us -uc
