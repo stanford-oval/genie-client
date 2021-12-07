@@ -47,6 +47,8 @@ int genie::Spotifyd::download() {
     dl_arch = "armhf-";
   } else if (arch == "aarch64") {
     dl_arch = "arm64-";
+  } else if (arch == "armv6l") {
+    dl_arch = "armv6-";
   } else {
     dl_arch = "";
   }
