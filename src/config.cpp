@@ -335,14 +335,14 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
 genie::AudioDriverType genie::Config::get_audio_backend() {
   GError *error = nullptr;
 
-  char *value = g_key_file_get_string(key_file, "general", "backend", &error);
+  char *value = g_key_file_get_string(key_file, "audio", "backend", &error);
   if (value == nullptr) {
     if (is_key_not_found_error(error)) {
       g_message(
-          "Config key [general] auth_mode missing, using default 'oauth2'");
+          "Config key [audio] backend missing, using default 'pulseaudio'");
     } else {
-      g_warning("Failed to load [general] auth_mode from config file, using "
-                "default 'oauth2'");
+      g_warning("Failed to load [audio] backend from config file, using "
+                "default 'pulseaudio'");
     }
     g_error_free(error);
     return AudioDriverType::PULSEAUDIO;

@@ -89,7 +89,7 @@ genie::AudioInput::AudioInput(App *app)
             "-> %zd frames",
             app->config->vad_listen_timeout_ms, vad_listen_timeout_frame_count);
 
-  g_message("Initialized audio input\n");
+  g_message("Initialized audio input with %s backend\n", audio_driver_type_to_string(app->config->audio_backend));
   input_thread = std::thread(&AudioInput::loop, this);
 }
 

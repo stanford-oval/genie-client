@@ -66,13 +66,13 @@ void genie::AudioVolumeDriverAlsa::set_volume(int volume) {
   snd_mixer_selem_id_t *sid;
 
   snd_mixer_open(&handle, 0);
-  snd_mixer_attach(handle, app->config->audio_output_device);
+  snd_mixer_attach(handle, "hw:1");
   snd_mixer_selem_register(handle, NULL, NULL);
   snd_mixer_load(handle);
 
   snd_mixer_selem_id_alloca(&sid);
   snd_mixer_selem_id_set_index(sid, 0);
-  snd_mixer_selem_id_set_name(sid, "LINEOUT volume");
+  snd_mixer_selem_id_set_name(sid, "Headphone");
   snd_mixer_elem_t *elem = snd_mixer_find_selem(handle, sid);
 
   long min, max;
@@ -95,13 +95,13 @@ int genie::AudioVolumeDriverAlsa::get_volume() {
   snd_mixer_selem_id_t *sid;
 
   snd_mixer_open(&handle, 0);
-  snd_mixer_attach(handle, app->config->audio_output_device);
+  snd_mixer_attach(handle, "hw:1");
   snd_mixer_selem_register(handle, NULL, NULL);
   snd_mixer_load(handle);
 
   snd_mixer_selem_id_alloca(&sid);
   snd_mixer_selem_id_set_index(sid, 0);
-  snd_mixer_selem_id_set_name(sid, "LINEOUT volume");
+  snd_mixer_selem_id_set_name(sid, "Headphone");
   elem = snd_mixer_find_selem(handle, sid);
 
   long current;
