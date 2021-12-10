@@ -135,7 +135,6 @@ int genie::App::exec(int argc, char *argv[]) {
   stt = std::make_unique<STT>(this);
 
   audio_input = std::make_unique<AudioInput>(this);
-  audio_input->init();
 
   spotifyd = std::make_unique<Spotifyd>(this);
   spotifyd->init();

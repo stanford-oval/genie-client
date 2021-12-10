@@ -27,7 +27,6 @@ class WakeWord {
 public:
   WakeWord(App *app);
   ~WakeWord();
-  int init();
   int process(AudioFrame *frame);
 
   int32_t pv_frame_length;

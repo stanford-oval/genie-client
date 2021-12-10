@@ -18,25 +18,27 @@
 
 #pragma once
 
-#include "app.hpp"
+#include "../../app.hpp"
+#include "../audiodriver.hpp"
 
-#include <thread>
+#include <pulse/error.h>
 #include <pulse/glib-mainloop.h>
 #include <pulse/pulseaudio.h>
-#include <pulse/error.h>
+#include <pulse/simple.h>
 
 namespace genie {
 
-class PulseAudioClient {
+class AudioVolumeDriverPulseAudio : public AudioVolumeDriver {
 public:
-  PulseAudioClient(App *app);
-  ~PulseAudioClient();
-  bool init();
-  void set_volume(char *device, int channels, int volume);
-  void set_default_volume(int volume);
-  int get_default_volume();
+  AudioVolumeDriverPulseAudio(App *app);
+  virtual ~AudioVolumeDriverPulseAudio();
 
-protected:
+  virtual void set_volume(int volume);
+  virtual int get_volume();
+  virtual void duck();
+  virtual void unduck();
+
+private:
   static void volume_cb(pa_context *ctx, int success, void *userdata);
   static void context_state_cb(pa_context *ctx, void *userdata);
   static void server_info_cb(pa_context *ctx, const pa_server_info *i,
@@ -46,18 +48,22 @@ protected:
   static void sink_info_cb(pa_context *c, const pa_sink_info *i, int eol,
                            void *userdata);
 
-private:
+  void set_volume(char *device, int channels, int volume);
+  void set_default_volume(int volume);
+  int get_default_volume();
+
   // initialized once and never overwritten
   App *const app;
 
-  std::thread pa_thread;
   pa_glib_mainloop *_mainloop;
   pa_mainloop_api *_mainloop_api;
   pa_context *_context;
 
   char *default_sink_name;
   int sink_num_channels;
-  int sink_volume;
+  pa_volume_t sink_volume;
+
+  pa_simple *ducking_stream = NULL;
 };
 
 } // namespace genie

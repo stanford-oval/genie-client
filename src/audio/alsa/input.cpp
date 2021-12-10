@@ -16,7 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "alsa.hpp"
+#include "input.hpp"
 
 // Define the following to dump audio streams for debugging reasons
 // #define DEBUG_DUMP_STREAMS
@@ -122,9 +122,8 @@ bool genie::AudioInputAlsa::init_pcm(gchar *input_audio_device) {
 bool genie::AudioInputAlsa::init_speex() {
   spx_int32_t tmp;
 
-  echo_state = speex_echo_state_init_mc(
-      frame_length,
-      (sample_rate * 300) / 1000, 1, 1);
+  echo_state =
+      speex_echo_state_init_mc(frame_length, (sample_rate * 300) / 1000, 1, 1);
   speex_echo_ctl(echo_state, SPEEX_ECHO_SET_SAMPLING_RATE, &(sample_rate));
 
   pp_state = speex_preprocess_state_init(512, sample_rate);
@@ -143,7 +142,7 @@ bool genie::AudioInputAlsa::init_speex() {
   speex_preprocess_ctl(pp_state, SPEEX_PREPROCESS_SET_ECHO_SUPPRESS, &tmp);
 
   speex_preprocess_ctl(pp_state, SPEEX_PREPROCESS_SET_ECHO_STATE, echo_state);
-  
+
   g_print("Initialized speex echo-cancellation\n");
 
   return true;

@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "audio/audio.hpp"
 #include <glib.h>
 
 namespace genie {
@@ -140,6 +141,7 @@ public:
   // Audio
   // -------------------------------------------------------------------------
 
+  AudioDriverType audio_backend;
   gchar *audio_input_device;
   gchar *audio_sink;
   gchar *audio_output_device_music;
@@ -147,7 +149,6 @@ public:
   gchar *audio_output_device_alerts;
   gchar *audio_output_fifo;
   gchar *audio_voice;
-  gchar *audio_backend;
 
   /**
    * @brief Use the audio input as a stereo and convert it to mono
@@ -325,6 +326,7 @@ private:
                             const double default_value, const double min,
                             const double max);
   bool get_bool(const char *section, const char *key, const bool default_value);
+  AudioDriverType get_audio_backend();
 };
 
 } // namespace genie

@@ -18,25 +18,29 @@
 
 #pragma once
 
+#include "../../app.hpp"
+#include "../audiodriver.hpp"
+
+#include <alsa/asoundlib.h>
+
 namespace genie {
 
-class AudioInputDriver {
+class AudioVolumeDriverAlsa : public AudioVolumeDriver {
 public:
-  AudioInputDriver(){};
-  virtual ~AudioInputDriver(){};
-  virtual bool init(gchar *audio_input_device, int sample_rate, int channels,
-                    int max_frame_length) = 0;
-  virtual AudioFrame read_frame(int32_t frame_length) = 0;
-};
+  AudioVolumeDriverAlsa(App *app) : app(app){};
+  virtual ~AudioVolumeDriverAlsa(){};
+  virtual void set_volume(int volume);
+  virtual int get_volume();
+  virtual void duck();
+  virtual void unduck();
 
-class AudioVolumeDriver {
-public:
-  AudioVolumeDriver(){};
-  virtual ~AudioVolumeDriver(){};
-  virtual void set_volume(int volume) = 0;
-  virtual int get_volume() = 0;
-  virtual void duck() = 0;
-  virtual void unduck() = 0;
+private:
+  App *app;
+  bool ducked = false;
+  int base_volume = 0;
+
+  snd_mixer_elem_t *get_mixer_element(snd_mixer_t *handle,
+                                      const char *selem_name);
 };
 
 } // namespace genie

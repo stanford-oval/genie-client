@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "app.hpp"
-#include "audiodriver.hpp"
+#include "../../app.hpp"
+#include "../audiodriver.hpp"
 
 #include <pulse/error.h>
 #include <pulse/simple.h>

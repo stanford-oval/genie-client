@@ -44,7 +44,6 @@ genie::Config::~Config() {
   g_free(audio_output_device_alerts);
   g_free(audio_voice);
   g_free(audio_output_device);
-  g_free(audio_backend);
   g_free(sound_wake);
   g_free(sound_no_input);
   g_free(sound_too_much_input);
@@ -333,6 +332,36 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
   return parsed;
 }
 
+genie::AudioDriverType genie::Config::get_audio_backend() {
+  GError *error = nullptr;
+
+  char *value = g_key_file_get_string(key_file, "general", "backend", &error);
+  if (value == nullptr) {
+    if (is_key_not_found_error(error)) {
+      g_message(
+          "Config key [general] auth_mode missing, using default 'oauth2'");
+    } else {
+      g_warning("Failed to load [general] auth_mode from config file, using "
+                "default 'oauth2'");
+    }
+    g_error_free(error);
+    return AudioDriverType::PULSEAUDIO;
+  }
+
+  AudioDriverType backend;
+  if (strcmp(value, "alsa") == 0) {
+    backend = AudioDriverType::ALSA;
+  } else if (strcmp(value, "pulse") == 0 || strcmp(value, "pulseaudio") == 0) {
+    backend = AudioDriverType::PULSEAUDIO;
+  } else {
+    g_warning("Invalid audio backend %s, using default 'pulseaudio'", value);
+    backend = AudioDriverType::PULSEAUDIO;
+  }
+
+  g_free(value);
+  return backend;
+}
+
 void genie::Config::save() {
   GError *error = NULL;
   g_key_file_save_to_file(key_file, "config.ini", &error);
@@ -419,8 +448,8 @@ void genie::Config::load() {
   // Audio
   // =========================================================================
 
-  audio_backend = get_string("audio", "backend", "pulse");
-  if (strcmp(audio_backend, "pulse") == 0) {
+  audio_backend = get_audio_backend();
+  if (audio_backend == AudioDriverType::PULSEAUDIO) {
     audio_input_device = nullptr;
     audio_output_fifo = nullptr;
     audio_input_stereo2mono = false;
@@ -431,7 +460,7 @@ void genie::Config::load() {
     audio_output_device_music = g_strdup(audio_output_device);
     audio_output_device_voice = g_strdup(audio_output_device);
     audio_output_device_alerts = g_strdup(audio_output_device);
-  } else if (strcmp(audio_backend, "alsa") == 0) {
+  } else if (audio_backend == AudioDriverType::ALSA) {
     audio_input_device =
         g_key_file_get_string(key_file, "audio", "input", &error);
     if (error) {
@@ -479,7 +508,7 @@ void genie::Config::load() {
       audio_input_stereo2mono = false;
     }
   } else {
-    g_error("Invalid audio backend %s", audio_backend);
+    g_assert_not_reached();
     return;
   }
 
