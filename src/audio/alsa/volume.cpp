@@ -19,12 +19,15 @@
 #include "volume.hpp"
 #include "../audiovolume.hpp"
 
+static const char *DUCKING_DEVICE = "hw:0";
+static const char *DUCKING_CONTROL = "hd";
+
 void genie::AudioVolumeDriverAlsa::duck() {
   if (ducked)
     return;
 
-  base_volume = get_volume();
-  set_volume(0);
+  set_volume(AudioVolumeController::MIN_VOLUME, DUCKING_DEVICE,
+             DUCKING_CONTROL);
   ducked = true;
 }
 
@@ -32,24 +35,9 @@ void genie::AudioVolumeDriverAlsa::unduck() {
   if (!ducked)
     return;
 
-  set_volume(base_volume);
+  set_volume(AudioVolumeController::MAX_VOLUME, DUCKING_DEVICE,
+             DUCKING_CONTROL);
   ducked = false;
-}
-
-snd_mixer_elem_t *
-genie::AudioVolumeDriverAlsa::get_mixer_element(snd_mixer_t *handle,
-                                                const char *selem_name) {
-  snd_mixer_selem_id_t *sid;
-
-  snd_mixer_open(&handle, 0);
-  snd_mixer_attach(handle, app->config->audio_output_device);
-  snd_mixer_selem_register(handle, NULL, NULL);
-  snd_mixer_load(handle);
-
-  snd_mixer_selem_id_alloca(&sid);
-  snd_mixer_selem_id_set_index(sid, 0);
-  snd_mixer_selem_id_set_name(sid, selem_name);
-  return snd_mixer_find_selem(handle, sid);
 }
 
 /**
@@ -62,18 +50,31 @@ static long convert_to_range(long value, long from_min, long from_max,
 }
 
 void genie::AudioVolumeDriverAlsa::set_volume(int volume) {
+  set_volume(volume, app->config->audio_output_device,
+             app->config->audio_volume_control);
+}
+
+void genie::AudioVolumeDriverAlsa::set_volume(int volume,
+                                              const char *device_name,
+                                              const char *ctl_name) {
   snd_mixer_t *handle = NULL;
   snd_mixer_selem_id_t *sid;
 
   snd_mixer_open(&handle, 0);
-  snd_mixer_attach(handle, "hw:1");
+  snd_mixer_attach(handle, device_name);
   snd_mixer_selem_register(handle, NULL, NULL);
   snd_mixer_load(handle);
 
   snd_mixer_selem_id_alloca(&sid);
   snd_mixer_selem_id_set_index(sid, 0);
-  snd_mixer_selem_id_set_name(sid, "Headphone");
+  snd_mixer_selem_id_set_name(sid, ctl_name);
   snd_mixer_elem_t *elem = snd_mixer_find_selem(handle, sid);
+  if (!elem) {
+    g_warning("Cannot find mixer control element %s in device %s", ctl_name,
+              device_name);
+    snd_mixer_close(handle);
+    return;
+  }
 
   long min, max;
   int err = snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
@@ -90,19 +91,31 @@ void genie::AudioVolumeDriverAlsa::set_volume(int volume) {
 }
 
 int genie::AudioVolumeDriverAlsa::get_volume() {
+  return get_volume(app->config->audio_output_device,
+                    app->config->audio_volume_control);
+}
+
+int genie::AudioVolumeDriverAlsa::get_volume(const char *device_name,
+                                             const char *ctl_name) {
   snd_mixer_t *handle = NULL;
   snd_mixer_elem_t *elem;
   snd_mixer_selem_id_t *sid;
 
   snd_mixer_open(&handle, 0);
-  snd_mixer_attach(handle, "hw:1");
+  snd_mixer_attach(handle, device_name);
   snd_mixer_selem_register(handle, NULL, NULL);
   snd_mixer_load(handle);
 
   snd_mixer_selem_id_alloca(&sid);
   snd_mixer_selem_id_set_index(sid, 0);
-  snd_mixer_selem_id_set_name(sid, "Headphone");
+  snd_mixer_selem_id_set_name(sid, ctl_name);
   elem = snd_mixer_find_selem(handle, sid);
+  if (!elem) {
+    g_warning("Cannot find mixer control element %s in device %s", ctl_name,
+              device_name);
+    snd_mixer_close(handle);
+    return 0;
+  }
 
   long current;
   int err =

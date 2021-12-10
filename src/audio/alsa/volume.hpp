@@ -37,10 +37,9 @@ public:
 private:
   App *app;
   bool ducked = false;
-  int base_volume = 0;
 
-  snd_mixer_elem_t *get_mixer_element(snd_mixer_t *handle,
-                                      const char *selem_name);
+  void set_volume(int volume, const char *device_name, const char *ctl_name);
+  int get_volume(const char *device_name, const char *ctl_name);
 };
 
 } // namespace genie

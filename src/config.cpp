@@ -39,11 +39,12 @@ genie::Config::~Config() {
   g_free(asset_dir);
   g_free(audio_input_device);
   g_free(audio_sink);
+  g_free(audio_output_device);
   g_free(audio_output_device_music);
   g_free(audio_output_device_voice);
   g_free(audio_output_device_alerts);
+  g_free(audio_volume_control);
   g_free(audio_voice);
-  g_free(audio_output_device);
   g_free(sound_wake);
   g_free(sound_no_input);
   g_free(sound_too_much_input);
@@ -451,6 +452,7 @@ void genie::Config::load() {
   audio_backend = get_audio_backend();
   if (audio_backend == AudioDriverType::PULSEAUDIO) {
     audio_input_device = nullptr;
+    audio_volume_control = nullptr;
     audio_output_fifo = nullptr;
     audio_input_stereo2mono = false;
     audio_sink = g_strdup("pulsesink");
@@ -472,6 +474,9 @@ void genie::Config::load() {
     audio_sink = g_strdup("alsasink");
     audio_output_device =
         get_string("audio", "output", DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE);
+
+    audio_volume_control =
+        get_string("audio", "volume", DEFAULT_ALSA_AUDIO_VOLUME_CONTROL);
 
     audio_output_device_music =
         g_key_file_get_string(key_file, "audio", "music_output", &error);

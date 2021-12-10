@@ -41,7 +41,9 @@ public:
   static const size_t VAD_LISTEN_TIMEOUT_MAX_MS = 100000;
 
   static const constexpr char *DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE = "echosink";
-  static const constexpr char *DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE = "hw:0,0";
+  static const constexpr char *DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE = "hw:0";
+  static const constexpr char *DEFAULT_ALSA_AUDIO_VOLUME_CONTROL =
+      "Master Playback Volume";
   static const constexpr char *DEFAULT_GENIE_URL =
       "wss://dev.genie.stanford.edu/me/api/conversation";
   static const constexpr AuthMode DEFAULT_AUTH_MODE = AuthMode::OAUTH2;
@@ -144,10 +146,15 @@ public:
   AudioDriverType audio_backend;
   gchar *audio_input_device;
   gchar *audio_sink;
+  /**
+   * @brief The general/main audio output device; used to control volume.
+   */
+  gchar *audio_output_device;
   gchar *audio_output_device_music;
   gchar *audio_output_device_voice;
   gchar *audio_output_device_alerts;
   gchar *audio_output_fifo;
+  gchar *audio_volume_control;
   gchar *audio_voice;
 
   /**
@@ -165,11 +172,6 @@ public:
    * signal
    */
   bool audio_ec_loopback;
-
-  /**
-   * @brief The general/main audio output device; used to control volume.
-   */
-  gchar *audio_output_device;
 
   // Hacks
   // -------------------------------------------------------------------------
