@@ -207,16 +207,18 @@ gboolean genie::AudioPlayer::bus_call_queue(GstBus *bus, GstMessage *msg,
       // which is convinient for us, because we can track the event _both_
       // times, with the second time over-writing the first, which results
       // in the desired state.
-      if (type == GST_STREAM_STATUS_TYPE_ENTER) {
+      if (type == GST_STREAM_STATUS_TYPE_ENTER && obj->playing_task) {
         obj->app->dispatch(new state::events::PlayerStreamEnter(
             obj->playing_task->type, obj->playing_task->ref_id));
       }
       break;
     case GST_MESSAGE_EOS:
       g_message("End of stream");
-      obj->app->dispatch(new state::events::PlayerStreamEnd(
-          obj->playing_task->type, obj->playing_task->ref_id));
-      obj->playing_task->stop();
+      if (obj->playing_task) {
+          obj->app->dispatch(new state::events::PlayerStreamEnd(
+              obj->playing_task->type, obj->playing_task->ref_id));
+          obj->playing_task->stop();
+      }
       obj->playing_task = nullptr;
       obj->playing = false;
       obj->dispatch_queue();
