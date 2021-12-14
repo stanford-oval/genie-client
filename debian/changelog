@@ -1,5 +1,5 @@
-genie-client (1.0.0) UNRELEASED; urgency=medium
+genie-client (0.1.0) UNRELEASED; urgency=medium
 
   * Initial release
 
- -- Giovanni Campagn <gcampagn@cs.stanford.edu>  Sun, 28 Nov 2021 16:16:46 -0800
+ -- Giovanni Campagna <gcampagn@cs.stanford.edu>  Sun, 28 Nov 2021 16:16:46 -0800

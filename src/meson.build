@@ -10,7 +10,10 @@ _onlySharedDeps = [ 'gstreamer-1.0', 'alsa' ]
 _alwaysSharedDeps = [ 'gio-2.0' ]
 
 _linkArgs = []
-_incDirs = []
+_incDirs = [
+  include_directories('../submodules/mustache'),
+  include_directories('../submodules/porcupine/include')
+]
 _deps = []
 
 _deps += dependency('threads')
@@ -78,9 +81,12 @@ executable(
   'config.cpp',
   'evinput.cpp',
   'leds.cpp',
-  'audio/alsa.cpp',
-  'audio/pulsesimple.cpp',
-  'audio/pulseaudio.cpp',
+  'audio/alsa/input.cpp',
+  'audio/alsa/volume.cpp',
+  'audio/alsa/audiofifo.cpp',
+  'audio/alsa/pa_ringbuffer.c',
+  'audio/pulseaudio/input.cpp',
+  'audio/pulseaudio/volume.cpp',
   'audio/audioinput.cpp',
   'audio/audioplayer.cpp',
   'audio/audiovolume.cpp',

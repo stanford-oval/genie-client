@@ -10,7 +10,8 @@ Build-Depends: debhelper (>= 12), wget,
 
 Package: genie-client
 Architecture: armhf arm64 amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, gstreamer1.0-plugins-base-apps,
+ gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-pulseaudio, pulseaudio
 Description: Client for the Genie virtual assistant
  Interacts with the Genie assistant over the network
  and provides voice functionality.

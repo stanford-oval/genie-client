@@ -16,11 +16,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <glib.h>
+#include <fcntl.h>
 #include <glib-unix.h>
+#include <glib.h>
 #include <glib/gstdio.h>
 #include <string.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -42,13 +42,14 @@ genie::AudioFIFO::~AudioFIFO() {
 
 int genie::AudioFIFO::init() {
   struct stat st;
-  if (stat(app->config->audioOutputFIFO, &st) != 0) {
-    mkfifo(app->config->audioOutputFIFO, 0666);
+  if (stat(app->config->audio_output_fifo, &st) != 0) {
+    mkfifo(app->config->audio_output_fifo, 0666);
   }
 
-  fd = open(app->config->audioOutputFIFO, O_RDONLY | O_NONBLOCK);
+  fd = open(app->config->audio_output_fifo, O_RDONLY | O_NONBLOCK);
   if (fd < 0) {
-    g_printerr("failed to open %s, error %d\n", app->config->audioOutputFIFO, fd);
+    g_printerr("failed to open %s, error %d\n", app->config->audio_output_fifo,
+               fd);
     return false;
   }
 
@@ -71,7 +72,8 @@ int genie::AudioFIFO::init() {
 
   pcm = (int16_t *)malloc(frame_length * sizeof(int16_t));
   if (!pcm) {
-    g_printerr("failed to allocate memory for audio buffer, errno = %d\n", errno);
+    g_printerr("failed to allocate memory for audio buffer, errno = %d\n",
+               errno);
     close(fd);
     return false;
   }
@@ -86,8 +88,8 @@ int genie::AudioFIFO::init() {
     return false;
   }
 
-  ring_buffer_size_t r1 = PaUtil_InitializeRingBuffer(
-      &ring_buffer, sample_size, buffer_size, buffer);
+  ring_buffer_size_t r1 = PaUtil_InitializeRingBuffer(&ring_buffer, sample_size,
+                                                      buffer_size, buffer);
   if (r1 == -1) {
     g_printerr("failed to initialize ring buffer\n");
     close(fd);
@@ -137,6 +139,4 @@ void *genie::AudioFIFO::loop(gpointer data) {
   return NULL;
 }
 
-bool genie::AudioFIFO::isReading() {
-  return reading;
-}
+bool genie::AudioFIFO::isReading() { return reading; }

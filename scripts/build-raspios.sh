@@ -1,17 +1,18 @@
-ARG BASE_IMAGE
-FROM ${BASE_IMAGE}
+#!/bin/bash -ex
 
-RUN apt-get update
-RUN apt-get -y install \
+apt-get update
+
+apt-get -y install \
     debhelper devscripts wget \
     pkg-config meson ninja-build libasound2-dev libglib2.0-dev libjson-glib-dev \
     libsoup2.4-dev libpulse-dev libevdev-dev libgstreamer1.0-dev sound-theme-freedesktop \
     libwebrtc-audio-processing-dev libspeex-dev libspeexdsp-dev
 
-RUN mkdir /src
-WORKDIR /src
-COPY . /src
+cd /src
+git clean -fdx
+./scripts/get-assets.sh armv6
 
-ARG ARCH
-RUN ./scripts/get-assets.sh ${ARCH}
-RUN debuild -us -uc
+rm -fr /genie-client*
+debuild -us -uc
+
+cp /genie-client* /out

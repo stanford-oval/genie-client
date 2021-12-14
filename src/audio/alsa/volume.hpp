@@ -18,42 +18,28 @@
 
 #pragma once
 
-#include "app.hpp"
-#include "audiodriver.hpp"
+#include "../../app.hpp"
+#include "../audiodriver.hpp"
 
 #include <alsa/asoundlib.h>
 
-#include <speex/speex_echo.h>
-#include <speex/speex_preprocess.h>
-
 namespace genie {
 
-class AudioInputAlsa : public AudioInputDriver {
+class AudioVolumeDriverAlsa : public AudioVolumeDriver {
 public:
-  AudioInputAlsa(App *app);
-  ~AudioInputAlsa();
-  bool init(gchar *audio_input_device, int sample_rate, int channels,
-            int max_frame_length);
-  AudioFrame read_frame(int32_t frame_length);
+  AudioVolumeDriverAlsa(App *app) : app(app){};
+  virtual ~AudioVolumeDriverAlsa(){};
+  virtual void set_volume(int volume);
+  virtual int get_volume();
+  virtual void duck();
+  virtual void unduck();
 
 private:
-  // initialized once and never overwritten
-  App *const app;
-  snd_pcm_t *alsa_handle = NULL;
+  App *app;
+  bool ducked = false;
 
-  bool init_pcm(gchar *input_audio_device);
-  bool init_speex();
-
-  SpeexEchoState *echo_state;
-  SpeexPreprocessState *pp_state;
-
-  int16_t *pcm;
-  int16_t *pcm_mono;
-  int16_t *pcm_playback;
-  int16_t *pcm_filter;
-  size_t sample_rate;
-  int16_t channels;
-  size_t frame_length;
+  void set_volume(int volume, const char *device_name, const char *ctl_name);
+  int get_volume(const char *device_name, const char *ctl_name);
 };
 
 } // namespace genie

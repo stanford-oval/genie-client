@@ -322,11 +322,25 @@ void genie::conversation::Client::connect_home_assistant() {
   // in Home Assistant auth mode, we must first get the session token
   SoupURI *home_assistant_url = soup_uri_new(app->config->genie_url);
 
+  // Since setting the scheme _also_ sets the port we need to read it and
+  // possibly reset it after setting the scheme
+  guint port = soup_uri_get_port(home_assistant_url);
+
   soup_uri_set_path(home_assistant_url, "/api/hassio/ingress/session");
-  if (strcmp(soup_uri_get_scheme(home_assistant_url), "wss") == 0)
+  if (strcmp(soup_uri_get_scheme(home_assistant_url), "wss") == 0) {
     soup_uri_set_scheme(home_assistant_url, "https");
-  else
+    if (port != 443) {
+      soup_uri_set_port(home_assistant_url, port);
+    }
+  } else {
     soup_uri_set_scheme(home_assistant_url, "http");
+    if (port != 80) {
+      soup_uri_set_port(home_assistant_url, port);
+    }
+  }
+
+  g_message("Requesting Home Assistant session token from %s",
+            soup_uri_to_string(home_assistant_url, false));
 
   SoupMessage *msg =
       soup_message_new_from_uri(SOUP_METHOD_POST, home_assistant_url);
@@ -344,7 +358,7 @@ void genie::conversation::Client::connect_home_assistant() {
         g_message("Sent access token request to Home Assistant, got HTTP %u",
                   msg->status_code);
 
-        if (msg->status_code >= 400) {
+        if (msg->status_code < 200 || msg->status_code >= 400) {
           g_warning("Failed to get access token from Home Assistant: %s",
                     msg->response_body->data);
           retry_connect();
@@ -371,6 +385,9 @@ void genie::conversation::Client::connect_home_assistant() {
 
         json_reader_read_member(reader, "session");
         const char *session_token = json_reader_get_string_value(reader);
+
+        g_debug("Got Home Assistant session token %s", session_token);
+
         gchar *cookie = g_strdup_printf("ingress_session=%s", session_token);
         json_reader_end_member(reader); // session
 

@@ -19,7 +19,7 @@
 #pragma once
 
 #include "app.hpp"
-#include "pv_porcupine.h"
+#include <pv_porcupine.h>
 
 namespace genie {
 
@@ -27,7 +27,6 @@ class WakeWord {
 public:
   WakeWord(App *app);
   ~WakeWord();
-  int init();
   int process(AudioFrame *frame);
 
   int32_t pv_frame_length;
@@ -39,10 +38,9 @@ private:
 
   void *porcupine_library;
   pv_porcupine_t *porcupine;
-  void (*pv_porcupine_delete_func)(pv_porcupine_t *);
-  pv_status_t (*pv_porcupine_process_func)(pv_porcupine_t *, const int16_t *,
-                                           int32_t *);
-  const char *(*pv_status_to_string_func)(pv_status_t);
+  decltype(pv_porcupine_delete) *pv_porcupine_delete_func;
+  decltype(pv_porcupine_process) *pv_porcupine_process_func;
+  decltype(pv_status_to_string) *pv_status_to_string_func;
 };
 
 } // namespace genie

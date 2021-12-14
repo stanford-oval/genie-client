@@ -26,18 +26,10 @@
 genie::WakeWord::WakeWord(App *app) : app(app) {
   porcupine = nullptr;
   porcupine_library = nullptr;
-}
+  pv_porcupine_delete_func = nullptr;
+  pv_porcupine_process_func = nullptr;
+  pv_status_to_string_func = nullptr;
 
-genie::WakeWord::~WakeWord() {
-  if (porcupine) {
-    pv_porcupine_delete_func(porcupine);
-  }
-  if (porcupine_library) {
-    dlclose(porcupine_library);
-  }
-}
-
-int genie::WakeWord::init() {
   char *library_path =
       g_build_filename(app->config->asset_dir, "libpv_porcupine.so", nullptr);
 
@@ -62,7 +54,7 @@ int genie::WakeWord::init() {
   porcupine_library = dlopen(library_path, RTLD_NOW);
   if (!porcupine_library) {
     g_error("failed to open library %s: %s", library_path, dlerror());
-    return false;
+    return;
   }
   g_free(library_path);
 
@@ -72,51 +64,47 @@ int genie::WakeWord::init() {
       porcupine_library, "pv_status_to_string");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_status_to_string' with '%s'.\n", error);
-    return false;
+    return;
   }
 
-  int32_t (*pv_sample_rate_func)() =
-      (int32_t(*)())dlsym(porcupine_library, "pv_sample_rate");
+  auto pv_sample_rate_func =
+      (decltype(pv_sample_rate) *)dlsym(porcupine_library, "pv_sample_rate");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_sample_rate' with '%s'.\n", error);
-    return false;
+    return;
   }
 
   int32_t sample_rate_signed = pv_sample_rate_func();
   g_assert(sample_rate_signed > 0);
   sample_rate = (size_t)sample_rate_signed;
 
-  pv_status_t (*pv_porcupine_init_func)(const char *, int32_t,
-                                        const char *const *, const float *,
-                                        pv_porcupine_t **) =
-      (pv_status_t(*)(const char *, int32_t, const char *const *, const float *,
-                      pv_porcupine_t **))dlsym(porcupine_library,
-                                               "pv_porcupine_init");
+  auto pv_porcupine_init_func = (decltype(pv_porcupine_init) *)dlsym(
+      porcupine_library, "pv_porcupine_init");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_init' with '%s'.\n", error);
-    return false;
+    return;
   }
 
-  pv_porcupine_delete_func = (void (*)(pv_porcupine_t *))dlsym(
+  pv_porcupine_delete_func = (decltype(pv_porcupine_delete) *)dlsym(
       porcupine_library, "pv_porcupine_delete");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_delete' with '%s'.\n", error);
-    return false;
+    return;
   }
 
-  pv_porcupine_process_func =
-      (pv_status_t(*)(pv_porcupine_t *, const int16_t *, int32_t *))dlsym(
-          porcupine_library, "pv_porcupine_process");
+  pv_porcupine_process_func = (decltype(pv_porcupine_process) *)dlsym(
+      porcupine_library, "pv_porcupine_process");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_process' with '%s'.\n", error);
-    return false;
+    return;
   }
 
-  int32_t (*pv_porcupine_frame_length_func)() =
-      (int32_t(*)())dlsym(porcupine_library, "pv_porcupine_frame_length");
+  auto pv_porcupine_frame_length_func =
+      (decltype(pv_porcupine_frame_length) *)dlsym(porcupine_library,
+                                                   "pv_porcupine_frame_length");
   if ((error = dlerror()) != NULL) {
     g_error("failed to load 'pv_porcupine_frame_length' with '%s'.\n", error);
-    return false;
+    return;
   }
 
   pv_frame_length = pv_porcupine_frame_length_func();
@@ -127,15 +115,22 @@ int genie::WakeWord::init() {
   if (status != PV_STATUS_SUCCESS) {
     g_error("'pv_porcupine_init' failed with '%s'\n",
             pv_status_to_string_func(status));
-    return false;
+    return;
   }
   g_free(model_path);
   g_free(keyword_path);
 
   g_print("Initialized wakeword engine, frame length %d, sample rate %zd\n",
           pv_frame_length, sample_rate);
+}
 
-  return true;
+genie::WakeWord::~WakeWord() {
+  if (porcupine) {
+    pv_porcupine_delete_func(porcupine);
+  }
+  if (porcupine_library) {
+    dlclose(porcupine_library);
+  }
 }
 
 int genie::WakeWord::process(AudioFrame *frame) {

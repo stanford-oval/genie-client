@@ -39,12 +39,12 @@ genie::Config::~Config() {
   g_free(asset_dir);
   g_free(audio_input_device);
   g_free(audio_sink);
+  g_free(audio_output_device);
   g_free(audio_output_device_music);
   g_free(audio_output_device_voice);
   g_free(audio_output_device_alerts);
+  g_free(audio_volume_control);
   g_free(audio_voice);
-  g_free(audio_output_device);
-  g_free(audio_backend);
   g_free(sound_wake);
   g_free(sound_no_input);
   g_free(sound_too_much_input);
@@ -334,6 +334,36 @@ static genie::AuthMode get_auth_mode(GKeyFile *key_file) {
   return parsed;
 }
 
+genie::AudioDriverType genie::Config::get_audio_backend() {
+  GError *error = nullptr;
+
+  char *value = g_key_file_get_string(key_file, "audio", "backend", &error);
+  if (value == nullptr) {
+    if (is_key_not_found_error(error)) {
+      g_message(
+          "Config key [audio] backend missing, using default 'pulseaudio'");
+    } else {
+      g_warning("Failed to load [audio] backend from config file, using "
+                "default 'pulseaudio'");
+    }
+    g_error_free(error);
+    return AudioDriverType::PULSEAUDIO;
+  }
+
+  AudioDriverType backend;
+  if (strcmp(value, "alsa") == 0) {
+    backend = AudioDriverType::ALSA;
+  } else if (strcmp(value, "pulse") == 0 || strcmp(value, "pulseaudio") == 0) {
+    backend = AudioDriverType::PULSEAUDIO;
+  } else {
+    g_warning("Invalid audio backend %s, using default 'pulseaudio'", value);
+    backend = AudioDriverType::PULSEAUDIO;
+  }
+
+  g_free(value);
+  return backend;
+}
+
 void genie::Config::save() {
   GError *error = NULL;
   g_key_file_save_to_file(key_file, "config.ini", &error);
@@ -354,8 +384,7 @@ void genie::Config::load() {
                                  &error)) {
     if (error->domain != G_FILE_ERROR || error->code != G_FILE_ERROR_NOENT)
       g_critical("config load error: %s\n", error->message);
-    g_error_free(error);
-    return;
+    g_clear_error(&error);
   }
 
   asset_dir = get_string("general", "assets_dir", pkglibdir "/assets");
@@ -378,20 +407,18 @@ void genie::Config::load() {
         g_key_file_get_string(key_file, "general", "accessToken", &error);
     if (error) {
       g_warning("Missing access token in config file");
-      g_error_free(error);
+      g_clear_error(&error);
     }
   } else {
     genie_access_token = nullptr;
   }
 
-  error = NULL;
   nl_url = g_key_file_get_string(key_file, "general", "nlUrl", &error);
   if (error) {
     nl_url = g_strdup(DEFAULT_NLP_URL);
     g_clear_error(&error);
   }
 
-  error = NULL;
   locale = g_key_file_get_string(key_file, "general", "locale", &error);
   if (error) {
     locale = g_strdup(DEFAULT_LOCALE);
@@ -401,7 +428,15 @@ void genie::Config::load() {
   g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\nlocale: %s\n",
           genie_url, genie_access_token, nl_url, locale);
 
-  error = NULL;
+  locale = g_key_file_get_string(key_file, "general", "locale", &error);
+  if (error) {
+    locale = g_strdup(DEFAULT_LOCALE);
+    g_clear_error(&error);
+  }
+
+  g_debug("genieURL: %s\ngenieAccessToken: %s\nnlURL: %s\nlocale: %s\n",
+          genie_url, genie_access_token, nl_url, locale);
+
   conversation_id =
       g_key_file_get_string(key_file, "general", "conversationId", &error);
   if (error) {
@@ -415,11 +450,10 @@ void genie::Config::load() {
   // Audio
   // =========================================================================
 
-  error = NULL;
-
-  audio_backend = get_string("audio", "backend", "pulse");
-  if (strcmp(audio_backend, "pulse") == 0) {
+  audio_backend = get_audio_backend();
+  if (audio_backend == AudioDriverType::PULSEAUDIO) {
     audio_input_device = nullptr;
+    audio_volume_control = nullptr;
     audio_output_fifo = nullptr;
     audio_input_stereo2mono = false;
     audio_sink = g_strdup("pulsesink");
@@ -429,7 +463,7 @@ void genie::Config::load() {
     audio_output_device_music = g_strdup(audio_output_device);
     audio_output_device_voice = g_strdup(audio_output_device);
     audio_output_device_alerts = g_strdup(audio_output_device);
-  } else if (strcmp(audio_backend, "alsa") == 0) {
+  } else if (audio_backend == AudioDriverType::ALSA) {
     audio_input_device =
         g_key_file_get_string(key_file, "audio", "input", &error);
     if (error) {
@@ -442,47 +476,45 @@ void genie::Config::load() {
     audio_output_device =
         get_string("audio", "output", DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE);
 
-    error = NULL;
+    audio_volume_control =
+        get_string("audio", "volume", DEFAULT_ALSA_AUDIO_VOLUME_CONTROL);
+
     audio_output_device_music =
         g_key_file_get_string(key_file, "audio", "music_output", &error);
     if (error) {
-      g_error_free(error);
+      g_clear_error(&error);
       audio_output_device_music = g_strdup(audio_output_device);
     }
 
-    error = NULL;
     audio_output_device_voice =
         g_key_file_get_string(key_file, "audio", "voice_output", &error);
     if (error) {
-      g_error_free(error);
+      g_clear_error(&error);
       audio_output_device_voice = g_strdup(audio_output_device);
     }
 
-    error = NULL;
     audio_output_device_alerts =
         g_key_file_get_string(key_file, "audio", "alert_output", &error);
     if (error) {
-      g_error_free(error);
+      g_clear_error(&error);
       audio_output_device_alerts = g_strdup(audio_output_device);
     }
 
-    error = NULL;
     audio_output_fifo =
         g_key_file_get_string(key_file, "audio", "output_fifo", &error);
     if (error) {
-      g_error_free(error);
+      g_clear_error(&error);
       audio_output_fifo = g_strdup("/tmp/playback.fifo");
     }
 
-    error = NULL;
     audio_input_stereo2mono =
         g_key_file_get_boolean(key_file, "audio", "stereo2mono", &error);
     if (error) {
-      g_error_free(error);
+      g_clear_error(&error);
       audio_input_stereo2mono = false;
     }
   } else {
-    g_error("Invalid audio backend %s", audio_backend);
+    g_assert_not_reached();
     return;
   }
 
@@ -491,18 +523,16 @@ void genie::Config::load() {
   // Echo Cancellation
   // =========================================================================
 
-  error = NULL;
   audio_ec_enabled = g_key_file_get_boolean(key_file, "ec", "enabled", &error);
   if (error) {
-    g_error_free(error);
+    g_clear_error(&error);
     audio_ec_enabled = false;
   }
 
-  error = NULL;
   audio_ec_loopback =
       g_key_file_get_boolean(key_file, "ec", "loopback", &error);
   if (error) {
-    g_error_free(error);
+    g_clear_error(&error);
     audio_ec_loopback = false;
   }
 
@@ -548,12 +578,11 @@ void genie::Config::load() {
 
   // Buttons
   // =========================================================================
-  error = NULL;
   buttons_enabled =
       g_key_file_get_boolean(key_file, "buttons", "enabled", &error);
   if (error) {
     buttons_enabled = true;
-    g_error_free(error);
+    g_clear_error(&error);
   }
 
   if (buttons_enabled) {
@@ -565,22 +594,20 @@ void genie::Config::load() {
   // Leds
   // =========================================================================
 
-  error = NULL;
   leds_enabled = g_key_file_get_boolean(key_file, "leds", "enabled", &error);
   if (error) {
     leds_enabled = false;
-    g_error_free(error);
+    g_clear_error(&error);
   }
 
   if (leds_enabled) {
     leds_type = get_string("leds", "type", "aw");
 
-    error = NULL;
     leds_path = g_key_file_get_string(key_file, "leds", "path", &error);
     if (error) {
       g_warning("Missing leds path in configuration file, disabling");
       leds_enabled = false;
-      g_error_free(error);
+      g_clear_error(&error);
     }
 
     leds_starting_effect = get_leds_effect_string("leds", "starting_effect",
@@ -635,11 +662,10 @@ void genie::Config::load() {
     g_print("Proxy enabled: %s\n", proxy);
   }
 
-  error = NULL;
   ssl_strict = g_key_file_get_boolean(key_file, "system", "ssl_strict", &error);
   if (error) {
     ssl_strict = true;
-    g_error_free(error);
+    g_clear_error(&error);
   }
   if (!ssl_strict) {
     g_warning("SSL strict validation disabled");
@@ -648,10 +674,9 @@ void genie::Config::load() {
   ssl_ca_file =
       g_key_file_get_string(key_file, "system", "ssl_ca_file", nullptr);
 
-  error = NULL;
   cache_dir = g_key_file_get_string(key_file, "system", "cache_dir", &error);
   if (error) {
-    g_error_free(error);
+    g_clear_error(&error);
     cache_dir = g_strdup_printf("%s/genie", g_get_user_cache_dir());
   }
 

@@ -109,7 +109,8 @@ void State::react(events::SpotifyCredentials *spotify_credentials) {
 }
 
 void State::react(events::AdjustVolume *adjust_volume) {
-  app->audio_volume_controller->adjust_playback_volume(adjust_volume->delta);
+  app->audio_volume_controller->adjust_volume(
+      adjust_volume->delta * AudioVolumeController::VOLUME_DELTA);
 }
 
 void State::react(events::TogglePlayback *) {
@@ -188,7 +189,7 @@ void State::react(events::audio::SetVolumeEvent *set_volume) {
 }
 
 void State::react(events::audio::AdjVolumeEvent *adj_volume) {
-  app->audio_volume_controller->adjust_playback_volume(adj_volume->delta);
+  app->audio_volume_controller->adjust_volume(adj_volume->delta);
   adj_volume->resolve();
 }
 

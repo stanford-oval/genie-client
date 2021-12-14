@@ -1,13 +1,11 @@
 .vscode/
-assets/*
-!assets/.gitkeep
-!assets/bling.oga
-!assets/diiing.oga
-!assets/err-erra.oga
-!assets/magic.oga
-!assets/news-intro.oga
-!assets/ca-certificates.crt
-!assets/webui
+assets/computer/keyword.ppn
+assets/libpv_porcupine.so
+assets/porcupine_params.pv
+assets/match.oga
+assets/no-match.oga
+assets/alarm-clock-elapsed.oga
+
 # Meson build directory
 /build/
 # Build output directories

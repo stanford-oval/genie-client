@@ -49,7 +49,6 @@ public:
 
   AudioInput(App *app);
   ~AudioInput();
-  int init();
   void close();
   void wake();
 

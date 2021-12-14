@@ -1,9 +1,9 @@
 # NOTE  I defaulted `ARCH` to the xiaodu architecture because it was how I was
 #       able to run VSCode in the container -- couldn't get the IDE to provide
 #       the right build arg to bring up an `arm32v7` container.
-ARG ARCH=arm32v7/
+ARG ARCH=arm32v7
 ARG STATIC=0
-FROM ${ARCH}debian:stretch-slim
+FROM ${ARCH}/debian:stretch-slim
 ARG ARCH
 
 # baseline deps
@@ -56,11 +56,7 @@ RUN ./scripts/build-pulse.sh
 COPY scripts/gst /src/scripts/gst
 RUN ./scripts/gst/build.sh
 
-# assets
-COPY assets /src/assets
-COPY scripts/get-assets.sh /src/scripts
-RUN ./scripts/get-assets.sh ${ARCH}
-
 # our actual build
 COPY . /src/
+RUN ./scripts/get-assets.sh ${ARCH}
 RUN ./scripts/build.sh

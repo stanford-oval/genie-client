@@ -16,7 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pulsesimple.hpp"
+#include "input.hpp"
 #include <string.h>
 
 genie::AudioInputPulseSimple::AudioInputPulseSimple(App *app) : app(app) {}
@@ -51,7 +51,8 @@ bool genie::AudioInputPulseSimple::init(gchar *audio_input_device,
   return true;
 }
 
-genie::AudioFrame genie::AudioInputPulseSimple::read_frame(int32_t frame_length) {
+genie::AudioFrame
+genie::AudioInputPulseSimple::read_frame(int32_t frame_length) {
   int read_frames = 0;
   int error;
 
