@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "audio/audio.hpp"
 #include <glib.h>
 
 namespace genie {
@@ -40,7 +41,9 @@ public:
   static const size_t VAD_LISTEN_TIMEOUT_MAX_MS = 100000;
 
   static const constexpr char *DEFAULT_PULSE_AUDIO_OUTPUT_DEVICE = "echosink";
-  static const constexpr char *DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE = "hw:0,0";
+  static const constexpr char *DEFAULT_ALSA_AUDIO_OUTPUT_DEVICE = "hw:0";
+  static const constexpr char *DEFAULT_ALSA_AUDIO_VOLUME_CONTROL =
+      "Master Playback Volume";
   static const constexpr char *DEFAULT_GENIE_URL =
       "wss://dev.genie.stanford.edu/me/api/conversation";
   static const constexpr AuthMode DEFAULT_AUTH_MODE = AuthMode::OAUTH2;
@@ -140,14 +143,19 @@ public:
   // Audio
   // -------------------------------------------------------------------------
 
+  AudioDriverType audio_backend;
   gchar *audio_input_device;
   gchar *audio_sink;
+  /**
+   * @brief The general/main audio output device; used to control volume.
+   */
+  gchar *audio_output_device;
   gchar *audio_output_device_music;
   gchar *audio_output_device_voice;
   gchar *audio_output_device_alerts;
   gchar *audio_output_fifo;
+  gchar *audio_volume_control;
   gchar *audio_voice;
-  gchar *audio_backend;
 
   /**
    * @brief Use the audio input as a stereo and convert it to mono
@@ -164,11 +172,6 @@ public:
    * signal
    */
   bool audio_ec_loopback;
-
-  /**
-   * @brief The general/main audio output device; used to control volume.
-   */
-  gchar *audio_output_device;
 
   // Hacks
   // -------------------------------------------------------------------------
@@ -325,6 +328,7 @@ private:
                             const double default_value, const double min,
                             const double max);
   bool get_bool(const char *section, const char *key, const bool default_value);
+  AudioDriverType get_audio_backend();
 };
 
 } // namespace genie

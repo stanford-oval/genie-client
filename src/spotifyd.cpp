@@ -199,13 +199,7 @@ static void child_setup(gpointer user_data) {
 int genie::Spotifyd::spawn() {
   gchar *file_path = g_strdup_printf("%s/spotifyd", app->config->cache_dir);
   const gchar *device_name = "genie-cpp";
-  const gchar *backend;
-  std::string config_backend(app->config->audio_backend);
-  if (config_backend == "pulse") {
-    backend = "pulseaudio";
-  } else {
-    backend = "alsa";
-  }
+  const char *backend = audio_driver_type_to_string(app->config->audio_backend);
 
   gchar **envp;
   envp = g_get_environ();

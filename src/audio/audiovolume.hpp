@@ -18,37 +18,34 @@
 
 #pragma once
 
-#include "app.hpp"
-#include "pulseaudio.hpp"
+#include "../app.hpp"
+#include "audiodriver.hpp"
 
-#include <alsa/asoundlib.h>
-#include <pulse/simple.h>
 #include <pulse/error.h>
+#include <pulse/simple.h>
 
 namespace genie {
 
 class AudioVolumeController {
 public:
   AudioVolumeController(App *appInstance);
-  ~AudioVolumeController();
-  int init();
-  int duck();
-  int unduck();
-  long get_volume();
-  void set_volume(long volume);
-  int adjust_playback_volume(long delta);
-  int increment_playback_volume();
-  int decrement_playback_volume();
+  void init();
+  void duck();
+  void unduck();
+  int get_volume();
+  void set_volume(int volume);
+  void adjust_volume(int delta);
+  void increment_volume();
+  void decrement_volume();
+
+  static const int MAX_VOLUME = 100;
+  static const int MIN_VOLUME = 0;
+  static const int VOLUME_DELTA = 10;
 
 private:
   App *app;
   bool ducked;
-
-  pa_simple *pulse_handle = NULL;
-  PulseAudioClient *pulseaudio_client;
-
-  snd_mixer_elem_t *get_mixer_element(snd_mixer_t *handle,
-                                      const char *selem_name);
+  std::unique_ptr<AudioVolumeDriver> driver;
 };
 
 } // namespace genie

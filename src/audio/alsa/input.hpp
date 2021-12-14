@@ -18,19 +18,20 @@
 
 #pragma once
 
-#include "app.hpp"
-#include "audiodriver.hpp"
+#include "../../app.hpp"
+#include "../audiodriver.hpp"
 
-#include <pulse/error.h>
-#include <pulse/simple.h>
+#include <alsa/asoundlib.h>
+
+#include <speex/speex_echo.h>
+#include <speex/speex_preprocess.h>
 
 namespace genie {
 
-class AudioInputPulseSimple : public AudioInputDriver {
-
+class AudioInputAlsa : public AudioInputDriver {
 public:
-  AudioInputPulseSimple(App *app);
-  ~AudioInputPulseSimple();
+  AudioInputAlsa(App *app);
+  ~AudioInputAlsa();
   bool init(gchar *audio_input_device, int sample_rate, int channels,
             int max_frame_length);
   AudioFrame read_frame(int32_t frame_length);
@@ -38,9 +39,21 @@ public:
 private:
   // initialized once and never overwritten
   App *const app;
-  pa_simple *pulse_handle = NULL;
+  snd_pcm_t *alsa_handle = NULL;
+
+  bool init_pcm(gchar *input_audio_device);
+  bool init_speex();
+
+  SpeexEchoState *echo_state;
+  SpeexPreprocessState *pp_state;
 
   int16_t *pcm;
+  int16_t *pcm_mono;
+  int16_t *pcm_playback;
+  int16_t *pcm_filter;
+  size_t sample_rate;
+  int16_t channels;
+  size_t frame_length;
 };
 
 } // namespace genie

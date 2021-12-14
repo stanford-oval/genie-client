@@ -148,9 +148,9 @@ struct SpotifyCredentials : Event {
 // ===========================================================================
 
 struct AdjustVolume : Event {
-  long delta;
+  int delta; // 1 or -1
 
-  AdjustVolume(long delta) : delta(delta) {}
+  AdjustVolume(int delta) : delta(delta) {}
 };
 
 struct TogglePlayback : Event {};
@@ -240,7 +240,8 @@ struct SetVolumeEvent : public RequestEvent<void> {
 };
 
 struct AdjVolumeEvent : public RequestEvent<void> {
-  AdjVolumeEvent(std::unique_ptr<Request<void>> &&req, int delta)
+  AdjVolumeEvent(std::unique_ptr<Request<void>> &&req,
+                 int delta /* a value between -100 and +100 */)
       : RequestEvent<void>(std::move(req)), delta(delta) {}
 
   const int delta;

@@ -17,8 +17,8 @@
 // limitations under the License.
 
 #include "audioinput.hpp"
-#include "alsa.hpp"
-#include "pulsesimple.hpp"
+#include "alsa/input.hpp"
+#include "pulseaudio/input.hpp"
 
 // note: we need to redefine G_LOG_DOMAIN here or the definition will
 // bleed into the functions declared in the header, which will break
@@ -26,32 +26,10 @@
 #undef G_LOG_DOMAIN
 #define G_LOG_DOMAIN "genie::AudioInput"
 
-genie::AudioInputDriver::~AudioInputDriver() {}
-
 genie::AudioInput::AudioInput(App *app)
     : app(app), vad_instance(WebRtcVad_Create()), wakeword(nullptr),
-      input(nullptr), state(State::WAITING) {}
-
-genie::AudioInput::~AudioInput() {
-  WebRtcVad_Free(vad_instance);
-  if (wakeword) {
-    delete wakeword;
-  }
-  if (input) {
-    delete input;
-  }
-}
-
-void genie::AudioInput::close() {
-  state.store(State::CLOSED);
-  input_thread.join();
-}
-
-int genie::AudioInput::init() {
-  wakeword = new WakeWord(app);
-  if (!wakeword->init()) {
-    return -1;
-  }
+      input(nullptr), state(State::WAITING) {
+  wakeword = std::make_unique<WakeWord>(app);
 
   sample_rate = wakeword->sample_rate;
   pv_frame_length = wakeword->pv_frame_length;
@@ -59,29 +37,29 @@ int genie::AudioInput::init() {
       std::max(AUDIO_INPUT_VAD_FRAME_LENGTH, pv_frame_length);
   channels = 1;
 
-  if (strcmp(app->config->audio_backend, "alsa") == 0) {
-    input = new AudioInputAlsa(app);
-  } else if (strcmp(app->config->audio_backend, "pulse") == 0) {
-    input = new AudioInputPulseSimple(app);
+  if (app->config->audio_backend == AudioDriverType::ALSA) {
+    input = std::make_unique<AudioInputAlsa>(app);
+  } else if (app->config->audio_backend == AudioDriverType::PULSEAUDIO) {
+    input = std::make_unique<AudioInputPulseSimple>(app);
   } else {
-    g_error("invalid audio backend: %s", app->config->audio_backend);
-    return -1;
+    g_assert_not_reached();
   }
 
   if (!input->init(app->config->audio_input_device, wakeword->sample_rate,
                    channels, max_frame_length)) {
-    return -1;
+    g_error("failed to initialized audio input driver");
+    return;
   }
 
   if (WebRtcVad_Init(vad_instance)) {
     g_error("failed to initialize webrtc vad\n");
-    return -2;
+    return;
   }
 
   int vadMode = 3;
   if (WebRtcVad_set_mode(vad_instance, vadMode)) {
     g_error("unable to set vad mode to %d", vadMode);
-    return -2;
+    return;
   }
 
   if (WebRtcVad_ValidRateAndFrameLength(sample_rate, pv_frame_length)) {
@@ -111,10 +89,15 @@ int genie::AudioInput::init() {
             "-> %zd frames",
             app->config->vad_listen_timeout_ms, vad_listen_timeout_frame_count);
 
-  g_message("Initialized audio input with %s backend\n",
-            app->config->audio_backend);
+  g_message("Initialized audio input with %s backend\n", audio_driver_type_to_string(app->config->audio_backend));
   input_thread = std::thread(&AudioInput::loop, this);
-  return 0;
+}
+
+genie::AudioInput::~AudioInput() { WebRtcVad_Free(vad_instance); }
+
+void genie::AudioInput::close() {
+  state.store(State::CLOSED);
+  input_thread.join();
 }
 
 /**

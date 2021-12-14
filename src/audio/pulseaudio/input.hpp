@@ -18,25 +18,29 @@
 
 #pragma once
 
+#include "../../app.hpp"
+#include "../audiodriver.hpp"
+
+#include <pulse/error.h>
+#include <pulse/simple.h>
+
 namespace genie {
 
-class AudioInputDriver {
-public:
-  AudioInputDriver(){};
-  virtual ~AudioInputDriver(){};
-  virtual bool init(gchar *audio_input_device, int sample_rate, int channels,
-                    int max_frame_length) = 0;
-  virtual AudioFrame read_frame(int32_t frame_length) = 0;
-};
+class AudioInputPulseSimple : public AudioInputDriver {
 
-class AudioVolumeDriver {
 public:
-  AudioVolumeDriver(){};
-  virtual ~AudioVolumeDriver(){};
-  virtual void set_volume(int volume) = 0;
-  virtual int get_volume() = 0;
-  virtual void duck() = 0;
-  virtual void unduck() = 0;
+  AudioInputPulseSimple(App *app);
+  ~AudioInputPulseSimple();
+  bool init(gchar *audio_input_device, int sample_rate, int channels,
+            int max_frame_length);
+  AudioFrame read_frame(int32_t frame_length);
+
+private:
+  // initialized once and never overwritten
+  App *const app;
+  pa_simple *pulse_handle = NULL;
+
+  int16_t *pcm;
 };
 
 } // namespace genie
