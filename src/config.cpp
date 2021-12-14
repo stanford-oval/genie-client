@@ -61,6 +61,7 @@ genie::Config::~Config() {
   g_free(leds_path);
   g_free(leds_type);
   g_free(cache_dir);
+  g_free(hacks_dns_server);
 
   g_key_file_unref(key_file);
 }

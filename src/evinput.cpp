@@ -29,7 +29,7 @@
 
 genie::EVInput::EVInput(App *app) : app(app) {}
 
-genie::EVInput::~EVInput() {}
+genie::EVInput::~EVInput() { g_source_unref(source); }
 
 gboolean genie::EVInput::event_prepare(GSource *source, gint *timeout) {
   *timeout = -1;

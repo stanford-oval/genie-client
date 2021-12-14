@@ -333,25 +333,20 @@ void genie::WebServer::handle_index(SoupMessage *msg) {
 }
 
 void genie::WebServer::handle_index_post(SoupMessage *msg) {
-  SoupMessageHeaders *headers;
-  GBytes *request_body;
-  gsize body_size;
   GHashTable *fields = nullptr;
   bool any_change = false;
   bool needs_reconnect = false;
   bool needs_oauth_redirect = false;
 
-  g_object_get(msg, "request-headers", &headers, "request-body-data",
-               &request_body, nullptr);
-  if (g_strcmp0(soup_message_headers_get_content_type(headers, nullptr),
-                "application/x-www-form-urlencoded") != 0) {
+  if (g_strcmp0(
+          soup_message_headers_get_content_type(msg->request_headers, nullptr),
+          "application/x-www-form-urlencoded") != 0) {
     log_request(msg, "/", 406);
     send_html(msg, 406, title_error, "<h1>Not Acceptable</h1>");
     goto out;
   }
 
-  fields = soup_form_decode(
-      (const char *)g_bytes_get_data(request_body, &body_size));
+  fields = soup_form_decode(msg->request_body->data);
 
   if (g_strcmp0((const char *)g_hash_table_lookup(fields, "_csrf"),
                 csrf_token.c_str()) != 0) {
@@ -429,7 +424,7 @@ void genie::WebServer::handle_index_post(SoupMessage *msg) {
 
     soup_message_set_redirect(msg, 303, oauth_login_url_str);
     g_free(oauth_login_url_str);
-    return;
+    goto out;
   }
 
   if (needs_reconnect)
@@ -440,8 +435,6 @@ void genie::WebServer::handle_index_post(SoupMessage *msg) {
 out:
   if (fields)
     g_hash_table_unref(fields);
-  soup_message_headers_free(headers);
-  g_bytes_unref(request_body);
 }
 
 void genie::WebServer::handle_index_get(SoupMessage *msg) {
