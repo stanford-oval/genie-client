@@ -75,7 +75,7 @@ public:
   static const constexpr float DEFAULT_PV_SENSITIVITY = 0.7f;
   static const constexpr char *DEFAULT_PV_WAKE_WORD_PATTERN =
       "^([A-Za-z]+[ .,]? (gene|genie|jeannie|jenny|jennie|dean)|beijing|pg and "
-      "e|ragini|pagini)[.,]?";
+      "e|ragini|pagini|paging)[.,]?";
 
   // Sound Defaults
   // -------------------------------------------------------------------------
