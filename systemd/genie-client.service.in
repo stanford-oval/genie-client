@@ -1,0 +1,14 @@
+[Unit]
+Description=Genie Client
+
+# this is wants instead of requires so we can use pipewire-pulse.socket
+Wants=pulseaudio.socket
+
+[Service]
+WorkingDirectory=~
+ExecStart=@bindir@/genie-client
+RestartSec=1
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

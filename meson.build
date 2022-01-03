@@ -30,7 +30,8 @@ config_h.set_quoted('OAUTH_CLIENT_SECRET', get_option('oauth_client_secret'))
 
 pkgdatadir = join_paths(get_option('prefix'), get_option('datadir'), app_id)
 pkglibdir = join_paths(get_option('prefix'), 'lib', app_id)
-config_h.set_quoted('bindir', join_paths(get_option('prefix'), get_option('bindir')))
+bindir = join_paths(get_option('prefix'), get_option('bindir'))
+config_h.set_quoted('bindir', bindir)
 config_h.set_quoted('libdir', join_paths(get_option('prefix'), get_option('libdir')))
 config_h.set_quoted('pkglibdir', pkglibdir)
 config_h.set_quoted('pkgdatadir', pkgdatadir)
@@ -55,3 +56,13 @@ add_global_arguments([
 
 subdir('src')
 install_subdir('assets', install_dir: pkglibdir)
+
+unitconf = configuration_data()
+unitconf.set('bindir', bindir)
+
+configure_file(
+  input : 'systemd/genie-client.service.in',
+  output : 'genie-client.service',
+  configuration : unitconf,
+  install_dir: join_paths(get_option('prefix'), 'lib', 'systemd', 'user')
+)
