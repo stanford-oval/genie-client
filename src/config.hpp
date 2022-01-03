@@ -45,10 +45,10 @@ public:
   static const constexpr char *DEFAULT_ALSA_AUDIO_VOLUME_CONTROL =
       "Master Playback Volume";
   static const constexpr char *DEFAULT_GENIE_URL =
-      "wss://dev.genie.stanford.edu/me/api/conversation";
+      "wss://genie.stanford.edu/me/api/conversation";
   static const constexpr AuthMode DEFAULT_AUTH_MODE = AuthMode::OAUTH2;
   static const constexpr char *DEFAULT_NLP_URL =
-      "https://nlp-staging.almond.stanford.edu";
+      "https://nlp.almond.stanford.edu";
   static const constexpr char *DEFAULT_LOCALE = "en-US";
   static const constexpr char *DEFAULT_VOICE = "male";
 
