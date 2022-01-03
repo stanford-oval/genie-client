@@ -18,7 +18,7 @@ for arch in ${ARCH:-arm32v7 arm64v8 amd64} ; do
         localhost/genie-builder:debian-${arch} -c 'cp /genie-client* /out'
 done
 (cd ${outdir} ; dpkg-scanpackages -m . /dev/null > Packages)
-gzip -k ${outdir}/Packages
+gzip -k -f ${outdir}/Packages
 
 # raspios build
 RASPIOS_VERSION=${2021-10-30}
@@ -38,4 +38,4 @@ sudo systemd-nspawn --image debian/out/raspios-${DEBIAN_RELEASE}.img \
     --overlay $(pwd):${builddir}:/src --bind $(realpath ${outdir}):/out \
     /src/scripts/build-raspios.sh
 (cd ${outdir} ; dpkg-scanpackages -m . /dev/null > Packages)
-gzip -k ${outdir}/Packages
+gzip -k -f ${outdir}/Packages
