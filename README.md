@@ -20,6 +20,14 @@ sudo dnf -y install meson gcc-c++ 'pkgconfig(alsa)' 'pkgconfig(glib-2.0)' 'pkgco
   'pkgconfig(webrtc-audio-processing)' gstreamer1-plugins-base gstreamer1-plugins-good cmake 
 ```
 
+On Ubuntu, this is:
+```bash
+sudo apt-get install -y meson g++ libasound2-dev libglib2.0-0 libsoup2.4 libjson-glib-dev \
+  libevdev-dev libgstreamer1.0-0 libgstreamer1.0-dev libspeex-dev libspeexdsp-dev libwebrtc-audio-processing-dev \
+  gstreamer1.0-plugins-base gstreamer1.0-plugins-good cmake
+```
+
+
 ### Step 2: Picovoice
 
 Run:
