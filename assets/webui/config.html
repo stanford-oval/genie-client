@@ -1,4 +1,7 @@
 <h1>Genie Configuration</h1>
+
+<h2>Backend Connection</h2>
+
 <form method="POST" action="/">
 <input type="hidden" name="_csrf" value="{{csrf_token}}" />
 <div class="mb-3">
@@ -22,4 +25,8 @@
     <label for="config-conversation-id" class="form-label">Conversation ID</label>
     <input type="text" id="config-conversation-id" name="conversation_id" value="{{conversation_id}}" class="form-control" />
 </div>
+<br/>
 <button type="submit" class="btn btn-primary">Save</button>
+</form>
+
+<hr>

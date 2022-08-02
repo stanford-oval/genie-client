@@ -1,0 +1,32 @@
+<h2>Network Configuration</h2>
+
+<br/>
+<p>Network connection status: {{status}}</p>
+
+<br/>
+<p>MAC Address: {{mac}}</p>
+
+<br/>
+<form method="POST" action="/network">
+  <input type="hidden" name="_csrf" value="{{csrf_token}}" />
+  <div class="mb-3">
+      <label for="config-url" class="form-label">SSID</label>
+      <input type="text" id="config-ssid" name="ssid" value="{{ssid}}" class="form-control" />
+  </div>
+  <div class="mb-3">
+      <label for="config-auth-mode" class="form-label">Authentication Mode</label>
+      <select id="config-auth-mode" name="auth_mode" class="form-control">
+          <option value="open" {{#auth_mode_checked}}none{{/auth_mode_checked}}>None</option>
+          <option value="wep" {{#auth_mode_checked}}bearer{{/auth_mode_checked}}>WEP</option>
+          <option value="wpa" {{#auth_mode_checked}}home-assistant{{/auth_mode_checked}}>WPA</option>
+      </select>
+  </div>
+  <div class="mb-3" id="config-passphrase">
+      <label for="config-passphrase" class="form-label">Passphrase</label>
+      <input type="text" id="config-passphrase" name="passphrase" value="" class="form-control" />
+  </div>
+  <br/>
+  <button type="submit" class="btn btn-primary">Save and Apply</button>
+</form>
+
+<hr>
