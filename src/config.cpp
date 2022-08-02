@@ -62,6 +62,9 @@ genie::Config::~Config() {
   g_free(leds_type);
   g_free(cache_dir);
   g_free(hacks_dns_server);
+  g_free(net_wlan_if);
+  g_free(net_wlan_ap_ctrl);
+  g_free(net_wlan_sta_ctrl);
 
   g_key_file_unref(key_file);
 }
@@ -645,6 +648,26 @@ void genie::Config::load() {
   } else {
     leds_type = nullptr;
     leds_path = nullptr;
+  }
+
+  // Network
+  // =========================================================================
+
+  net_controller_enabled =
+      g_key_file_get_boolean(key_file, "net", "enabled", &error);
+  if (error) {
+    net_controller_enabled = false;
+    g_clear_error(&error);
+  }
+
+  if (net_controller_enabled) {
+    net_wlan_if = get_string("net", "wlan_if", DEFAULT_NET_WLAN_IF);
+    net_wlan_ap_ctrl = get_string("net", "ap_ctrl", nullptr);
+    net_wlan_sta_ctrl = get_string("net", "sta_ctrl", nullptr);
+  } else {
+    net_wlan_if = nullptr;
+    net_wlan_ap_ctrl = nullptr;
+    net_wlan_sta_ctrl = nullptr;
   }
 
   // System

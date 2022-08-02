@@ -25,6 +25,8 @@ namespace genie {
 
 enum class AuthMode { NONE, BEARER, COOKIE, HOME_ASSISTANT, OAUTH2 };
 
+enum class WifiAuthMode { OPEN, WEP, WPA };
+
 class Config {
 public:
   static const size_t DEFAULT_WS_RETRY_INTERVAL = 3000;
@@ -51,6 +53,7 @@ public:
       "https://nlp.almond.stanford.edu";
   static const constexpr char *DEFAULT_LOCALE = "en-US";
   static const constexpr char *DEFAULT_VOICE = "male";
+  static const constexpr char *DEFAULT_NET_WLAN_IF = "wlan0";
 
   // Hacks Defaults
   // ---------------------------------------------------------------------------
@@ -259,6 +262,13 @@ public:
   gint leds_net_error_color;
   gint leds_disabled_effect;
   gint leds_disabled_color;
+
+  // Network
+  // -------------------------------------------------------------------------
+  bool net_controller_enabled;
+  gchar *net_wlan_if;
+  gchar *net_wlan_ap_ctrl;
+  gchar *net_wlan_sta_ctrl;
 
   // System
   // -------------------------------------------------------------------------
