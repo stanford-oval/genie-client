@@ -74,6 +74,7 @@ public:
   virtual void react(events::audio::SetMuteEvent *set_mute);
   virtual void react(events::audio::SetVolumeEvent *set_volume);
   virtual void react(events::audio::AdjVolumeEvent *adj_volume);
+  virtual void react(events::ToggleConfigMode *);
 };
 
 } // namespace state

@@ -28,6 +28,7 @@ enum class LedsState_t {
   Listening,
   Processing,
   Saying,
+  Config,
   Error,
   NetError,
   Disabled

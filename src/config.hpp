@@ -109,6 +109,8 @@ public:
   static const constexpr char *DEFAULT_LEDS_PROCESSING_COLOR = "ffffff";
   static const constexpr char *DEFAULT_LEDS_SAYING_EFFECT = "pulse";
   static const constexpr char *DEFAULT_LEDS_SAYING_COLOR = "00ff00";
+  static const constexpr char *DEFAULT_LEDS_CONFIG_EFFECT = "pulse";
+  static const constexpr char *DEFAULT_LEDS_CONFIG_COLOR = "0000ff";
   static const constexpr char *DEFAULT_LEDS_ERROR_EFFECT = "pulse";
   static const constexpr char *DEFAULT_LEDS_ERROR_COLOR = "ff0000";
   static const constexpr char *DEFAULT_LEDS_NET_ERROR_EFFECT = "circular";
@@ -256,6 +258,8 @@ public:
   gint leds_processing_color;
   gint leds_saying_effect;
   gint leds_saying_color;
+  gint leds_config_effect;
+  gint leds_config_color;
   gint leds_error_effect;
   gint leds_error_color;
   gint leds_net_error_effect;

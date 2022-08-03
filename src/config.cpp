@@ -633,6 +633,10 @@ void genie::Config::load() {
                                                 DEFAULT_LEDS_SAYING_EFFECT);
     leds_saying_color = get_dec_color_from_hex_string(
         "leds", "saying_color", DEFAULT_LEDS_SAYING_COLOR);
+    leds_config_effect = get_leds_effect_string("leds", "config_effect",
+                                                DEFAULT_LEDS_CONFIG_EFFECT);
+    leds_config_color = get_dec_color_from_hex_string(
+        "leds", "config_color", DEFAULT_LEDS_CONFIG_COLOR);
     leds_error_effect = get_leds_effect_string("leds", "error_effect",
                                                DEFAULT_LEDS_ERROR_EFFECT);
     leds_error_color = get_dec_color_from_hex_string("leds", "error_color",
@@ -662,8 +666,8 @@ void genie::Config::load() {
 
   if (net_controller_enabled) {
     net_wlan_if = get_string("net", "wlan_if", DEFAULT_NET_WLAN_IF);
-    net_wlan_ap_ctrl = get_string("net", "ap_ctrl", nullptr);
-    net_wlan_sta_ctrl = get_string("net", "sta_ctrl", nullptr);
+    net_wlan_ap_ctrl = get_string("net", "ap_ctrl", g_strdup(""));
+    net_wlan_sta_ctrl = get_string("net", "sta_ctrl", g_strdup(""));
   } else {
     net_wlan_if = nullptr;
     net_wlan_ap_ctrl = nullptr;

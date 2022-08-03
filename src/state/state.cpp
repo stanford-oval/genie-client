@@ -129,6 +129,11 @@ void State::react(events::ToggleDisabled *) {
   app->transit(new Disabled(app));
 }
 
+void State::react(events::ToggleConfigMode *) {
+  g_message("CONFIG MODE...");
+  app->transit(new Config(app));
+}
+
 void State::react(events::PlayerStreamEnter *player_stream_enter) {
   g_message("Received PlayerStreamEnter with type=%d ref_id=%" G_GINT64_FORMAT
             ", ignoring.",

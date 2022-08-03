@@ -104,6 +104,11 @@ void genie::Leds::animate(LedsState_t state) {
       animate_internal((LedsAnimation_t)app->config->leds_saying_effect,
                        app->config->leds_saying_color);
       break;
+    case LedsState_t::Config:
+      g_debug("leds config\n");
+      animate_internal((LedsAnimation_t)app->config->leds_config_effect,
+                       app->config->leds_config_color);
+      break;
     case LedsState_t::Error:
       g_debug("leds error\n");
       animate_internal((LedsAnimation_t)app->config->leds_error_effect,

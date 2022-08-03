@@ -159,6 +159,8 @@ struct Panic : Event {};
 
 struct ToggleDisabled : Event {};
 
+struct ToggleConfigMode : Event {};
+
 // Audio Player Events
 // ===========================================================================
 
