@@ -37,6 +37,7 @@
 #include "state/processing.hpp"
 #include "state/saying.hpp"
 #include "state/sleeping.hpp"
+#include "state/config.hpp"
 #include "state/state.hpp"
 
 #define PROF_PRINT(...)                                                        \
@@ -73,6 +74,7 @@ class Spotifyd;
 class STT;
 class TTS;
 class DNSController;
+class NetController;
 class WebServer;
 namespace conversation {
 class Client;
@@ -94,6 +96,7 @@ class App {
   friend class state::Listening;
   friend class state::Processing;
   friend class state::Saying;
+  friend class state::Config;
   friend class state::Disabled;
 
 public:
@@ -149,6 +152,10 @@ public:
 
   void force_reconnect();
   void set_temporary_access_token(const char *token);
+
+  // TODO: make private and react through events
+public:
+  std::unique_ptr<NetController> net_controller;
 
 private:
   // =========================================================================

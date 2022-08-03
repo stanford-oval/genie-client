@@ -94,6 +94,8 @@ executable(
   'stt.cpp',
   'spotifyd.cpp',
   'dns_controller.cpp',
+  'utils/net.cpp',
+  'state/config.cpp',
   'state/disabled.cpp',
   'state/listening.cpp',
   'state/processing.cpp',

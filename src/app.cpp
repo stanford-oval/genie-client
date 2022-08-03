@@ -25,6 +25,7 @@
 #include "audio/audiovolume.hpp"
 #include "config.hpp"
 #include "dns_controller.hpp"
+#include "utils/net.hpp"
 #include "evinput.hpp"
 #include "leds.hpp"
 #include "spotifyd.hpp"
@@ -149,6 +150,10 @@ int genie::App::exec(int argc, char *argv[]) {
 
   if (config->dns_controller_enabled) {
     dns_controller = std::make_unique<DNSController>(config->hacks_dns_server);
+  }
+
+  if (config->net_controller_enabled) {
+    net_controller = std::make_unique<NetController>(this);
   }
 
   this->current_state = new state::Sleeping(this);

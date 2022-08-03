@@ -21,6 +21,7 @@
 #include "string.h"
 #include "utils/c-style-callback.hpp"
 #include "utils/soup-utils.hpp"
+#include "utils/net.hpp"
 #include <fcntl.h>
 #include <functional>
 #include <json-glib/json-glib.h>
@@ -125,6 +126,17 @@ genie::WebServer::WebServer(App *app)
          GHashTable *query, SoupClientContext *context, gpointer data) {
         WebServer *self = static_cast<WebServer *>(data);
         self->handle_oauth_redirect(msg, query);
+      },
+      this, nullptr);
+  soup_server_add_handler(
+      server.get(), "/network",
+      [](SoupServer *server, SoupMessage *msg, const char *path,
+         GHashTable *query, SoupClientContext *context, gpointer data) {
+        WebServer *self = static_cast<WebServer *>(data);
+        if (strcmp(path, "/network") == 0)
+          self->handle_net(msg);
+        else
+          self->handle_404(msg, path);
       },
       this, nullptr);
   soup_server_add_handler(
@@ -456,6 +468,96 @@ void genie::WebServer::handle_index_get(SoupMessage *msg) {
 
   log_request(msg, "/", 200);
   send_html(msg, 200, title_normal, body.c_str());
+}
+
+void genie::WebServer::handle_net(SoupMessage *msg) {
+  auto method = check_method(
+      msg, "/network", (int)AllowedMethod::GET | (int)AllowedMethod::POST);
+  if (method == AllowedMethod::GET)
+    handle_net_get(msg);
+  else if (method == AllowedMethod::POST)
+    handle_net_post(msg);
+}
+
+void genie::WebServer::handle_net_get(SoupMessage *msg) {
+  const char *auth_mode = Config::auth_mode_to_string(app->config->auth_mode);
+
+  mustache::object data{
+      {"csrf_token", csrf_token.c_str()},
+      {"status", "todo"},
+      {"ssid", "test"},
+      {"mac", "00:00:00:00:00:00"}};
+  auto body = load_html_template(app, "network.html").render(data);
+
+  log_request(msg, "/", 200);
+  send_html(msg, 200, title_normal, body.c_str());
+}
+
+void genie::WebServer::handle_net_post(SoupMessage *msg) {
+  SoupMessageHeaders *headers;
+  GBytes *request_body;
+  gsize body_size;
+  GHashTable *fields = nullptr;
+  bool any_change = false;
+  bool needs_reconnect = false;
+  bool needs_oauth_redirect = false;
+
+  g_object_get(msg, "request-headers", &headers, "request-body-data",
+               &request_body, nullptr);
+  if (g_strcmp0(soup_message_headers_get_content_type(headers, nullptr),
+                "application/x-www-form-urlencoded") != 0) {
+    log_request(msg, "/", 406);
+    send_html(msg, 406, title_error, "<h1>Not Acceptable</h1>");
+    goto out;
+  }
+
+  fields = soup_form_decode(
+      (const char *)g_bytes_get_data(request_body, &body_size));
+
+  if (g_strcmp0((const char *)g_hash_table_lookup(fields, "_csrf"),
+                csrf_token.c_str()) != 0) {
+    log_request(msg, "/", 403);
+    send_html(msg, 403, title_error, "<h1>Invalid CSRF token</h1>");
+    goto out;
+  }
+
+  {
+    const char *ssid = (const char *)g_hash_table_lookup(fields, "ssid");
+    const char *auth_mode =
+        (const char *)g_hash_table_lookup(fields, "auth_mode");
+    WifiAuthMode parsed_auth_mode;
+    if (auth_mode && *auth_mode) {
+      parsed_auth_mode = app->net_controller->parse_auth_mode(auth_mode);
+    }
+    const char *secret = (const char *)g_hash_table_lookup(fields, "passphrase");
+
+    if (strlen(ssid) <= 0) {
+      send_html(msg, 500, title_error, "<h1>Bad parameter: ssid</h1>");
+      goto out;
+    }
+
+    if (strlen(secret) <= 0 || strlen(secret) > 64) {
+      send_html(msg, 500, title_error, "<h1>Bad parameter: secret</h1>");
+      goto out;
+    }
+
+    if (ssid && auth_mode && secret) {
+      app->net_controller->set_wifi_config(parsed_auth_mode, ssid, secret);
+      app->net_controller->stop_ap();
+      app->net_controller->start_sta();
+    } else {
+      send_html(msg, 500, title_error, "<h1>Missing parameters</h1>");
+      goto out;
+    }
+  }
+
+  handle_net_get(msg);
+
+out:
+  if (fields)
+    g_hash_table_unref(fields);
+  soup_message_headers_free(headers);
+  g_bytes_unref(request_body);
 }
 
 void genie::WebServer::send_html(SoupMessage *msg, int status,

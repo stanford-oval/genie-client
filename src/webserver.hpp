@@ -52,6 +52,9 @@ private:
   void handle_index(SoupMessage *msg);
   void handle_index_post(SoupMessage *msg);
   void handle_index_get(SoupMessage *msg);
+  void handle_net(SoupMessage *msg);
+  void handle_net_get(SoupMessage *msg);
+  void handle_net_post(SoupMessage *msg);
   void handle_oauth_redirect(SoupMessage *msg, GHashTable *query);
   void handle_404(SoupMessage *msg, const char *path);
   void handle_405(SoupMessage *msg, const char *path);
