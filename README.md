@@ -7,6 +7,8 @@ It is designed for embedded clients with limited flash storage and RAM.
 Genie is a research project led by Prof. Monica Lam, from Stanford University.
 You can find more information at <https://oval.cs.stanford.edu>.
 
+__Disclaimer: "Hey Genie" wake word is powered by Picovoice Porcupine for non-commercial use only, for commercial use please contact [Picovoice](https://picovoice.ai/).__
+
 ## Developer Setup
 
 You can make a local build for development a standard Linux distro using [`meson`](https://mesonbuild.com) and [`ninja`](https://ninja-build.org/).
